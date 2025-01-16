@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<script type="text/javascript" src="hlcoop.js"></script>
+		<style>
+			html, body {
+				min-height: 100%;
+			}
+			body {
+				margin: 0;
+				background: #181818;
+				font-family: "Trebuchet MS", Trebuchet, Tahoma, Arial, Helvetica, sans-serif;
+				color: #ddd;
+			}
+			#server_name {
+				margin: 0 0;
+				padding: 20px 0 10px 0;
+				text-align: center;
+			}
+			#player_list_container {
+				width: 450px;
+				margin: 0 auto;
+				float: left;
+			}
+			#player_list {
+				background: black;
+				width: 100%;
+				border-collapse: collapse;
+				font-family: "Trebuchet MS", Trebuchet, Tahoma, Arial, Helvetica, sans-serif;
+				font-size: 12px;
+			}
+			#player_list th {
+				background: #2e1f00;
+				height: 20px;
+			}
+			#player_list td:first-child, #player_list th:first-child {
+				width: 215px;
+				padding-left: 10px;
+			}
+			#player_list td:nth-child(2), #player_list th:nth-child(2) {
+				width: 50px;
+			}
+			#player_list td:nth-child(3), #player_list th:nth-child(3) {
+				width: 50px;
+			}
+			#player_list td:nth-child(4), #player_list th:nth-child(4) {
+				width: 50px;
+			}
+			#player_list td:nth-child(5), #player_list th:nth-child(5) {
+				width: 50px;
+			}
+			#player_list td:nth-child(6), #player_list th:nth-child(6) {
+				width: 60px;
+			}
+			#player_list td:nth-child(7), #player_list th:nth-child(7) {
+				width: 70px;
+			}
+			#player_list td:nth-child(8), #player_list th:nth-child(8) {
+				width: 70px;
+			}
+			#player_list th {
+				text-align: left;
+			}
+			#player_list tr:nth-child(odd) {
+				background: #111111;
+			}
+			#player_list td {
+				height: 22px;
+			}
+			#player_list a {
+				text-decoration: none;
+				color: #99CCFF;
+				overflow: hidden;
+				text-overflow: ellipsis;
+				max-width: 215px;
+				display: inline-block;
+			}
+			#player_list tbody {
+				height: 400px;
+				overflow-y: auto;
+				overflow-x: hidden;
+			}
+			tbody, thead tr {
+				display: block;
+			}
+			#player_list .alive {
+				color: green;
+			}
+			#player_list .dead {
+				color: red;
+			}
+			#player_list .spec {
+				color: #aaa;
+			}
+			#player_list .longidle {
+				color: #a0f;
+			}
+			#player_list .idle {
+				color: #f80;
+			}
+			#player_list .shortidle {
+				color: #ff0;
+			}
+			#player_list td:nth-child(6), #player_list th:nth-child(6),
+			#player_list td:nth-child(7), #player_list th:nth-child(7),
+			#player_list td:nth-child(8), #player_list th:nth-child(8) {
+				display: none;
+			}
+			#player_list.stat_view td:nth-child(2), #player_list.stat_view th:nth-child(2),
+			#player_list.stat_view td:nth-child(3), #player_list.stat_view th:nth-child(3),
+			#player_list.stat_view td:nth-child(4), #player_list.stat_view th:nth-child(4),
+			#player_list.stat_view td:nth-child(5), #player_list.stat_view th:nth-child(5) {
+				display: none;
+			}
+			#player_list.stat_view td:nth-child(6), #player_list.stat_view th:nth-child(6),
+			#player_list.stat_view td:nth-child(7), #player_list.stat_view th:nth-child(7),
+			#player_list.stat_view td:nth-child(8), #player_list.stat_view th:nth-child(8) {
+				display: table-cell;
+			}
+			
+			h2 {
+				text-align: center;
+				margin: 10px 0;
+				font-size: 20px;
+			}
+			
+			#content {
+				padding: 0 10px;
+			}
+			#active_maps {
+				min-width: 500px;
+				width: 100%;
+				display: inline-block;
+				text-align: center;
+			}
+			#current_map_container, #next_map_container, #next_map_arrow {
+				display: inline-block;
+			}
+			#next_map_container {
+				margin-left: 40px;
+			}
+			#upcoming_maps_grid {
+				height: 600px;
+				overflow-y: auto;
+				background: #000;
+			}
+			#next_map_arrow div {
+				margin: 90px 5px 0px 5px;
+			}
+			
+			#map_list_container {
+				margin: 0 auto;
+				width: calc(100% - 470px);
+				float: right;
+				padding: 0 5px;
+			}
+			.map_container {
+				display: inline-block;
+				text-align: left;
+				vertical-align: top;
+				width: 220px;
+				text-align: center;
+				background: #111;
+				border: 1px solid #a80;
+			}
+			.map_container img {
+				border-top: 1px solid #a80;
+			}
+			.map_container.next, .map_container.next img, #next_map_container .map_container, #next_map_container img {
+				border-color: green;
+			}
+			.map_title {
+				font-size: 16px;
+				font-weight: bold;
+				color: #FFAA00;
+				overflow: hidden;
+				text-overflow: ellipsis;
+				width: 100%;
+				display: inline-block;
+				white-space: nowrap;
+			}
+			.map_image {
+				max-width:100%;
+				max-height:100%;
+				width: 100%;
+				height: 140px;
+			}
+			.map_tags {
+				font-size: 12px;
+			}
+			
+			#upcoming_maps {
+				padding-top: 20px;
+				clear: both;
+			}
+			#upcoming_maps .map_title {
+				font-size: 12px;
+			}
+			#upcoming_maps .map_title.longtext {
+				font-size: 10px;
+			}
+			#upcoming_maps .map_container {
+				width: 140px;
+				margin: 6px;
+			}
+			#upcoming_maps .map_image {
+				height: 89px;
+			}
+			
+			#filter_maps_container {
+				padding: 10px;
+				text-align: center;
+			}
+			#maps_filter {
+				font-size: 20px;
+			}
+			
+			#chat_container {
+				padding-top: 20px;
+			}
+			#chat_box {
+				background: black;
+				width: 100%;
+				height: 400px;
+				color: #fa0;
+				overflow-y: scroll;
+				font-size: 12px;
+			}
+			.chat_message a {
+				text-decoration: none;
+				color: #99CCFF;
+			}
+			.chat_message {
+				padding: 1px 0;
+				display:block;
+			}
+			
+			#login_but {
+				display: inline-block;
+				padding: 10px 0;
+				background: #444;
+				position: absolute;
+				top: 10px;
+				right: 20px;
+				border-radius: 4px;
+				cursor: pointer;
+				color: #fff;
+				text-decoration: none;
+				width: 200px;
+				text-align: center;
+			}
+			#login_but:hover {
+				background: #555;
+			}
+			#login_but div {
+				display: inline-block;
+			}
+			#login_but img {
+				width: 20px;
+				vertical-align: middle;
+			}
+			#login_text {
+				max-width: 160px;
+				overflow: hidden;
+				text-overflow: ellipsis;
+				vertical-align: middle;
+			}
+			#login_subtext {
+				display: inline-block;
+				font-size: 12px;
+				text-align: center;
+				width: 100%;
+			}
+			.red {
+				color: red;
+			}
+			
+			.hidden {
+				visibility: hidden;
+			}
+			.tooltip {
+				font-size: 12px;
+				vertical-align: top;
+				color: #FFAA00;
+				cursor: help;
+			}
+		</style>
+		<title id="tab_title">Half-Life Co-op</title>
+	</head>
+
+	<body>
+		<div>
+			<h1 id="server_name">Half-Life Co-op</h1>
+			<a id="login_but">
+				<img id="login_icon" src="steam_icon_logo.svg"/>
+				<div id="login_text">Sign in through Steam</div>
+				<br/>
+				<div id="login_subtext">(required for some actions)</div>
+			</a>
+		</div>
+		
+		<hr>
+		<div id="content">
+			<div id="player_list_container">
+				<h2>Players (<span id="pcount">?</span> / 32)</h2>
+				<table id="player_list">
+					<thead>
+						<th title="Player's in-game name">Player name</th>
+						<th title="Player's in-game status">Status</th>
+						<th title="Points awarded for damage dealt in the current map">Score</th>
+						<th title="The number of times the player has died in the current map">Deaths</th>
+						<th title="Player's latency to the server">Ping</th>
+						<th title="Player's opinion of the selected map">Opinion</th>
+						<th title="Last time this player played the selected map">Last play</th>
+						<th title="Total number of times the player played the selected map">Total plays</th>
+					</thead>
+					<tbody></tbody>
+				</table>
+				
+				<div id="chat_container">
+					<h2>Messages</h2>
+					<div id="chat_box"></div>
+				</div>
+			</div>
+			
+			<div id="map_list_container">
+				<div id="active_maps">
+					<div id="current_map_container">
+						<h2>Current map</h2>
+						<a id="current_map" class="map_container" href="http://scmapdb.wikidot.com/map:azure-sheep" target="_blank">
+							<span class="map_title">asmap00</span>
+							<img class="map_image" src="pages/img/map_azure-sheep.jpg">
+						</a>
+					</div>
+					<div id="next_map_container">
+						<h2>Next map <span class="tooltip" title="This is not guaranteed to be the next map. The next map changes every time a player joins the server. The next map is chosen randomly from the &quot;Upcoming maps&quot; pool.
+
+Rejoining the server on the same map does not randomize the next map. This prevents players from constantly rejoining to try and get a &quot;better&quot; next map.">(?)</span></h2></h2>
+						<a id="next_map" class="map_container" href="http://scmapdb.wikidot.com/map:azure-sheep" target="_blank">
+							<span class="map_title">asmap00</span>
+							<img class="map_image" src="pages/img/map_azure-sheep.jpg">
+						</a>
+					</div>
+				</div>
+				<div id="upcoming_maps">
+					<h2>Upcoming maps (<span id="upcoming_maps_count">?</span>) <span class="tooltip" title="Maps displayed here depend on who is currently in the server. A new player joining may cause this map list to change completely.
+
+The server tries to pick maps that haven't been played in the longest time. Every map should feel fresh and no one should have to replay the same map for another month or so.
+
+You must play at least 50% of a map or 3 minutes of it (whichever is lesser) for it to count as played. So, if you hate a map and quit the game because of it, you may see that map tomorrow because the server didn't count your play. Play enough of the map if you don't want to see it for a longer time. If the map normally lasts 60 minutes, but gets RTV'd after 2 minutes, and you left the server after 1 minute, then that counts as a play.
+
+The algorithm for picking upcoming maps is as follows:
+1) All maps start as potential candidates.
+2) Exclude maps played by anyone in the server within the last X days, starting with X=1.
+3) If more than ~8 maps remain, increase X incrementally (up to 4096 days) and repeat.
+4) Once fewer than ~8 maps are left, select the largest X that resulted in ~8 maps.
+
+More than 8 maps will be shown in cases where the current players haven't played every map on the server, when combining their play stats. For example, if there are 500 maps on the server, and the current players have only played 100 of them, then 400 maps will be displayed here.">(?)</span></h2>
+					<div id="upcoming_maps_grid"></div>
+					<div id="filter_maps_container">
+						<input id="maps_filter" type="text" placeholder="Search...">
+					</div>
+				</div>
+			</div>
+		</div>
+	</body>
+</html>
