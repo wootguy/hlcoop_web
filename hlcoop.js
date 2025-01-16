@@ -1,6 +1,6 @@
 var g_socket;
-var server_url = 'wss://localhost:3000/test';
-//var server_url = 'ws://localhost:3000/test'; // for Visual Studio debugging
+var g_server_url = 'wss://localhost:3000/test';
+//var g_server_url = 'ws://localhost:3000/test'; // for Visual Studio debugging
 var g_player_data = [];
 var g_map_stats = [];
 var g_server_name = "Half-Life Co-op";
@@ -469,6 +469,10 @@ function setup() {
 	let params = new URLSearchParams(window.location.search);
 	g_auth_token = getCookie("token");
 	
+	if (params.has("server_url")) {
+		g_server_url = params.get('server_url');
+	}
+	
 	if (params.has("openid.claimed_id")) {
 		g_auth_params = params;
 		
@@ -495,8 +499,8 @@ function setup() {
 }
 
 function createWebSocket() {
-	console.log("Connecting to " + server_url);
-	g_socket = new WebSocket(server_url);
+	console.log("Connecting to " + g_server_url);
+	g_socket = new WebSocket(g_server_url);
 	
 	// Handle connection open
 	g_socket.addEventListener('open', function () {
