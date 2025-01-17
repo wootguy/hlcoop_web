@@ -18,17 +18,17 @@ const WEBMSG_CHAT = 3;
 const WEBMSG_AUTH = 4;
 
 function read_string(view, offset) {
-	let str = "";
-	
+	let bytes = [];
+
 	for (let j = offset; j < view.byteLength; j++) {
 		let charCode = view.getUint8(j);
-		if (charCode == 0) {
-			break;
+		if (charCode === 0) {
+			break; // Null terminator found, end of string
 		}
-		str +=  String.fromCharCode(charCode);
+		bytes.push(charCode);
 	}
-	
-	return str;
+
+	return new TextDecoder('utf-8').decode(new Uint8Array(bytes));
 }
 
 function update_table_state() {
@@ -185,7 +185,7 @@ function refresh_player_table() {
 	}
 	
 	document.getElementById('pcount').textContent = pcount;
-	document.getElementById('tab_title').textContent = g_server_name + " (" + pcount + " / 32)";
+	document.getElementById('tab_title').textContent = "Half-Life Co-op (" + pcount + "/32)";
 	
 	update_table_state();
 }
@@ -352,6 +352,11 @@ function map_mouse_out(ev) {
 	}, 500);
 }
 
+function handle_img_error(event) {
+    event.target.src = 'missing_preview.png'; // Fallback image URL
+    event.target.onerror = null; // Prevent infinite loop if the fallback also fails
+}
+
 function update_next_maps(view) {
 	let offset = 1; // skip message type byte
 	let next_maps = [];
@@ -400,10 +405,11 @@ function update_next_maps(view) {
 
 function get_map_dat(mapname) {
 	for (let i = 0; i < g_map_data.length; i++) {
-		for (let k = 0; k < g_map_data[i].maps.length; k++) {
-			if (g_map_data[i].maps[k] == mapname) {
-				console.log("ZOMG MAP DAT: ", g_map_data[i]);
-				return g_map_data[i];
+		let map_dat = g_map_data[i];
+		
+		for (let k = 0; k < map_dat.maps.length; k++) {
+			if (map_dat.maps[k] == mapname) {
+				return map_dat;
 			}
 		}
 	}
@@ -430,7 +436,8 @@ function update_map_data() {
 	let current_img = current_div.getElementsByClassName("map_image")[0];
 	current_title.textContent = current_map;
 	current_div.href = current_url;
-	current_img.src = "img/" + current_map + ".jpg";
+	current_img.src = "img/" + current_dat.maps[0] + ".jpg";
+	current_img.onerror = handle_img_error;
 	current_div.removeEventListener('mouseover', map_mouse_over);
 	current_div.removeEventListener('mouseout', map_mouse_out);
 	current_div.addEventListener('mouseover', map_mouse_over);
@@ -442,7 +449,8 @@ function update_map_data() {
 	let next_img = next_div.getElementsByClassName("map_image")[0];
 	next_title.textContent = next_map;
 	next_div.href = next_url;
-	next_img.src = "img/" + next_map + ".jpg";
+	next_img.src = "img/" + next_dat.maps[0] + ".jpg";
+	next_img.onerror = handle_img_error;
 	next_div.removeEventListener('mouseover', map_mouse_over);
 	next_div.removeEventListener('mouseout', map_mouse_out);
 	next_div.addEventListener('mouseover', map_mouse_over);
@@ -478,6 +486,7 @@ function update_map_data() {
 		let img = document.createElement('img');
 		img.classList.add("map_image");
 		img.src = "img/" + g_map_stats[i].map + ".jpg";
+		img.onerror = handle_img_error;
 		
 		map.addEventListener('mouseover', map_mouse_over);
 		map.addEventListener('mouseout', map_mouse_out);
