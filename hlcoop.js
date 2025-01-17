@@ -9,6 +9,7 @@ var g_reset_table_timer;
 var g_mouseover_state = false;
 var g_auth_params;
 var g_auth_token;
+var g_map_data = {};
 
 const WEBMSG_SERVER_NAME = 0;
 const WEBMSG_PLAYER_LIST = 1;
@@ -392,15 +393,44 @@ function update_next_maps(view) {
 		g_map_stats.push({map, player_stats});
 	}
 	
+	console.log("Next maps:", g_map_stats);
+	
+	update_map_data();
+}
+
+function get_map_dat(mapname) {
+	for (let i = 0; i < g_map_data.length; i++) {
+		for (let k = 0; k < g_map_data[i].maps.length; k++) {
+			if (g_map_data[i].maps[k] == mapname) {
+				console.log("ZOMG MAP DAT: ", g_map_data[i]);
+				return g_map_data[i];
+			}
+		}
+	}
+	
+	let maps = [];
+	let link = "";
+	return {maps, link};
+}
+
+function update_map_data() {
+	if (!g_map_stats.length) {
+		return;
+	}
+	
 	let current_map = g_map_stats[0].map;
-	let current_url = "http://scmapdb.wikidot.com/map:azure-sheep";
+	let current_dat = get_map_dat(current_map);
+	let current_url = "http://scmapdb.wikidot.com/map:" + current_dat.link;
 	let next_map = g_map_stats[g_map_stats.length-1].map;
-	let next_url = "http://scmapdb.wikidot.com/map:azure-sheep";
+	let next_dat = get_map_dat(next_map);
+	let next_url = "http://scmapdb.wikidot.com/map:" + next_dat.link;
 	
 	let current_div = document.getElementById('current_map');
 	let current_title = current_div.getElementsByClassName("map_title")[0];
+	let current_img = current_div.getElementsByClassName("map_image")[0];
 	current_title.textContent = current_map;
-	current_title.href = current_url;
+	current_div.href = current_url;
+	current_img.src = "img/" + current_map + ".jpg";
 	current_div.removeEventListener('mouseover', map_mouse_over);
 	current_div.removeEventListener('mouseout', map_mouse_out);
 	current_div.addEventListener('mouseover', map_mouse_over);
@@ -409,8 +439,10 @@ function update_next_maps(view) {
 	
 	let next_div = document.getElementById('next_map');
 	let next_title = next_div.getElementsByClassName("map_title")[0];
+	let next_img = next_div.getElementsByClassName("map_image")[0];
 	next_title.textContent = next_map;
-	next_title.href = next_url;
+	next_div.href = next_url;
+	next_img.src = "img/" + next_map + ".jpg";
 	next_div.removeEventListener('mouseover', map_mouse_over);
 	next_div.removeEventListener('mouseout', map_mouse_out);
 	next_div.addEventListener('mouseover', map_mouse_over);
@@ -422,7 +454,8 @@ function update_next_maps(view) {
 	
 	for (let i = 1; i < g_map_stats.length-1; i++) {
 		let map = document.createElement('a');
-		let url = "http://scmapdb.wikidot.com/map:azure-sheep";
+		let dat = get_map_dat(g_map_stats[i].map);
+		let url = "http://scmapdb.wikidot.com/map:" + dat.link;
 		
 		map.classList.add("map_container");
 		map.href = url;
@@ -444,7 +477,7 @@ function update_next_maps(view) {
 		
 		let img = document.createElement('img');
 		img.classList.add("map_image");
-		img.src = "pages/img/map_stadium-3.jpg";
+		img.src = "img/" + g_map_stats[i].map + ".jpg";
 		
 		map.addEventListener('mouseover', map_mouse_over);
 		map.addEventListener('mouseout', map_mouse_out);
@@ -455,11 +488,32 @@ function update_next_maps(view) {
 	}
 	
 	document.getElementById('upcoming_maps_count').textContent = g_map_stats.length;
-	
-	console.log("Next maps:", g_map_stats);
 }
 
-function setup() {	
+async function downloadJson(url) {
+	try {
+		console.log("Downloading: " + url);
+		const response = await fetch(url);
+		
+		// Check if the response is OK
+		if (!response.ok) {
+			throw new Error(`HTTP error! Status: ${response.status}`);
+		}
+		
+		// Parse the response as JSON
+		const data = await response.json();
+		
+		// Log or return the JSON object
+		return data;
+	} catch (error) {
+		console.error('Error downloading or parsing JSON:', error);
+	}
+}
+
+async function setup() {
+	g_map_data = await downloadJson("mapdb.json");
+	update_map_data();
+	
 	let return_to = window.location;
 	
 	let openid_link = "https://steamcommunity.com/openid/login?openid.ns=http://specs.openid.net/auth/2.0&openid.mode=checkid_setup&openid.return_to=" + return_to + "&openid.realm=" + return_to +"&openid.identity=http://specs.openid.net/auth/2.0/identifier_select&openid.claimed_id=http://specs.openid.net/auth/2.0/identifier_select";
