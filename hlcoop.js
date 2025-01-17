@@ -1,5 +1,5 @@
 var g_socket;
-var g_server_url = 'wss://localhost:3000/test';
+var g_server_url = 'wss://w00tguy.ddns.net:3000/';
 //var g_server_url = 'ws://localhost:3000/test'; // for Visual Studio debugging
 var g_player_data = [];
 var g_map_stats = [];
