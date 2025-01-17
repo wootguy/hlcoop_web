@@ -10,12 +10,14 @@ var g_mouseover_state = false;
 var g_auth_params;
 var g_auth_token;
 var g_map_data = {};
+var g_web_clients = [];
 
 const WEBMSG_SERVER_NAME = 0;
 const WEBMSG_PLAYER_LIST = 1;
 const WEBMSG_NEXT_MAPS = 2;
 const WEBMSG_CHAT = 3;
 const WEBMSG_AUTH = 4;
+const WEBMSG_WEB_CLIENTS = 5;
 
 function read_string(view, offset) {
 	let bytes = [];
@@ -237,17 +239,7 @@ function update_server_name(view) {
 	document.getElementById('tab_title').textContent = name;
 }
 
-function parse_chat_message(view) {
-	let offset = 1; // skip message type byte
-
-	let steamid64 = view.getBigUint64(offset, true);
-	offset += 8;
-
-	let name = read_string(view, offset)
-	offset += name.length+1;
-	
-	let msg = read_string(view, offset);
-	
+function add_message(steamid64, name, msg) {
 	let chatbox = document.getElementById('chat_box');
 	
 	let chat_container = document.createElement('div');
@@ -260,7 +252,11 @@ function parse_chat_message(view) {
 	chat_name.textContent = name;
 	
 	let chat_msg = document.createElement('span');
-	chat_msg.textContent = ": " + msg;
+	if (steamid64 != 0) {
+		chat_msg.textContent = ": " + msg;
+	} else {
+		chat_msg.textContent = msg;
+	}
 	
 	chat_container.appendChild(chat_name);
 	chat_container.appendChild(chat_msg);
@@ -271,8 +267,41 @@ function parse_chat_message(view) {
 	}
 	
 	chatbox.scrollTop = chatbox.scrollHeight;
+}
+
+function parse_chat_message(view) {
+	let offset = 1; // skip message type byte
 	
-	console.log(name + ": " + msg);
+	while (offset < view.byteLength) {
+		let time = view.getBigUint64(offset, true);
+		offset += 8;
+		
+		let steamid64 = view.getBigUint64(offset, true);
+		offset += 8;
+		
+		let name = read_string(view, offset)
+		offset += name.length+1;
+		
+		let msg = read_string(view, offset);
+		offset += msg.length+1;
+		
+		add_message(steamid64, name, msg);
+	}
+}
+
+function parse_web_clients(view) {
+	let offset = 1; // skip message type byte
+	
+	g_web_clients = [];
+	
+	while (offset < view.byteLength) {
+		let steamid64 = view.getBigUint64(offset, true);
+		offset += 8;
+		
+		g_web_clients.push(steamid64);
+	}
+	
+	document.getElementById("client_anon_counter").textContent = g_web_clients.length;
 }
 
 function getCookie(name) {
@@ -607,6 +636,9 @@ function createWebSocket() {
 		}
 		else if (msgType == WEBMSG_AUTH) {
 			parse_auth(view);
+		}
+		else if (msgType == WEBMSG_WEB_CLIENTS) {
+			parse_web_clients(view);
 		}
 		else {
 			console.error("Unrecognized socket message type " + msgType);
