@@ -19,6 +19,10 @@ const WEBMSG_CHAT = 3;
 const WEBMSG_AUTH = 4;
 const WEBMSG_WEB_CLIENTS = 5;
 
+function get_utf8_data_len(str) {
+	return new TextEncoder().encode(str).length+1;
+}
+
 function read_string(view, offset) {
 	let bytes = [];
 
@@ -202,7 +206,7 @@ function update_player_data(view) {
 		offset += 8;
 		
 		let name = read_string(view, offset)
-		offset += name.length+1;
+		offset += get_utf8_data_len(name);
 
 		let status = view.getUint8(offset, true);
 		offset += 1;
@@ -280,10 +284,12 @@ function parse_chat_message(view) {
 		offset += 8;
 		
 		let name = read_string(view, offset)
-		offset += name.length+1;
+		offset += get_utf8_data_len(name);
 		
 		let msg = read_string(view, offset);
-		offset += msg.length+1;
+		offset += get_utf8_data_len(msg);
+		
+		msg = msg.replace(/\n$/, ''); // remove trailing newline if it exists
 		
 		add_message(steamid64, name, msg);
 	}
@@ -316,13 +322,13 @@ function parse_auth(view) {
 	offset += 8;
 	
 	let name = read_string(view, offset);
-	offset += name.length+1;
+	offset += get_utf8_data_len(name);
 	
 	let avatar = read_string(view, offset);
-	offset += avatar.length+1;
+	offset += get_utf8_data_len(avatar);
 	
 	let token = read_string(view, offset);
-	offset += token.length+1;
+	offset += get_utf8_data_len(token);
 	
 	if (token.length) {
 		const currentDate = new Date();
@@ -405,7 +411,7 @@ function update_next_maps(view) {
 	
 	for (let j = offset; j < view.byteLength; j++) {
 		let map = read_string(view, offset);
-		offset += map.length+1;
+		offset += get_utf8_data_len(map);
 		if (offset >= view.byteLength) {
 			continue;
 		}
