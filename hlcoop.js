@@ -131,11 +131,17 @@ function refresh_player_table() {
 		name_col.appendChild(plr);
 		
 		let status_col = document.createElement('td');
-		if (dat.status == 0) {
+		if (dat.status == 0 || dat.status == 1) {
 			if (dat.idleTime < 20) {
-				status_col.classList.add("alive");
-				status_col.textContent = "ALIVE";
-				status_col.title = "Player is alive";
+				if (dat.status == 0) {
+					status_col.classList.add("alive");
+					status_col.textContent = "ALIVE";
+					status_col.title = "Player is alive";
+				} else {
+					status_col.classList.add("dead");
+					status_col.textContent = "DEAD";
+					status_col.title = "Player is dead";
+				}
 			} else {
 				if (dat.idleTime > 60*2) {
 					status_col.classList.add("longidle");
@@ -147,12 +153,8 @@ function refresh_player_table() {
 					status_col.classList.add("shortidle");
 				}
 				status_col.textContent = "IDLE";
-				status_col.title = "Player has been idle for " + (dat.idleTime / 60.0).toFixed(1) + " minutes";
+				status_col.title = "Player has been idle for " + dat.idleTime + " seconds";
 			}
-		} else if (dat.status == 1) {
-			status_col.classList.add("dead");
-			status_col.textContent = "DEAD";
-			status_col.title = "Player is dead";
 		} else if (dat.status == 2) {
 			status_col.classList.add("spec");
 			status_col.textContent = "SPEC";
@@ -531,7 +533,7 @@ function update_map_data() {
 		upcoming.appendChild(map);
 	}
 	
-	document.getElementById('upcoming_maps_count').textContent = g_map_stats.length;
+	document.getElementById('upcoming_maps_count').textContent = g_map_stats.length-2;
 }
 
 async function downloadJson(url) {
