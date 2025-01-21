@@ -660,9 +660,11 @@ function update_map_ratings() {
 		let numLike = 0;
 		let numDislike = 0;
 		
+		let map_dat = get_map_dat(map);
+		let first_map = map_dat.maps[0];
 		let map_stats = undefined;
 		for (let i = 0; i < g_map_stats.length; i++) {
-			if (g_map_stats[i].map == map) {
+			if (g_map_stats[i].map == first_map) {
 				map_stats = g_map_stats[i];
 				break;
 			}
@@ -701,11 +703,21 @@ function update_map_ratings() {
 		
 		div.classList.remove("liked");
 		div.classList.remove("disliked");
-		if (numLike > 0) {
+		if (numLike > 0 && numDislike > 0) {
+			div.title = "wow mixed";
+			div.classList.add("liked");
+			div.classList.add("disliked");
+			div.title = "This map is highlighted orange due to mixed ratings and is selected with normal priority.";
+		}
+		else if (numLike > 0) {
+			div.title = "This map is highlighted green due to positive ratings and is selected with the highest priority.";
 			div.classList.add("liked");
 		}
-		if (numDislike > 0) {
+		else if (numDislike > 0) {
+			div.title = "This map is highlighted red due to negative ratings and is selected with the lowest priority.\n\nIf all players currently in the server rate it negatively then it will never be chosen as the next map.";
 			div.classList.add("disliked");
+		} else {
+			div.title = "This map isn't highlighted due to neutral ratings and is selected with normal priority.";
 		}
 	});
 }
