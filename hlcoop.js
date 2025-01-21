@@ -1,6 +1,6 @@
 var g_socket;
 var g_server_url = 'wss://w00tguy.ddns.net:3000/';
-//var g_server_url = 'ws://localhost:3000/test'; // for Visual Studio debugging
+//var g_server_url = 'ws://localhost:3000/'; // for Visual Studio debugging
 var g_player_data = [];
 var g_map_stats = [];
 var g_server_name = "Half-Life Co-op";
@@ -11,6 +11,7 @@ var g_auth_params;
 var g_auth_token;
 var g_map_data = {};
 var g_web_clients = [];
+var g_steamid = 0;
 
 const WEBMSG_SERVER_NAME = 0;
 const WEBMSG_PLAYER_LIST = 1;
@@ -18,6 +19,9 @@ const WEBMSG_NEXT_MAPS = 2;
 const WEBMSG_CHAT = 3;
 const WEBMSG_AUTH = 4;
 const WEBMSG_WEB_CLIENTS = 5;
+const WEBMSG_NOT_AUTHED = 6;
+const WEBMSG_LOGOUT = 7;
+const WEBMSG_RATING = 8;
 
 function get_utf8_data_len(str) {
 	return new TextEncoder().encode(str).length+1;
@@ -74,7 +78,19 @@ function update_table_state() {
 			}
 			
 			if (player_stats && player_stats.lastPlay && player_stats.totalPlays) {
-				row.cells[5].textContent = "NONE";
+				row.cells[5].classList.remove("green");
+				row.cells[5].classList.remove("red");
+				
+				if (player_stats.rating == 0) {
+					row.cells[5].textContent = "NONE";
+				} else if (player_stats.rating == 1) {
+					row.cells[5].classList.add("green");
+					row.cells[5].textContent = "LIKE";
+				} else if (player_stats.rating == 2) {
+					row.cells[5].classList.add("red");
+					row.cells[5].textContent = "DISLIKE";
+				}
+				
 				let minutesSinceEpoch = Math.floor(Date.now() / (1000*60));
 				let timeSincePlay = minutesSinceEpoch - player_stats.lastPlay;
 				let minutes = Math.round(timeSincePlay);
@@ -344,6 +360,8 @@ function parse_auth(view) {
 	let login_subtext = document.getElementById("login_subtext");
 	let login_icon = document.getElementById("login_icon");
 	
+	g_steamid = 0;
+	
 	if (steamid64 == 0) {
 		// auth not attempted
 	}
@@ -366,8 +384,79 @@ function parse_auth(view) {
 		login_text.textContent = name;
 		login_text.title = name;
 		login_but.classList.add("authed");
-		login_subtext.textContent= "(click to change user)";
+		login_subtext.textContent= "(click to log out)";
+		login_but.href = "";
+		
+		document.getElementById('login_but').addEventListener('click', logout);
+		
+		g_steamid = steamid64;
 	}
+}
+
+function parse_rating(view) {
+	let offset = 1; // skip message type byte
+
+	let steamid64 = view.getBigUint64(offset, true);
+	offset += 8;
+	
+	let rating = view.getUint8(offset, true);
+	offset += 1;
+	
+	let map = read_string(view, offset);
+	offset += get_utf8_data_len(map);
+	
+	let map_stats = undefined;
+	for (let i = 0; i < g_map_stats.length; i++) {
+		if (g_map_stats[i].map == map) {
+			map_stats = g_map_stats[i];
+			break;
+		}
+	}
+	
+	if (!map_stats) {
+		console.log("Missing map stats for " + map);
+		return;
+	}
+	
+	let player_stats = undefined;
+	for (let k = 0; k < map_stats.player_stats.length; k++) {
+		if (map_stats.player_stats[k].steamid == steamid64) {
+			player_stats = map_stats.player_stats[k];
+			break;
+		}
+	}
+	
+	player_stats.rating = rating;
+	update_map_ratings();
+	refresh_player_table();
+}
+
+function logout(ev) {
+	ev.preventDefault();
+	g_socket.send("logout");
+}
+
+function finish_logout() {
+	let login_but = document.getElementById("login_but");
+	let login_text = document.getElementById("login_text");
+	let login_subtext = document.getElementById("login_subtext");
+	let login_icon = document.getElementById("login_icon");
+	
+	login_but.removeEventListener('click', logout);
+	
+	login_but.classList.remove("authed");
+	login_text.textContent= "Sign in through Steam";
+	login_subtext.textContent= "(required for some actions)";
+	login_subtext.classList.remove("red");
+	login_icon.src = "steam_icon_logo.svg";
+	
+	document.cookie = "token=DELETED; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Strict; secure";
+	
+	g_steamid = 0;
+	
+	setup_openid_link();
+	
+	update_map_ratings();
 }
 
 
@@ -387,6 +476,21 @@ function map_mouse_out(ev) {
 		g_selected_map = "";
 		update_table_state();
 	}, 500);
+}
+
+function rate_map(ev) {
+	ev.preventDefault();
+	
+	if (g_steamid == 0) {
+		action_denied_popup();
+		return;
+	}
+	
+	let map = event.target.getAttribute("map");
+	let rating = event.target.getAttribute("rating");
+	
+	g_socket.send("rate;" + rating + ";" + map);
+	console.log("Rate map " + map + " with " + rating);
 }
 
 function handle_img_error(event) {
@@ -429,7 +533,10 @@ function update_next_maps(view) {
 			let totalPlays = view.getUint16(offset, true)
 			offset += 2;
 			
-			player_stats.push({steamid, lastPlay, totalPlays});
+			let rating = view.getUint8(offset, true)
+			offset += 1;
+			
+			player_stats.push({steamid, lastPlay, totalPlays, rating});
 		}
 		
 		g_map_stats.push({map, player_stats});
@@ -460,51 +567,16 @@ function update_map_data() {
 	if (!g_map_stats.length) {
 		return;
 	}
-	
-	let current_map = g_map_stats[0].map;
-	let current_dat = get_map_dat(current_map);
-	let current_url = "http://scmapdb.wikidot.com/map:" + current_dat.link;
-	let next_map = g_map_stats[g_map_stats.length-1].map;
-	let next_dat = get_map_dat(next_map);
-	let next_url = "http://scmapdb.wikidot.com/map:" + next_dat.link;
-	
-	let current_div = document.getElementById('current_map');
-	let current_title = current_div.getElementsByClassName("map_title")[0];
-	let current_img = current_div.getElementsByClassName("map_image")[0];
-	current_title.textContent = current_map;
-	current_div.href = current_url;
-	current_img.src = "img/" + current_dat.maps[0] + ".jpg";
-	current_img.onerror = handle_img_error;
-	current_div.removeEventListener('mouseover', map_mouse_over);
-	current_div.removeEventListener('mouseout', map_mouse_out);
-	current_div.addEventListener('mouseover', map_mouse_over);
-	current_div.addEventListener('mouseout', map_mouse_out);
-	current_div.setAttribute("map", current_map);
-	
-	let next_div = document.getElementById('next_map');
-	let next_title = next_div.getElementsByClassName("map_title")[0];
-	let next_img = next_div.getElementsByClassName("map_image")[0];
-	next_title.textContent = next_map;
-	next_div.href = next_url;
-	next_img.src = "img/" + next_dat.maps[0] + ".jpg";
-	next_img.onerror = handle_img_error;
-	next_div.removeEventListener('mouseover', map_mouse_over);
-	next_div.removeEventListener('mouseout', map_mouse_out);
-	next_div.addEventListener('mouseover', map_mouse_over);
-	next_div.addEventListener('mouseout', map_mouse_out);
-	next_div.setAttribute("map", next_map);
+
+	document.getElementById('current_map').setAttribute("map", g_map_stats[0].map);
+	document.getElementById('next_map').setAttribute("map", g_map_stats[g_map_stats.length-1].map);
 	
 	let upcoming = document.getElementById('upcoming_maps_grid');
 	upcoming.innerHTML = "";
 	
 	for (let i = 1; i < g_map_stats.length-1; i++) {
 		let map = document.createElement('a');
-		let dat = get_map_dat(g_map_stats[i].map);
-		let url = "http://scmapdb.wikidot.com/map:" + dat.link;
-		
 		map.classList.add("map_container");
-		map.href = url;
-		map.target = "_blank";
 		map.setAttribute("map", g_map_stats[i].map);
 		
 		if (next_map == g_map_stats[i].map) {
@@ -513,27 +585,129 @@ function update_map_data() {
 	
 		let title = document.createElement('span');
 		title.classList.add("map_title");
-		title.title = g_map_stats[i].map;
-		title.textContent = g_map_stats[i].map;
-		
-		if (g_map_stats[i].map.length > 18) {
-			title.classList.add("longtext");
-		}
 		
 		let img = document.createElement('img');
 		img.classList.add("map_image");
-		img.src = "img/" + g_map_stats[i].map + ".jpg";
-		img.onerror = handle_img_error;
 		
-		map.addEventListener('mouseover', map_mouse_over);
-		map.addEventListener('mouseout', map_mouse_out);
+		let like = document.createElement('img');
+		like.classList.add("like_button");
+		like.src = "thumbs_up.png";
+		
+		let dislike = document.createElement('img');
+		dislike.classList.add("dislike_button");
+		dislike.src = "thumbs_down.png";
 		
 		map.appendChild(title);
 		map.appendChild(img);
+		map.appendChild(like);
+		map.appendChild(dislike);
 		upcoming.appendChild(map);
 	}
 	
+	document.querySelectorAll('.map_container').forEach(function(div) {
+		let map = div.getAttribute("map");
+		let dat = get_map_dat(map);
+		let url = "http://scmapdb.wikidot.com/map:" + dat.link;
+		
+		div.href = url;
+		div.target = "_blank";
+		div.removeEventListener('mouseover', map_mouse_over);
+		div.addEventListener('mouseover', map_mouse_over);
+		div.addEventListener('mouseout', map_mouse_out);
+		div.removeEventListener('mouseout', map_mouse_out);
+		
+		let title = div.getElementsByClassName("map_title")[0]; 
+		title.title = map;
+		title.textContent = map;
+		if (map.length > 18) {
+			title.classList.add("longtext");
+		}
+		
+		let img = div.getElementsByClassName("map_image")[0];
+		img.src = "img/" + dat.maps[0] + ".jpg";
+		img.onerror = handle_img_error;
+		
+		let like = div.getElementsByClassName("like_button")[0];
+		like.setAttribute("rating", "1");
+		like.setAttribute("map", dat.maps[0]);
+		like.removeEventListener("click", rate_map);
+		like.addEventListener("click", rate_map);
+		
+		let dislike = div.getElementsByClassName("dislike_button")[0];
+		dislike.setAttribute("rating", "2");
+		dislike.setAttribute("map", dat.maps[0]);
+		dislike.removeEventListener("click", rate_map);
+		dislike.addEventListener("click", rate_map);
+	});
+	
 	document.getElementById('upcoming_maps_count').textContent = g_map_stats.length-2;
+	
+	update_map_ratings();
+}
+
+function update_map_ratings() {
+	const divs = document.querySelectorAll('.map_container');
+	let plist = document.getElementById('player_list');
+	
+	divs.forEach(function(div) {
+		let map = div.getAttribute("map");
+		let like_button = div.getElementsByClassName("like_button")[0];
+		let dislike_button = div.getElementsByClassName("dislike_button")[0];
+		
+		like_button.classList.remove("own_rating");
+		dislike_button.classList.remove("own_rating");
+		
+		let numLike = 0;
+		let numDislike = 0;
+		
+		let map_stats = undefined;
+		for (let i = 0; i < g_map_stats.length; i++) {
+			if (g_map_stats[i].map == map) {
+				map_stats = g_map_stats[i];
+				break;
+			}
+		}
+		
+		if (!map_stats) {
+			console.log("Missing map stats for " + map);
+			return;
+		}
+		
+		for (let i = 1; i < plist.rows.length; i++) {
+			let id = plist.rows[i].getAttribute("steamid");
+			
+			let player_stats = undefined;
+			for (let k = 0; k < map_stats.player_stats.length; k++) {
+				if (map_stats.player_stats[k].steamid == id) {
+					player_stats = map_stats.player_stats[k];
+					break;
+				}
+			}
+			
+			if (player_stats) {
+				if (player_stats.rating == 1) {
+					if (id == g_steamid) {
+						like_button.classList.add("own_rating");
+					}
+					numLike += 1;
+				} else if (player_stats.rating == 2) {
+					if (id == g_steamid) {
+						dislike_button.classList.add("own_rating");
+					}
+					numDislike += 1;
+				}
+			}
+		}
+		
+		div.classList.remove("liked");
+		div.classList.remove("disliked");
+		if (numLike > 0) {
+			div.classList.add("liked");
+		}
+		if (numDislike > 0) {
+			div.classList.add("disliked");
+		}
+	});
 }
 
 async function downloadJson(url) {
@@ -556,15 +730,21 @@ async function downloadJson(url) {
 	}
 }
 
+function setup_openid_link() {
+	let return_to = window.location.origin + window.location.pathname;	
+	let openid_link = "https://steamcommunity.com/openid/login?openid.ns=http://specs.openid.net/auth/2.0&openid.mode=checkid_setup&openid.return_to=" + return_to + "&openid.realm=" + return_to +"&openid.identity=http://specs.openid.net/auth/2.0/identifier_select&openid.claimed_id=http://specs.openid.net/auth/2.0/identifier_select";
+	document.getElementById("login_but").setAttribute("href", openid_link);
+}
+
 async function setup() {
 	g_map_data = await downloadJson("mapdb.json");
 	update_map_data();
+
+	document.getElementById('closePopup').addEventListener('click', function() {
+		popup.style.display = 'none';
+	});
 	
-	let return_to = window.location;
-	
-	let openid_link = "https://steamcommunity.com/openid/login?openid.ns=http://specs.openid.net/auth/2.0&openid.mode=checkid_setup&openid.return_to=" + return_to + "&openid.realm=" + return_to +"&openid.identity=http://specs.openid.net/auth/2.0/identifier_select&openid.claimed_id=http://specs.openid.net/auth/2.0/identifier_select";
-	
-	document.getElementById("login_but").setAttribute("href", openid_link);
+	setup_openid_link();
 	
 	let params = new URLSearchParams(window.location.search);
 	g_auth_token = getCookie("token");
@@ -596,6 +776,10 @@ async function setup() {
 	}
 	
 	createWebSocket();
+}
+
+function action_denied_popup() {
+	document.getElementById('popup').style.display = 'flex';
 }
 
 function createWebSocket() {
@@ -647,6 +831,15 @@ function createWebSocket() {
 		}
 		else if (msgType == WEBMSG_WEB_CLIENTS) {
 			parse_web_clients(view);
+		}
+		else if (msgType == WEBMSG_NOT_AUTHED) {
+			action_denied_popup();
+		}
+		else if (msgType == WEBMSG_LOGOUT) {
+			finish_logout();
+		}
+		else if (msgType = WEBMSG_RATING) {
+			parse_rating(view);
 		}
 		else {
 			console.error("Unrecognized socket message type " + msgType);
