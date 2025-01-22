@@ -26,6 +26,7 @@ const WEBMSG_NOT_AUTHED = 6;
 const WEBMSG_LOGOUT = 7;
 const WEBMSG_RATING = 8;
 const WEBMSG_MAP_LIST = 9;
+const WEBMSG_OWN_MAP_STATS = 10;
 
 function get_utf8_data_len(str) {
 	return new TextEncoder().encode(str).length+1;
@@ -434,9 +435,11 @@ function parse_rating(view) {
 		}
 	}
 	
-	player_stats.rating = rating;
-	update_map_ratings();
-	refresh_player_table();
+	if (player_stats) {
+		player_stats.rating = rating;
+		update_map_ratings();
+		refresh_player_table();
+	}
 }
 
 function logout(ev) {
@@ -506,7 +509,7 @@ function handle_img_error(event) {
     event.target.onerror = null; // Prevent infinite loop if the fallback also fails
 }
 
-function parse_map_stats(view) {
+function parse_map_stats(view, isOwnStats) {
 	let offset = 1; // skip message type byte
 	let next_maps = [];
 
@@ -521,7 +524,12 @@ function parse_map_stats(view) {
 
 	console.log("Player ids: ", player_ids)
 	
-	g_map_stats = [];
+	if (!isOwnStats)
+		g_map_stats = [];
+	else {
+		// TODO: check if already loaded stats because of being in the server
+	}
+	
 	let mapIdx = 0;
 	
 	for (let j = offset; j < view.byteLength && mapIdx < g_map_cycle.length; j++) {
@@ -555,7 +563,15 @@ function parse_map_stats(view) {
 			player_stats.push({steamid, lastPlay, totalPlays, rating});
 		}
 		
-		g_map_stats.push({map, mapType, player_stats});
+		if (isOwnStats) {
+			for (let k = 0; k < g_map_stats.length; k++) {
+				if (g_map_stats[k].map == map) {
+					g_map_stats[k].player_stats.push(player_stats[0]);
+				}
+			}
+		} else {
+			g_map_stats.push({map, mapType, player_stats});
+		}
 	}
 	
 	g_current_map = g_map_stats[0].map;
@@ -667,8 +683,8 @@ function update_map_data() {
 		div.target = "_blank";
 		div.removeEventListener('mouseover', map_mouse_over);
 		div.addEventListener('mouseover', map_mouse_over);
-		div.addEventListener('mouseout', map_mouse_out);
 		div.removeEventListener('mouseout', map_mouse_out);
+		div.addEventListener('mouseout', map_mouse_out);
 		
 		let title = div.getElementsByClassName("map_title")[0]; 
 		title.title = map;
@@ -707,6 +723,21 @@ function update_map_ratings() {
 	const divs = document.querySelectorAll('.map_container');
 	let plist = document.getElementById('player_list');
 	
+	let steamids = [];
+	let ownIdPushed = false;
+	for (let i = 1; i < plist.rows.length; i++) {
+		let id = plist.rows[i].getAttribute("steamid");
+		if (id)
+			steamids.push(id);
+		if (id == g_steamid) {
+			ownIdPushed = true;
+		}
+	}
+	if (!ownIdPushed) {
+		steamids.push(g_steamid);
+	}
+	let shouldCountOwnId = ownIdPushed;
+	
 	divs.forEach(function(div) {
 		let map = div.getAttribute("map");
 		let like_button = div.getElementsByClassName("like_button")[0];
@@ -732,8 +763,8 @@ function update_map_ratings() {
 			return;
 		}
 		
-		for (let i = 1; i < plist.rows.length; i++) {
-			let id = plist.rows[i].getAttribute("steamid");
+		for (let i = 0; i < steamids.length; i++) {
+			let id = steamids[i];
 			
 			let player_stats = undefined;
 			for (let k = 0; k < map_stats.player_stats.length; k++) {
@@ -747,13 +778,21 @@ function update_map_ratings() {
 				if (player_stats.rating == 1) {
 					if (id == g_steamid) {
 						like_button.classList.add("own_rating");
+						if (shouldCountOwnId) {
+							numLike += 1;
+						}
+					} else {
+						numLike += 1;
 					}
-					numLike += 1;
 				} else if (player_stats.rating == 2) {
 					if (id == g_steamid) {
 						dislike_button.classList.add("own_rating");
+						if (shouldCountOwnId) {
+							numDislike += 1;
+						}
+					} else {
+						numDislike += 1;
 					}
-					numDislike += 1;
 				}
 			}
 		}
@@ -927,7 +966,7 @@ function createWebSocket() {
 			update_player_data(view);
 		}
 		else if (msgType == WEBMSG_NEXT_MAPS) {
-			parse_map_stats(view);
+			parse_map_stats(view, false);
 		}
 		else if (msgType == WEBMSG_CHAT) {
 			parse_chat_message(view);
@@ -949,6 +988,9 @@ function createWebSocket() {
 		}
 		else if (msgType == WEBMSG_MAP_LIST) {
 			parse_map_list(view);
+		}
+		else if (msgType == WEBMSG_OWN_MAP_STATS) {
+			parse_map_stats(view, true);
 		}
 		else {
 			console.error("Unrecognized socket message type " + msgType);
