@@ -255,6 +255,19 @@
 			#upcoming_maps .map_image {
 				height: 89px;
 			}
+			#upcoming_maps .map_container{
+				display: none;
+			}
+			#upcoming_maps .map_container.filtered {
+				display: none !important;
+			}
+			#upcoming_maps .map_container.upcoming {
+				display: inline-block;
+			}
+			#upcoming_maps.all_maps .map_container {
+				display: inline-block;
+			}
+
 			
 			#filter_maps_container {
 				padding: 10px;
@@ -447,7 +460,7 @@ Rejoining the server on the same map does not randomize the next map. This preve
 					</div>
 				</div>
 				<div id="upcoming_maps">
-					<h2>Upcoming maps (<span id="upcoming_maps_count">?</span>) <span class="tooltip" title="Maps displayed here depend on who is currently in the server. A new player joining may cause this map list to change completely.
+					<h2><span id="upcoming_title">Upcoming maps</span> (<span id="upcoming_maps_count">?</span>) <span class="tooltip" title="Maps displayed here depend on who is currently in the server. A new player joining may cause this map list to change completely.
 
 The server tries to pick maps that haven't been played in the longest time. Every map should feel fresh and no one should have to replay the same map for another month or so. Map ratings determine selection order after the upcoming maps pool is filled.
 
@@ -469,7 +482,9 @@ No light = No ratings. Normal priority. Selected if no green maps exist.
 Red light = Negative ratings. Low priority. Selected only if all other maps are red.">(?)</span></h2>
 					<div id="upcoming_maps_grid"></div>
 					<div id="filter_maps_container">
-						<input id="maps_filter" class="hidden" type="text" placeholder="Search...">
+						<input id="maps_filter" type="text" placeholder="Search..." onchange = "filter_maps();" onkeypress="this.onchange();" onpaste="this.onchange();" oninput="this.onchange();">
+						<input type="checkbox" id="show_all_maps" name="show_all_maps" value="asdf">
+						<label for="show_all_maps">Show ALL maps</label><br>
 					</div>
 				</div>
 			</div>
@@ -478,7 +493,7 @@ Red light = Negative ratings. Low priority. Selected only if all other maps are 
 		<div id="popup" class="popup">
 			<div class="popup-content">
 				<p id="popup-text">
-					Sign in to Steam so I can link your ratings to your Steam ID.
+					Sign in to Steam so the server can link ratings to your Steam ID.
 					<br><br>
 					If you don't want to do that, use the <span class="command-text">.rate</span> command in-game. You can pass a map name to rate a map other than the current one. For example, <span class="command-text">.rate ascii_art2</span> will bring up a rating menu for ascii_art2.
 				</p>
