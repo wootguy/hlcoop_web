@@ -562,16 +562,16 @@ function parse_map_stats(view, isOwnStats) {
 
 	console.log("Player ids: ", player_ids)
 	
-	if (!isOwnStats)
+	if (!isOwnStats) {
 		g_map_stats = [];
+		g_total_plays = {};
+		g_multi_plays = {};
+	}
 	else {
 		// TODO: check if already loaded stats because of being in the server
 	}
 	
 	let mapIdx = 0;
-	
-	g_total_plays = {}
-	g_multi_plays = {}
 	let datIdx = 0;
 	
 	for (let j = offset; j < view.byteLength && mapIdx < g_map_cycle.length; j++) {
