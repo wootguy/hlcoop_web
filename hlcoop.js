@@ -54,9 +54,10 @@ function read_string(view, offset) {
 }
 
 function update_table_state() {
-	let plist = document.getElementById('player_list');
+	let plist = document.getElementById('player_list').querySelector('tbody');
 	
 	if (g_selected_map) {
+		
 		let map_stats = undefined;
 		for (let i = 0; i < g_map_stats.length; i++) {
 			if (g_map_stats[i].map == g_selected_map) {
@@ -70,7 +71,7 @@ function update_table_state() {
 			return;
 		}
 		
-		for (let i = 1; i < plist.rows.length; i++) {
+		for (let i = 0; i < plist.rows.length; i++) {
 			let row = plist.rows[i];
 			let id = row.getAttribute("steamid");
 			
@@ -128,29 +129,31 @@ function update_table_state() {
 			}
 		}
 		
-		plist.classList.add("stat_view");
+		document.getElementById('player_list').classList.add("stat_view");
 	} else {
-		plist.classList.remove("stat_view");
+		document.getElementById('player_list').classList.remove("stat_view");
 	}
 }
 
 function refresh_player_table() {
-	let plist = document.getElementById('player_list');
+	let plist = document.getElementById('player_list').querySelector('tbody');
+	
+	let oldRowCount = plist.rows.length;
 	
 	// remove extra rows
-	for (let i = g_player_data.length+1; i < plist.rows.length; i++) {
+	for (let i = g_player_data.length; i < plist.rows.length; i++) {
 		plist.deleteRow(i);
 	}
 	
 	for (let i = 0; i < g_player_data.length; i++) {
 		let dat = g_player_data[i];
 		
-		if (i >= plist.rows.length-1) {
+		if (i >= plist.rows.length) {
 			let row = plist.insertRow(plist.rows.length);
 			row.innerHTML = "<tr><td><a></a><img class=\"rank\"/></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>";;
 		}
 		
-		let row = plist.rows[i+1];
+		let row = plist.rows[i];
 		let rank = row.cells[0].getElementsByClassName('rank')[0];
 		let name = row.cells[0].getElementsByTagName('a')[0];
 		
@@ -240,6 +243,11 @@ function refresh_player_table() {
 	document.getElementById('tab_title').textContent = "Half-Life Co-op (" + g_player_data.length + "/32)";
 	
 	update_table_state();
+	
+	if (oldRowCount != plist.rows.length) {
+		let chatbox = document.getElementById('chat_box');	
+		chatbox.scrollTop = chatbox.scrollHeight;
+	}
 }
 
 function update_player_data(view) {
@@ -293,11 +301,23 @@ function update_server_name(view) {
 	document.getElementById('tab_title').textContent = name;
 }
 
-function add_message(steamid64, name, msg) {
+function add_message(steamid64, name, msg, time) {
 	let chatbox = document.getElementById('chat_box');
 	
 	let chat_container = document.createElement('div');
 	chat_container.classList.add("chat_message");
+	
+	let chat_time = document.createElement('span');
+	chat_time.classList.add("chat_time");
+	const date = new Date(Number(time));
+	const hours = date.getHours().toString().padStart(2, '0');
+	const minutes = date.getMinutes().toString().padStart(2, '0');
+	chat_time.textContent = `${hours}:${minutes} `;
+	
+	chat_time.addEventListener("mouseover", function(ev) {
+		const deltaTime = Number(new Date()) - Number(date);
+		chat_time.title = format_age(Math.floor(deltaTime / 1000)) + " ago";
+	});
 	
 	let chat_name = document.createElement('a');
 	chat_name.classList.add("player_name");
@@ -312,6 +332,7 @@ function add_message(steamid64, name, msg) {
 		chat_msg.textContent = msg;
 	}
 	
+	chat_container.appendChild(chat_time);
 	chat_container.appendChild(chat_name);
 	chat_container.appendChild(chat_msg);
 	chatbox.appendChild(chat_container);
@@ -341,7 +362,7 @@ function parse_chat_message(view) {
 		
 		msg = msg.replace(/\n$/, ''); // remove trailing newline if it exists
 		
-		add_message(steamid64, name, msg);
+		add_message(steamid64, name, msg, time);
 	}
 }
 
@@ -416,7 +437,7 @@ function parse_auth(view) {
 		login_text.textContent = name;
 		login_text.title = name;
 		login_but.classList.add("authed");
-		login_subtext.textContent= "(click to log out)";
+		login_subtext.textContent= "(click to sign out)";
 		login_but.href = "";
 		
 		document.getElementById('login_but').addEventListener('click', logout);
@@ -824,12 +845,12 @@ function update_map_data() {
 
 function update_map_ratings() {
 	const divs = document.querySelectorAll('.map_container');
-	let plist = document.getElementById('player_list');
+	let plist = document.getElementById('player_list').querySelector('tbody');
 	
 	let steamids = [];
 	let connectedIds = {};
 	let ownIdPushed = false;
-	for (let i = 1; i < plist.rows.length; i++) {
+	for (let i = 0; i < plist.rows.length; i++) {
 		let id = plist.rows[i].getAttribute("steamid");
 		if (id)
 			steamids.push(id);
@@ -917,7 +938,7 @@ function update_map_ratings() {
 		div.classList.remove("disliked");
 		if (!was_played && g_player_data.length) {
 			div.classList.add("new");
-			div.title = "This map has a rainbow effect because no one in the server has played it before.";
+			div.title = "This map has a rainbow effect because no one in the server has played it. It is selected with the highest priority.";
 		}
 		else if (numLike > 0 && numDislike > 0) {
 			div.classList.add("liked");
@@ -941,11 +962,28 @@ function format_timer(secondsPassed) {
 	let seconds = secondsPassed % 60;
 	let minutes = Math.floor((secondsPassed / 60) % 60);
 	let hours = Math.floor(secondsPassed / (60*60));
+	let minutesTotal = Math.round(secondsPassed / 60);
 	
-	if (hours > 0) {
+	if (minutesTotal > 99) {
 		return `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 	} else {
-		return `${minutes}:${String(seconds).padStart(2, '0')}`;
+		return `${minutesTotal}:${String(seconds).padStart(2, '0')}`;
+	}
+}
+
+function format_age(secondsPassed) {
+	let seconds = secondsPassed;
+	let minutes = Math.round(secondsPassed / 60);
+	let hours = Math.round(secondsPassed / (60*60));
+	
+	if (hours > 2) {
+		return "" + hours + "h";
+	}
+	else if (minutes > 2) {
+		return "" + minutes + "m";
+	}
+	else {
+		return "" + seconds + "s";
 	}
 }
 
@@ -1017,6 +1055,7 @@ async function setup() {
 	});
 
 	document.getElementById("maps_filter").value = "";
+	document.getElementById("send_message").value = "";
 	document.getElementById('show_all_maps').checked = false;
 	document.getElementById("show_all_maps").addEventListener("change", function() {
 		let upcoming = document.getElementById("upcoming_maps");
@@ -1036,8 +1075,14 @@ async function setup() {
 		}
 	});
 	
-	// Add an event listener for the change event
 	document.getElementById("maps_filter").addEventListener('onchange', filter_maps);
+
+	document.getElementById('send_message').addEventListener('keydown', (event) => {
+		let message = document.getElementById("send_message").value.trim();
+		if (event.key === 'Enter' && message.length) {
+			alert("Oopsie whoopsie! Chat message feature not implemented.");
+		}
+	});
 	
 	setup_openid_link();
 	
