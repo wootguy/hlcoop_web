@@ -30,6 +30,7 @@ const WEBMSG_LOGOUT = 7;
 const WEBMSG_RATING = 8;
 const WEBMSG_MAP_LIST = 9;
 const WEBMSG_OWN_MAP_STATS = 10;
+const WEBMSG_MAP_INFO = 11;
 
 function get_utf8_data_len(str) {
 	return new TextEncoder().encode(str).length+1;
@@ -571,10 +572,12 @@ function parse_map_stats(view, isOwnStats) {
 	
 	g_total_plays = {}
 	g_multi_plays = {}
+	let datIdx = 0;
 	
 	for (let j = offset; j < view.byteLength && mapIdx < g_map_cycle.length; j++) {
 		let map = g_map_cycle[mapIdx][0];
-		let readingCurrentAndNextMap = g_map_stats.length < 2;
+		let readingCurrentAndNextMap = datIdx < 2 && !isOwnStats;
+		datIdx++;
 		
 		if (readingCurrentAndNextMap) {
 			// map name only written for current and next map, in case they are not cycle maps
@@ -630,8 +633,10 @@ function parse_map_stats(view, isOwnStats) {
 		}
 	}
 	
-	g_current_map = g_map_stats[0].map;
-	g_next_map = g_map_stats[1].map;
+	if (g_map_stats.length) {
+		g_current_map = g_map_stats[0].map;
+		g_next_map = g_map_stats[1].map;
+	}
 	
 	console.log("Map stats:", g_map_stats);
 	
@@ -782,6 +787,7 @@ function update_map_ratings() {
 	let plist = document.getElementById('player_list');
 	
 	let steamids = [];
+	let connectedIds = {};
 	let ownIdPushed = false;
 	for (let i = 1; i < plist.rows.length; i++) {
 		let id = plist.rows[i].getAttribute("steamid");
@@ -790,6 +796,7 @@ function update_map_ratings() {
 		if (id == g_steamid) {
 			ownIdPushed = true;
 		}
+		connectedIds[id] = true;
 	}
 	if (!ownIdPushed) {
 		steamids.push(g_steamid);
@@ -821,6 +828,8 @@ function update_map_ratings() {
 			return;
 		}
 		
+		let was_played = false;
+		
 		for (let i = 0; i < steamids.length; i++) {
 			let id = steamids[i];
 			
@@ -833,6 +842,10 @@ function update_map_ratings() {
 			}
 			
 			if (player_stats) {
+				if (player_stats.totalPlays > 0 && id in connectedIds) {
+					was_played = true;
+				}
+				
 				if (player_stats.rating == 1) {
 					if (id == g_steamid) {
 						like_button.classList.add("own_rating");
@@ -855,10 +868,14 @@ function update_map_ratings() {
 			}
 		}
 		
+		div.classList.remove("new");
 		div.classList.remove("liked");
 		div.classList.remove("disliked");
-		if (numLike > 0 && numDislike > 0) {
-			div.title = "wow mixed";
+		if (!was_played) {
+			div.classList.add("new");
+			div.title = "This map has a rainbow effect because no one in the server has played it before.";
+		}
+		else if (numLike > 0 && numDislike > 0) {
 			div.classList.add("liked");
 			div.classList.add("disliked");
 			div.title = "This map is highlighted orange due to mixed ratings and is selected with normal priority.";
