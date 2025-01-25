@@ -146,13 +146,6 @@ function refresh_player_table() {
 			dat =  g_player_data[i];
 		}
 		
-		let name = document.createElement('a');
-		name.textContent = dat.name;
-		name.href = "https://steamcommunity.com/profiles/" + dat.steamid64;
-		name.target = "_blank";
-		name.title = dat.name;
-		
-		
 		let rank = document.createElement('img');
 		rank.classList.add("rank");
 		
@@ -161,11 +154,11 @@ function refresh_player_table() {
 		//console.log("map plays for " + dat.name + " is " + mapsPlayed + " / " + g_map_cycle.length);
 		
 		if (mapMutliPlayed >= g_map_cycle.length) {
-			rank.title = "AUTIST - Played every map 2+ times!?";
+			rank.title = "AUTIST - Played every map 2+ times";
 			rank.src = "icon/rank_5.png";
 		}
 		else if (mapsPlayed >= g_map_cycle.length) {
-			rank.title = "MASTER - Played every map!";
+			rank.title = "MASTER - Played every map";
 			rank.src = "icon/rank_4.png";
 		}
 		else if (mapsPlayed >= 400) {
@@ -180,7 +173,16 @@ function refresh_player_table() {
 			rank.title = "NOVICE - Played 100+ maps";
 			rank.src = "icon/rank_1.png";
 		}
+		else if (mapsPlayed < 10) {
+			rank.title = "NEWB - Played fewer than 10 maps";
+			rank.src = "icon/newb.png";
+		}
 		
+		let name = document.createElement('a');
+		name.textContent = dat.name;
+		name.href = "https://steamcommunity.com/profiles/" + dat.steamid64;
+		name.target = "_blank";
+		name.title = dat.name + "\n\nMaps played: " + (mapsPlayed ? mapsPlayed : 0);
 		
 		let name_col = document.createElement('td');
 		name_col.appendChild(name);
