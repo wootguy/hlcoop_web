@@ -12,6 +12,9 @@ var g_auth_token;
 var g_map_data = {};
 var g_web_clients = [];
 var g_map_cycle = [];
+var g_total_maps = 0;
+var g_total_plays = {}; // maps a steam id to total number of maps played
+var g_multi_plays = {}; // maps a steam id to total number of maps played 2+ times
 var g_steamid = 0;
 var g_current_map;
 var g_next_map;
@@ -142,14 +145,46 @@ function refresh_player_table() {
 			dat =  g_player_data[i];
 		}
 		
-		let plr = document.createElement('a');
-		plr.href = "https://steamcommunity.com/profiles/" + dat.steamid64;
-		plr.target = "_blank";
-		plr.title = dat.name;
-		plr.textContent = dat.name;
+		let name = document.createElement('a');
+		name.textContent = dat.name;
+		name.href = "https://steamcommunity.com/profiles/" + dat.steamid64;
+		name.target = "_blank";
+		name.title = dat.name;
+		
+		
+		let rank = document.createElement('img');
+		rank.classList.add("rank");
+		
+		let mapsPlayed = g_total_plays[dat.steamid64];
+		let mapMutliPlayed = g_multi_plays[dat.steamid64];
+		//console.log("map plays for " + dat.name + " is " + mapsPlayed + " / " + g_map_cycle.length);
+		
+		if (mapMutliPlayed >= g_map_cycle.length) {
+			rank.title = "AUTIST - Played every map 2+ times!?";
+			rank.src = "icon/rank_5.png";
+		}
+		else if (mapsPlayed >= g_map_cycle.length) {
+			rank.title = "MASTER - Played every map!";
+			rank.src = "icon/rank_4.png";
+		}
+		else if (mapsPlayed >= 400) {
+			rank.title = "VETERAN - Played 400+ maps";
+			rank.src = "icon/rank_3.png";
+		}
+		else if (mapsPlayed >= 200) {
+			rank.title = "REGULAR - Played 200+ maps";
+			rank.src = "icon/rank_2.png";
+		}
+		else if (mapsPlayed >= 100) {
+			rank.title = "NOVICE - Played 100+ maps";
+			rank.src = "icon/rank_1.png";
+		}
+		
 		
 		let name_col = document.createElement('td');
-		name_col.appendChild(plr);
+		name_col.appendChild(name);
+		if (dat.steamid64)
+			name_col.appendChild(rank);
 		
 		let status_col = document.createElement('td');
 		if (dat.status == 0 || dat.status == 1) {
@@ -379,7 +414,7 @@ function parse_auth(view) {
 		login_text.textContent= "Sign in through Steam";
 		login_subtext.textContent= "(authentication failed)";
 		login_subtext.classList.add("red");
-		login_icon.src = "steam_icon_logo.svg";
+		login_icon.src = "icon/steam_icon_logo.svg";
 	}
 	else {
 		// valid id
@@ -439,6 +474,8 @@ function parse_rating(view) {
 		player_stats.rating = rating;
 		update_map_ratings();
 		refresh_player_table();
+	} else {
+		console.log("No player stats found for " + steamid64);
 	}
 }
 
@@ -459,7 +496,7 @@ function finish_logout() {
 	login_text.textContent= "Sign in through Steam";
 	login_subtext.textContent= "(required for some actions)";
 	login_subtext.classList.remove("red");
-	login_icon.src = "steam_icon_logo.svg";
+	login_icon.src = "icon/steam_icon_logo.svg";
 	
 	document.cookie = "token=DELETED; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Strict; secure";
 	
@@ -505,7 +542,7 @@ function rate_map(ev) {
 }
 
 function handle_img_error(event) {
-    event.target.src = 'missing_preview.png'; // Fallback image URL
+    event.target.src = 'img/missing_preview.png'; // Fallback image URL
     event.target.onerror = null; // Prevent infinite loop if the fallback also fails
 }
 
@@ -532,10 +569,14 @@ function parse_map_stats(view, isOwnStats) {
 	
 	let mapIdx = 0;
 	
+	g_total_plays = {}
+	g_multi_plays = {}
+	
 	for (let j = offset; j < view.byteLength && mapIdx < g_map_cycle.length; j++) {
 		let map = g_map_cycle[mapIdx][0];
+		let readingCurrentAndNextMap = g_map_stats.length < 2;
 		
-		if (g_map_stats.length < 2) {
+		if (readingCurrentAndNextMap) {
 			// map name only written for current and next map, in case they are not cycle maps
 			map = read_string(view, offset);
 			offset += get_utf8_data_len(map);
@@ -559,6 +600,21 @@ function parse_map_stats(view, isOwnStats) {
 			
 			let rating = view.getUint8(offset, true)
 			offset += 1;
+			
+			if (!readingCurrentAndNextMap) {
+				if (totalPlays > 0) {
+					if (!g_total_plays.hasOwnProperty(steamid)) {
+						g_total_plays[steamid] = 0;
+					}
+					g_total_plays[steamid] += 1;
+				}
+				if (totalPlays > 1) {
+					if (!g_multi_plays.hasOwnProperty(steamid)) {
+						g_multi_plays[steamid] = 0;
+					}
+					g_multi_plays[steamid] += 1;
+				}
+			}
 			
 			player_stats.push({steamid, lastPlay, totalPlays, rating});
 		}
@@ -588,10 +644,12 @@ function parse_map_list(view) {
 	let offset = 1;
 	
 	let series = [];
+	g_total_maps = 0;
 	
 	while (offset < view.byteLength) {
 		let map = read_string(view, offset);
 		offset += get_utf8_data_len(map);
+		g_total_maps += 1;
 		
 		if (map == "\n") {
 			g_map_cycle.push(series);
@@ -660,11 +718,11 @@ function update_map_data() {
 		
 		let like = document.createElement('img');
 		like.classList.add("like_button");
-		like.src = "thumbs_up.png";
+		like.src = "icon/thumbs_up.png";
 		
 		let dislike = document.createElement('img');
 		dislike.classList.add("dislike_button");
-		dislike.src = "thumbs_down.png";
+		dislike.src = "icon/thumbs_down.png";
 		
 		map.appendChild(title);
 		map.appendChild(img);
@@ -954,10 +1012,10 @@ function createWebSocket() {
 	g_socket.addEventListener('message', async function(event) {
 		let arrayBuffer = await event.data.arrayBuffer();
 		const view = new DataView(arrayBuffer);
-		
-		console.log("Got " + event.data.size + " byte message");
 
 		let msgType = view.getUint8(0);
+		
+		console.log("Got " + event.data.size + " byte message, type " + msgType);
 		
 		if (msgType == WEBMSG_SERVER_NAME) {
 			update_server_name(view);
