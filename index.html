@@ -28,13 +28,16 @@
 				flex-direction: column;
 				height: calc(100% - 100px);
 			}
-			#player_list_container > h2, #client_counter_container {
+			#player_list_container > h2 {
 				flex: 0;
 			}
+			#player_list_spacer {
+				height: 22px; /* because the header is absolute positioned */
+			}
 			#player_table_container {
-				flex: 1;
-				overflow-y: scroll;
+				overflow-y: auto;
 				background: black;
+				max-height: 400px;
 			}
 			#player_list {
 				background: black;
@@ -62,7 +65,7 @@
 				width: 50px;
 			}
 			#player_list td:nth-child(5), #player_list th:nth-child(5) {
-				width: 50px;
+				width: 66px;
 			}
 			#player_list td:nth-child(6), #player_list th:nth-child(6) {
 				width: 60px;
@@ -71,7 +74,7 @@
 				width: 70px;
 			}
 			#player_list td:nth-child(8), #player_list th:nth-child(8) {
-				width: 70px;
+				width: 88px;
 			}
 			#player_list th {
 				text-align: left;
@@ -92,6 +95,9 @@
 				text-overflow: ellipsis;
 				max-width: 215px;
 				display: inline-block;
+			}
+			#player_list a:hover {
+				color: #D2E6FB;
 			}
 			#player_list thead {
 				position: absolute;
@@ -196,9 +202,6 @@
 			}
 			.map_container img {
 				border-top: 1px solid #a80;
-			}
-			.map_container.next, .map_container.next img, #next_map_container .map_container, #next_map_container img {
-				border-color: white;
 			}
 			.map_container.liked {
 				filter: drop-shadow(0px 0px 4px #0f0);
@@ -345,13 +348,27 @@
 				box-sizing: border-box;
 			}
 
+			#send_message_container {
+				padding: 0px 0;
+				background: black;
+			}
+			#send_message {
+				background: black;
+				width: 100%;
+				box-sizing: border-box;
+				font-size: 16px;
+				color: #ddd;
+			}
 			
 			#filter_maps_container {
-				padding: 10px;
-				text-align: center;
+				padding: 0px 0;
+				background: black;
+				border-top: 1px solid #888;
 			}
 			#maps_filter {
-				font-size: 20px;
+				font-size: 16px;
+				background: black;
+				color: #ddd;
 			}
 			
 			#chat_header {
@@ -365,14 +382,27 @@
 				font-size: 13px;
 				flex: 1;
 				overflow: auto; 
+				margin-top: 20px;
+				padding-bottom: 5px;
 			}
 			.chat_message a {
 				text-decoration: none;
 				color: #99CCFF;
 			}
+			.chat_message a:hover {
+				color: #D2E6FB;
+			}
 			.chat_message {
 				padding: 1px 5px;
 				display:block;
+			}
+			.chat_time {
+				font-family: monospace;
+				color: #888;
+				cursor: default;
+			}
+			.chat_time:hover {
+				color: #bbb;
 			}
 			
 			#login_but {
@@ -486,9 +516,16 @@
 				color white;
 				background: black;
 				font-family: monospace;
-				font-size: 20px;
+				font-size: 14px;
 				color: #ddd;
 				padding: 0 5px;
+			}
+			
+			#client_counter_container {
+				position: absolute;
+				bottom: 0;
+				right: 0;
+				font-size: 11px;
 			}
 			
 		</style>
@@ -504,6 +541,9 @@
 				<br/>
 				<div id="login_subtext">(required for some actions)</div>
 			</a>
+			<div id="client_counter_container">
+				<span id="client_anon_counter">0</span> connected web clients
+			</div>
 			
 			<hr>
 		
@@ -523,14 +563,12 @@
 						</thead>
 						<tbody></tbody>
 					</table>
+					<div id="player_list_spacer"></div>
 				</div>
 				<!--<div id="player_list">test stuff</div>-->
-				
-				<h2 class id="chat_header">Messages</h2>
-				
 				<div id="chat_box"></div>
-				<div id="client_counter_container">
-					<span id="client_anon_counter">0</span> connected web clients
+				<div id="send_message_container">
+					<input id="send_message" type="text" placeholder="Send message..." maxlength="180" title="Type here and press Enter to send a chat message to the server">
 				</div>
 			</div>
 			
@@ -574,7 +612,7 @@ The algorithm for picking upcoming maps is as follows:
 More than 8 maps will be shown in cases where the current players haven't played every map on the server, when combining their play stats. For example, if there are 500 maps on the server, and the current players have only played 100 of them, then 400 maps will be displayed here.
 
 Map highlights represent map ratings and priority for random selection:
-Rainbow light = New or ever played map. Top priority. Always played first.
+Rainbow light = New or never played map. Top priority. Always played first.
 Green light = Positive ratings. High priority. Played after new maps.
 Orange light = Mixed ratings. Normal priority. Selected if no rainbow/green maps exist.
 No light = No ratings. Normal priority.
@@ -586,9 +624,9 @@ Red light = Negative ratings. Low priority. Selected only if all other maps are 
 					</div>
 				</div>
 				<div id="filter_maps_container">
-					<input id="maps_filter" type="text" placeholder="Search..." onchange = "filter_maps();" onkeypress="this.onchange();" onpaste="this.onchange();" oninput="this.onchange();">
+					<input id="maps_filter" type="text" placeholder="Search..." onchange = "filter_maps();" onkeypress="this.onchange();" onpaste="this.onchange();" oninput="this.onchange();" title="Filter maps by name">
 					<input type="checkbox" id="show_all_maps" name="show_all_maps" value="asdf">
-					<label for="show_all_maps">Show ALL maps</label><br>
+					<label for="show_all_maps">Show all maps</label><br>
 				</div>
 			</div>
 		</div>
