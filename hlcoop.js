@@ -133,26 +133,29 @@ function update_table_state() {
 
 function refresh_player_table() {
 	let plist = document.getElementById('player_list');
-	let tbody = plist.querySelector('tbody');
-	tbody.innerHTML = "";
 	
-	let pcount = 0;
+	// remove extra rows
+	for (let i = g_player_data.length+1; i < plist.rows.length; i++) {
+		plist.deleteRow(i);
+	}
 	
-	for (let i = 0; i < 32; i++) {
-		let dat = {};
+	for (let i = 0; i < g_player_data.length; i++) {
+		let dat = g_player_data[i];
 		
-		if (i < g_player_data.length) {
-			pcount += 1;
-			dat =  g_player_data[i];
+		if (i >= plist.rows.length-1) {
+			let row = plist.insertRow(plist.rows.length);
+			row.innerHTML = "<tr><td><a></a><img class=\"rank\"/></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>";;
 		}
 		
-		let rank = document.createElement('img');
-		rank.classList.add("rank");
+		let row = plist.rows[i+1];
+		let rank = row.cells[0].getElementsByClassName('rank')[0];
+		let name = row.cells[0].getElementsByTagName('a')[0];
 		
 		let mapsPlayed = g_total_plays[dat.steamid64];
 		let mapMutliPlayed = g_multi_plays[dat.steamid64];
 		//console.log("map plays for " + dat.name + " is " + mapsPlayed + " / " + g_map_cycle.length);
 		
+		rank.classList.remove("hidden");
 		if (mapMutliPlayed >= g_map_cycle.length) {
 			rank.title = "AUTIST - Played every map 2+ times";
 			rank.src = "icon/rank_5.png";
@@ -176,20 +179,17 @@ function refresh_player_table() {
 		else if (mapsPlayed < 10) {
 			rank.title = "NEWB - Played fewer than 10 maps";
 			rank.src = "icon/newb.png";
+		} else {
+			rank.classList.add("hidden");
 		}
 		
-		let name = document.createElement('a');
 		name.textContent = dat.name;
 		name.href = "https://steamcommunity.com/profiles/" + dat.steamid64;
 		name.target = "_blank";
 		name.title = dat.name + "\n\nMaps played: " + (mapsPlayed ? mapsPlayed : 0);
 		
-		let name_col = document.createElement('td');
-		name_col.appendChild(name);
-		if (dat.steamid64)
-			name_col.appendChild(rank);
-		
-		let status_col = document.createElement('td');
+		let status_col = row.cells[1];
+		status_col.className = "";
 		if (dat.status == 0 || dat.status == 1) {
 			if (dat.idleTime < 20) {
 				if (dat.status == 0) {
@@ -220,39 +220,18 @@ function refresh_player_table() {
 			status_col.title = "Player is spectating";
 		}
 		
-		let score_col = document.createElement('td');
-		score_col.textContent = dat.score;
+		row.cells[2].textContent = dat.score;
+		row.cells[3].textContent = dat.deaths;
+		row.cells[4].textContent = dat.ping;
+		row.cells[5].textContent = "";
+		row.cells[6].textContent = "";
+		row.cells[7].textContent = "";
 		
-		let deaths_col = document.createElement('td');
-		deaths_col.textContent = dat.deaths;
-		
-		let ping_col = document.createElement('td');
-		ping_col.textContent = dat.ping;
-		
-		let opinion_col = document.createElement('td');
-		
-		let last_play_col = document.createElement('td');
-		
-		let total_play_col = document.createElement('td');
-		
-		let plr_row = document.createElement('tr');
-		plr_row.appendChild(name_col);
-		plr_row.appendChild(status_col);
-		plr_row.appendChild(score_col);
-		plr_row.appendChild(deaths_col);
-		plr_row.appendChild(ping_col);
-		plr_row.appendChild(opinion_col);
-		plr_row.appendChild(last_play_col);
-		plr_row.appendChild(total_play_col);
-		
-		if (i < g_player_data.length)
-			plr_row.setAttribute("steamid", dat.steamid64);
-		
-		tbody.appendChild(plr_row);
+		row.setAttribute("steamid", dat.steamid64);
 	}
 	
-	document.getElementById('pcount').textContent = pcount;
-	document.getElementById('tab_title').textContent = "Half-Life Co-op (" + pcount + "/32)";
+	document.getElementById('pcount').textContent = g_player_data.length;
+	document.getElementById('tab_title').textContent = "Half-Life Co-op (" + g_player_data.length + "/32)";
 	
 	update_table_state();
 }
