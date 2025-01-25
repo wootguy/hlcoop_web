@@ -18,6 +18,9 @@ var g_multi_plays = {}; // maps a steam id to total number of maps played 2+ tim
 var g_steamid = 0;
 var g_current_map;
 var g_next_map;
+var g_map_start_time; // epoch millis when map started
+var g_map_time_limit; // map time limit in seconds
+var g_map_frag_limit;
 
 const WEBMSG_SERVER_NAME = 0;
 const WEBMSG_PLAYER_LIST = 1;
@@ -156,7 +159,10 @@ function refresh_player_table() {
 		//console.log("map plays for " + dat.name + " is " + mapsPlayed + " / " + g_map_cycle.length);
 		
 		rank.classList.remove("hidden");
-		if (mapMutliPlayed >= g_map_cycle.length) {
+		if (g_map_stats.length == 0) {
+			rank.classList.add("hidden");
+		}
+		else if (mapMutliPlayed >= g_map_cycle.length) {
 			rank.title = "AUTIST - Played every map 2+ times";
 			rank.src = "icon/rank_5.png";
 		}
@@ -176,7 +182,7 @@ function refresh_player_table() {
 			rank.title = "NOVICE - Played 100+ maps";
 			rank.src = "icon/rank_1.png";
 		}
-		else if (mapsPlayed < 10) {
+		else if (!mapsPlayed || mapsPlayed < 10) {
 			rank.title = "NEWB - Played fewer than 10 maps";
 			rank.src = "icon/newb.png";
 		} else {
@@ -544,11 +550,13 @@ function parse_map_stats(view, isOwnStats) {
 	console.log("Player ids: ", player_ids)
 	
 	if (!isOwnStats) {
+		console.log("Parse map stats for all players");
 		g_map_stats = [];
 		g_total_plays = {};
 		g_multi_plays = {};
 	}
 	else {
+		console.log("Parse map stats for self");
 		// TODO: check if already loaded stats because of being in the server
 	}
 	
@@ -617,6 +625,26 @@ function parse_map_stats(view, isOwnStats) {
 	if (g_map_stats.length) {
 		g_current_map = g_map_stats[0].map;
 		g_next_map = g_map_stats[1].map;
+		
+		let series_counter = document.getElementById("series_counter");
+		
+		let seriesLength = 1;
+		let seriesIdx = 1;
+		for (let i = 0; i < g_map_cycle.length; i++) {
+			for (let k = 0; k < g_map_cycle[i].length; k++) {
+				if (g_map_cycle[i][k] == g_current_map) {
+					seriesLength = g_map_cycle[i].length;
+					seriesIdx = k+1;
+					break;
+				}
+			}
+		}
+		
+		if (seriesLength > 1) {
+			series_counter.textContent = " (" + seriesIdx + " of " + seriesLength + ")";
+		} else {
+			series_counter.textContent = "";
+		}
 	}
 	
 	console.log("Map stats:", g_map_stats);
@@ -646,6 +674,19 @@ function parse_map_list(view) {
 	}
 	
 	console.log("Map cycle:", g_map_cycle);
+}
+
+function parse_map_info(view) {
+	let offset = 1;
+	
+	g_map_start_time = view.getBigUint64(offset, true);
+	offset += 8;
+	
+	g_map_time_limit = Math.round(view.getFloat32(offset, true) * 60);
+	offset += 4;
+	
+	g_map_frag_limit = view.getFloat32(offset, true);
+	offset += 4;
 }
 
 function get_map_dat(mapname) {
@@ -746,12 +787,16 @@ function update_map_data() {
 		like.setAttribute("map", first_map);
 		like.removeEventListener("click", rate_map);
 		like.addEventListener("click", rate_map);
+		like.title= "Giving this map a positive rating will increase its chance of being picked by the server."
+		+ "\n\nThe recent playtime filter doesn't apply to maps you rate positively, meaning you can potentially play them multiple times per day.";
 		
 		let dislike = div.getElementsByClassName("dislike_button")[0];
 		dislike.setAttribute("rating", "2");
 		dislike.setAttribute("map", first_map);
 		dislike.removeEventListener("click", rate_map);
 		dislike.addEventListener("click", rate_map);
+		dislike.title = "Giving this map a negative rating will decrease its chance of being picked by the server."
+		+ "\n\nIf everyone on the server dislikes this map, then it will never be picked.";
 	});
 	
 	if (document.getElementById("show_all_maps").checked) {
@@ -830,6 +875,8 @@ function update_map_ratings() {
 				if (player_stats.rating == 1) {
 					if (id == g_steamid) {
 						like_button.classList.add("own_rating");
+						like_button.title = "You've rated this map positively. Clicking this button again will remove your rating."
+						
 						if (shouldCountOwnId) {
 							numLike += 1;
 						}
@@ -839,6 +886,8 @@ function update_map_ratings() {
 				} else if (player_stats.rating == 2) {
 					if (id == g_steamid) {
 						dislike_button.classList.add("own_rating");
+						dislike_button.title = "You've rated this map negatively. Clicking this button again will remove your rating."
+						
 						if (shouldCountOwnId) {
 							numDislike += 1;
 						}
@@ -872,6 +921,31 @@ function update_map_ratings() {
 			div.title = "This map isn't highlighted due to neutral ratings and is selected with normal priority.";
 		}
 	});
+}
+
+function format_timer(secondsPassed) {
+	let seconds = secondsPassed % 60;
+	let minutes = Math.floor((secondsPassed / 60) % 60);
+	let hours = Math.floor(secondsPassed / (60*60));
+	
+	if (hours > 0) {
+		return `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+	} else {
+		return `${minutes}:${String(seconds).padStart(2, '0')}`;
+	}
+}
+
+function update_map_timer() {
+	let timer = document.getElementById("map_timer");
+	
+	let secondsPassed = Math.floor((Date.now() / 1000) - Number(g_map_start_time));
+	
+	if (g_map_time_limit) {
+		timer.textContent = format_timer(secondsPassed) + " / " + format_timer(g_map_time_limit);
+	} else {
+		timer.textContent = format_timer(secondsPassed);
+	}
+	
 }
 
 async function downloadJson(url) {
@@ -921,6 +995,8 @@ function filter_maps() {
 async function setup() {
 	g_map_data = await downloadJson("mapdb.json");
 	update_map_data();
+	
+	setInterval(update_map_timer, 1000, -1);
 
 	document.getElementById('closePopup').addEventListener('click', function() {
 		popup.style.display = 'none';
@@ -1047,6 +1123,9 @@ function createWebSocket() {
 		}
 		else if (msgType == WEBMSG_OWN_MAP_STATS) {
 			parse_map_stats(view, true);
+		}
+		else if (msgType == WEBMSG_MAP_INFO) {
+			parse_map_info(view, true);
 		}
 		else {
 			console.error("Unrecognized socket message type " + msgType);

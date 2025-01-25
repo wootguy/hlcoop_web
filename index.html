@@ -77,7 +77,10 @@
 				text-align: left;
 			}
 			#player_list tr:nth-child(odd) {
-				background: #111111;
+				background: #111;
+			}
+			#player_list tr:nth-child(even) {
+				background: #222;
 			}
 			#player_list td {
 				height: 20px;
@@ -157,7 +160,7 @@
 				display: inline-block;
 			}
 			#next_map_container {
-				margin-left: 40px;
+				margin-left: 20px;
 			}
 			#upcoming_maps_grid {
 				overflow-y: auto;
@@ -264,6 +267,7 @@
 				font-size: 32px;
 				border: none !important;
 				opacity: 0.0;
+				z-index: 2;
 			}
 			.map_container:hover .like_button, .map_container:hover .dislike_button {
 				opacity: 0.4;
@@ -458,6 +462,19 @@
 				cursor: help;
 			}
 			
+			#map_timer {
+				position: absolute;
+				bottom: 0;
+				left: 0;
+				text-decoration: none;
+				color white;
+				background: black;
+				font-family: monospace;
+				font-size: 20px;
+				color: #ddd;
+				padding: 0 5px;
+			}
+			
 		</style>
 		<title id="tab_title">Half-Life Co-op</title>
 	</head>
@@ -504,12 +521,13 @@
 			<div id="map_list_container">
 				<div id="active_maps">
 					<div id="current_map_container">
-						<h2>Current map</h2>
+						<h2>Current map<span id="series_counter"></span></h2>
 						<a id="current_map" class="map_container" href="" target="_blank">
 							<span class="map_title"></span>
 							<img class="map_image" src="">
 							<img class="like_button" src="icon/thumbs_up.png"/>
 							<img class="dislike_button" src="icon/thumbs_down.png"/>
+							<div id="map_timer"></div>
 						</a>
 					</div>
 					<div id="next_map_container">
