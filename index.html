@@ -6,6 +6,7 @@
 		<style>
 			html, body {
 				min-height: 100%;
+				height: 100%;
 			}
 			body {
 				margin: 0;
@@ -15,13 +16,24 @@
 			}
 			#server_name {
 				margin: 0 0;
-				padding: 20px 0 10px 0;
+				padding: 20px 0 0 0;
 				text-align: center;
+				height: 50px;
 			}
 			#player_list_container {
 				width: 450px;
 				margin: 0 auto;
 				float: left;
+				display: flex;
+				flex-direction: column;
+				height: calc(100% - 100px);
+			}
+			#player_list_container > h2, #client_counter_container {
+				flex: 0;
+			}
+			#player_table_container {
+				flex: 1;
+				overflow-y: auto;
 			}
 			#player_list {
 				background: black;
@@ -29,6 +41,7 @@
 				border-collapse: collapse;
 				font-family: "Trebuchet MS", Trebuchet, Tahoma, Arial, Helvetica, sans-serif;
 				font-size: 12px;
+				display: block;
 			}
 			#player_list th {
 				background: #2e1f00;
@@ -76,13 +89,16 @@
 				max-width: 215px;
 				display: inline-block;
 			}
+			#player_list thead {
+				position: absolute;
+				z-index: 1;
+			}
 			#player_list tbody {
-				height: 400px;
 				overflow-y: auto;
 				overflow-x: hidden;
-			}
-			tbody, thead tr {
-				display: block;
+				height: 100%;
+				position: relative;
+				top: 22px;
 			}
 			#player_list .alive {
 				color: #0d0;
@@ -127,12 +143,14 @@
 			
 			#content {
 				padding: 0 10px;
+				height: 100%;
 			}
 			#active_maps {
 				min-width: 500px;
 				width: 100%;
 				display: inline-block;
 				text-align: center;
+				flex: 0;
 			}
 			#current_map_container, #next_map_container, #next_map_arrow {
 				display: inline-block;
@@ -141,11 +159,11 @@
 				margin-left: 40px;
 			}
 			#upcoming_maps_grid {
-				height: 600px;
 				overflow-y: auto;
 				background: #000;
 				position: relative;
 				z-index: 1;
+				height: 100%;
 			}
 			#next_map_arrow div {
 				margin: 90px 5px 0px 5px;
@@ -156,6 +174,9 @@
 				width: calc(100% - 470px);
 				float: right;
 				padding: 0 5px;
+				display: flex;
+				flex-direction: column;
+				height: calc(100% - 100px);
 			}
 			.map_container {
 				display: inline-block;
@@ -193,34 +214,10 @@
 				bottom: 2px;
 				background: linear-gradient(
 					90deg,
-					violet,
-					red,
-					orange,
-					yellow,
-					green,
-					blue,
-					indigo,
-					violet,
-					red,
-					orange,
-					yellow,
-					green,
-					blue,
-					indigo,
-					violet,
-					red,
-					orange,
-					yellow,
-					green,
-					blue,
-					indigo,
-					violet,
-					red,
-					orange,
-					yellow,
-					green,
-					blue,
-					indigo,
+					violet, red, orange, yellow, green, blue, indigo,
+					violet, red, orange, yellow, green, blue, indigo,
+					violet, red, orange, yellow, green, blue, indigo,
+					violet, red, orange, yellow, green, blue, indigo,
 					violet
 				);
 				filter: blur(1px);
@@ -230,16 +227,11 @@
 				background-size: 200%;
 			}
 			.map_container.new:hover::after {
-				
 				animation: scroll-gradient 2s linear infinite;
 			}
 			@keyframes scroll-gradient {
-				0% {
-					background-position: 0% 50%;
-				}
-				100% {
-					background-position: 100% 50%;
-				}
+				0%   { background-position: 0%   50%; }
+				100% { background-position: 100% 50%; }
 			}
 			
 			.map_title {
@@ -297,9 +289,13 @@
 				height: 32px;
 			}
 			
-			#upcoming_maps {
+			#upcoming_maps_header {
 				padding-top: 20px;
 				clear: both;
+			}
+			#upcoming_maps {
+				flex: 1;
+				overflow: auto;
 			}
 			#upcoming_maps .map_title {
 				font-size: 12px;
@@ -337,16 +333,17 @@
 				font-size: 20px;
 			}
 			
-			#chat_container {
+			#chat_header {
 				padding-top: 20px;
 			}
 			#chat_box {
 				background: black;
 				width: 100%;
-				height: 400px;
 				color: #fa0;
 				overflow-y: scroll;
 				font-size: 13px;
+				flex: 1;
+				overflow: auto; 
 			}
 			.chat_message a {
 				text-decoration: none;
@@ -464,7 +461,7 @@
 	</head>
 
 	<body>
-		<div>
+		<div id="content">
 			<h1 id="server_name">Half-Life Co-op</h1>
 			<a id="login_but" class="">
 				<img id="login_icon" src="icon/steam_icon_logo.svg"/>
@@ -472,32 +469,33 @@
 				<br/>
 				<div id="login_subtext">(required for some actions)</div>
 			</a>
-		</div>
+			
+			<hr>
 		
-		<hr>
-		<div id="content">
 			<div id="player_list_container">
 				<h2>Players (<span id="pcount">?</span> / 32)</h2>
-				<table id="player_list">
-					<thead>
-						<th title="Player's in-game name">Player name</th>
-						<th title="Player's in-game status">Status</th>
-						<th title="Points awarded for damage dealt in the current map">Score</th>
-						<th title="The number of times the player has died in the current map">Deaths</th>
-						<th title="Player's latency to the server">Ping</th>
-						<th title="Player's opinion of the selected map">Opinion</th>
-						<th title="Last time this player played the selected map">Last play</th>
-						<th title="Total number of times the player played the selected map">Total plays</th>
-					</thead>
-					<tbody></tbody>
-				</table>
+				<div id="player_table_container">
+					<table id="player_list">
+						<thead>
+							<th title="Player's in-game name">Player name</th>
+							<th title="Player's in-game status">Status</th>
+							<th title="Points awarded for damage dealt in the current map">Score</th>
+							<th title="The number of times the player has died in the current map">Deaths</th>
+							<th title="Player's latency to the server">Ping</th>
+							<th title="Player's opinion of the selected map">Opinion</th>
+							<th title="Last time this player played the selected map">Last play</th>
+							<th title="Total number of times the player played the selected map">Total plays</th>
+						</thead>
+						<tbody></tbody>
+					</table>
+				</div>
+				<!--<div id="player_list">test stuff</div>-->
 				
-				<div id="chat_container">
-					<h2>Messages</h2>
-					<div id="chat_box"></div>
-					<div id="client_counter_container">
-						<span id="client_anon_counter">0</span> connected web clients
-					</div>
+				<h2 class id="chat_header">Messages</h2>
+				
+				<div id="chat_box"></div>
+				<div id="client_counter_container">
+					<span id="client_anon_counter">0</span> connected web clients
 				</div>
 			</div>
 			
@@ -524,8 +522,7 @@ Rejoining the server on the same map does not randomize the next map. This preve
 						</a>
 					</div>
 				</div>
-				<div id="upcoming_maps">
-					<h2><span id="upcoming_title">Upcoming maps</span> (<span id="upcoming_maps_count">?</span>) <span class="tooltip" title="Maps displayed here depend on who is currently in the server. A new player joining may cause this map list to change completely.
+				<h2 id="upcoming_maps_header"><span id="upcoming_title">Upcoming maps</span> (<span id="upcoming_maps_count">?</span>) <span class="tooltip" title="Maps displayed here depend on who is currently in the server. A new player joining may cause this map list to change completely.
 
 The server tries to pick maps that haven't been played in the longest time. Every map should feel fresh and no one should have to replay the same map for another month or so. Map ratings determine selection order after the upcoming maps pool is filled.
 
@@ -546,12 +543,13 @@ Green light = Positive ratings. High priority. Played after new maps.
 Orange light = Mixed ratings. Normal priority. Selected if no rainbow/green maps exist.
 No light = No ratings. Normal priority.
 Red light = Negative ratings. Low priority. Selected only if all other maps are red.">(?)</span></h2>
+				<div id="upcoming_maps">
 					<div id="upcoming_maps_grid"></div>
-					<div id="filter_maps_container">
-						<input id="maps_filter" type="text" placeholder="Search..." onchange = "filter_maps();" onkeypress="this.onchange();" onpaste="this.onchange();" oninput="this.onchange();">
-						<input type="checkbox" id="show_all_maps" name="show_all_maps" value="asdf">
-						<label for="show_all_maps">Show ALL maps</label><br>
-					</div>
+				</div>
+				<div id="filter_maps_container">
+					<input id="maps_filter" type="text" placeholder="Search..." onchange = "filter_maps();" onkeypress="this.onchange();" onpaste="this.onchange();" oninput="this.onchange();">
+					<input type="checkbox" id="show_all_maps" name="show_all_maps" value="asdf">
+					<label for="show_all_maps">Show ALL maps</label><br>
 				</div>
 			</div>
 		</div>
