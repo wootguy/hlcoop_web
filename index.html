@@ -301,12 +301,16 @@
 			#upcoming_maps {
 				flex: 1;
 				overflow: auto;
+				position: relative;
 			}
 			#upcoming_maps .map_title {
 				font-size: 12px;
 			}
 			#upcoming_maps .map_title.longtext {
 				font-size: 10px;
+			}
+			#content.empty_server .map_container.upcoming {
+				display: none;
 			}
 			#upcoming_maps .map_container {
 				width: 140px;
@@ -327,6 +331,18 @@
 			}
 			#upcoming_maps.all_maps .map_container {
 				display: inline-block;
+			}
+			#empty_notice {
+				position: absolute;
+				top: 50%;
+				z-index: 1;
+				margin: 0 auto;
+				font-size: 24px;
+				color: #555;
+				width: 100%;
+				text-align: center;
+				padding: 0 20px;
+				box-sizing: border-box;
 			}
 
 			
@@ -492,7 +508,7 @@
 			<hr>
 		
 			<div id="player_list_container">
-				<h2>Players (<span id="pcount">?</span> / 32)</h2>
+				<h2>Players (<span id="pcount">?</span>)</h2>
 				<div id="player_table_container">
 					<table id="player_list">
 						<thead>
@@ -565,6 +581,9 @@ No light = No ratings. Normal priority.
 Red light = Negative ratings. Low priority. Selected only if all other maps are red.">(?)</span></h2>
 				<div id="upcoming_maps">
 					<div id="upcoming_maps_grid"></div>
+					<div id="empty_notice">
+						Upcoming maps are not known until someone joins the server
+					</div>
 				</div>
 				<div id="filter_maps_container">
 					<input id="maps_filter" type="text" placeholder="Search..." onchange = "filter_maps();" onkeypress="this.onchange();" onpaste="this.onchange();" oninput="this.onchange();">

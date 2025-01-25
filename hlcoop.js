@@ -787,7 +787,7 @@ function update_map_data() {
 		like.setAttribute("map", first_map);
 		like.removeEventListener("click", rate_map);
 		like.addEventListener("click", rate_map);
-		like.title= "Giving this map a positive rating will increase its chance of being picked by the server."
+		like.title= "Rating this map positively will raise its chance of being picked while you're on the server."
 		+ "\n\nThe recent playtime filter doesn't apply to maps you rate positively, meaning you can potentially play them multiple times per day.";
 		
 		let dislike = div.getElementsByClassName("dislike_button")[0];
@@ -795,7 +795,7 @@ function update_map_data() {
 		dislike.setAttribute("map", first_map);
 		dislike.removeEventListener("click", rate_map);
 		dislike.addEventListener("click", rate_map);
-		dislike.title = "Giving this map a negative rating will decrease its chance of being picked by the server."
+		dislike.title = "Rating this map negatively will lower its chance of being picked while you're on the server."
 		+ "\n\nIf everyone on the server dislikes this map, then it will never be picked.";
 	});
 	
@@ -803,6 +803,20 @@ function update_map_data() {
 		document.getElementById('upcoming_maps_count').textContent = upcoming.getElementsByClassName("map_container").length;
 	} else {
 		document.getElementById('upcoming_maps_count').textContent = upcoming.getElementsByClassName("upcoming").length;
+	}
+	
+	if (g_player_data.length == 0) {
+		document.getElementById("content").classList.add("empty_server");
+		document.getElementById('upcoming_maps_count').textContent = "0";
+		
+		if (document.getElementById("show_all_maps").checked) {
+			document.getElementById("empty_notice").classList.add("hidden");
+		} else {
+			document.getElementById("empty_notice").classList.remove("hidden");
+		}
+	} else {
+		document.getElementById("content").classList.remove("empty_server");
+		document.getElementById("empty_notice").classList.add("hidden");
 	}
 	
 	update_map_ratings();
@@ -901,7 +915,7 @@ function update_map_ratings() {
 		div.classList.remove("new");
 		div.classList.remove("liked");
 		div.classList.remove("disliked");
-		if (!was_played) {
+		if (!was_played && g_player_data.length) {
 			div.classList.add("new");
 			div.title = "This map has a rainbow effect because no one in the server has played it before.";
 		}
@@ -1011,10 +1025,14 @@ async function setup() {
 			upcoming.classList.add("all_maps");
 			document.getElementById("upcoming_title").textContent = "All maps";
 			document.getElementById('upcoming_maps_count').textContent = upcoming.getElementsByClassName("map_container").length;
+			document.getElementById("empty_notice").classList.add("hidden");
 		} else {
 			document.getElementById("upcoming_maps").classList.remove("all_maps");
 			document.getElementById("upcoming_title").textContent = "Upcoming maps";
 			document.getElementById('upcoming_maps_count').textContent = upcoming.getElementsByClassName("upcoming").length;
+			if (g_player_data.length == 0) {
+				document.getElementById("empty_notice").classList.remove("hidden");
+			}
 		}
 	});
 	
