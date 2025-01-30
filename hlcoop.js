@@ -946,7 +946,7 @@ function update_map_ratings() {
 			div.title = "This map is highlighted orange due to mixed ratings and is selected with normal priority.";
 		}
 		else if (numLike > 0) {
-			div.title = "This map is highlighted green due to positive ratings and is selected with the highest priority.";
+			div.title = "This map is highlighted green due to positive ratings and is selected with high priority.";
 			div.classList.add("liked");
 		}
 		else if (numDislike > 0) {
@@ -962,7 +962,7 @@ function format_timer(secondsPassed) {
 	let seconds = secondsPassed % 60;
 	let minutes = Math.floor((secondsPassed / 60) % 60);
 	let hours = Math.floor(secondsPassed / (60*60));
-	let minutesTotal = Math.round(secondsPassed / 60);
+	let minutesTotal = Math.floor(secondsPassed / 60);
 	
 	if (minutesTotal > 99) {
 		return `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
@@ -973,8 +973,8 @@ function format_timer(secondsPassed) {
 
 function format_age(secondsPassed) {
 	let seconds = secondsPassed;
-	let minutes = Math.round(secondsPassed / 60);
-	let hours = Math.round(secondsPassed / (60*60));
+	let minutes = Math.floor(secondsPassed / 60);
+	let hours = Math.floor(secondsPassed / (60*60));
 	
 	if (hours > 2) {
 		return "" + hours + "h";

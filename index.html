@@ -393,6 +393,7 @@
 				color: #D2E6FB;
 			}
 			.chat_message {
+				overflow-wrap: break-word;
 				padding: 1px 5px;
 				display:block;
 			}
@@ -606,8 +607,7 @@ The algorithm for picking upcoming maps is as follows:
 1) All maps start as potential candidates.
 2) Exclude maps that all players in the server dislike.
 3) Exclude maps played by anyone in the server within the last X days, starting with X=1.
-4) If more than ~8 maps remain, increase X incrementally (up to 4096 days) and repeat.
-5) Once fewer than ~8 maps are left, select the largest X that resulted in ~8 maps.
+4) Select the largest X that results in at least ~8 maps.
 
 More than 8 maps will be shown in cases where the current players haven't played every map on the server, when combining their play stats. For example, if there are 500 maps on the server, and the current players have only played 100 of them, then 400 maps will be displayed here.
 
