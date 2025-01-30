@@ -14,12 +14,27 @@
 				font-family: "Trebuchet MS", Trebuchet, Tahoma, Arial, Helvetica, sans-serif;
 				color: #ddd;
 			}
+			
 			#server_name {
 				margin: 0 0;
-				padding: 20px 0 0 0;
+				padding: 10px 0 0 0;
 				text-align: center;
-				height: 50px;
+				height: 40px;
 			}
+			#server_link_container {
+				text-align: center;
+			}
+			#server_link {
+				display: inline-block;
+				margin: 0 auto;
+				color: #FFAA00;
+				font-family: monospace;
+				font-size: 14px;
+			}
+			#server_link:visited {
+				color: #FFAA00;
+			}
+			
 			#player_list_container {
 				width: 450px;
 				margin: 0 auto;
@@ -528,7 +543,6 @@
 				right: 0;
 				font-size: 11px;
 			}
-			
 		</style>
 		<title id="tab_title">Half-Life Co-op</title>
 	</head>
@@ -536,6 +550,9 @@
 	<body>
 		<div id="content">
 			<h1 id="server_name">Half-Life Co-op</h1>
+			<div id="server_link_container">
+				<a id="server_link" target="_blank" href="steam://connect/207.148.12.159:27016">connect 207.148.12.159:27016</a>
+			</div>
 			<a id="login_but" class="">
 				<img id="login_icon" src="icon/steam_icon_logo.svg"/>
 				<div id="login_text">Sign in through Steam</div>
