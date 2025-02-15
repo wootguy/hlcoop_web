@@ -2,6 +2,12 @@ import json, os
 import urllib.request, requests, mimetypes
 from lxml import html
 
+# Usage:
+# 1) Add new maps to mapcycle.txt
+# 2) open img_new folder and downscale the images:
+#    magick mogrify -resize 256x -quality 80 -path output *.jpg
+# 3) copy to img/
+
 def read_url_safe(url):
 	try:
 		f = urllib.request.urlopen(url, timeout=60)
@@ -16,8 +22,8 @@ def read_url_safe(url):
 	except socket.timeout as e:
 		print("Failed to open url due to timeout")
 
-def download_map_image(mapname, outpath):
-	if os.path.exists(outpath):
+def download_map_image(mapname, checkpath, outpath):
+	if os.path.exists(checkpath):
 		return
 	
 	domain_name = 'http://scmapdb.wikidot.com'
@@ -100,7 +106,8 @@ for line in mapcycle:
 		print("No link found for %s" % bsp)
 
 for item in mapdb:
-	download_map_image(item["link"], os.path.join("img", item["maps"][0] + ".jpg"))
+	img_name = item["maps"][0] + ".jpg"
+	download_map_image(item["link"], os.path.join("img", img_name), os.path.join("img_new", img_name))
 
 with open("mapdb.json", 'w') as outfile:
 	json.dump(mapdb, outfile)
