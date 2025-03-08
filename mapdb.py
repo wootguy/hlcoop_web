@@ -23,7 +23,7 @@ def read_url_safe(url):
 		print("Failed to open url due to timeout")
 
 def download_map_image(mapname, checkpath, outpath):
-	if os.path.exists(checkpath):
+	if os.path.exists(checkpath) or os.path.exists(outpath):
 		return
 	
 	domain_name = 'http://scmapdb.wikidot.com'
@@ -62,6 +62,7 @@ def download_map_image(mapname, checkpath, outpath):
 json_dat = {}
 mapcycle = []
 manual_links = {}
+ignore_missing = set({})
 
 with open('pool.json') as f:
 	json_dat = json.loads(f.read())
@@ -74,6 +75,11 @@ with open("manual_links.txt") as f:
 	for line in lines:
 		parts = line.split("=")
 		manual_links[parts[0].strip()] = parts[1].strip()
+		
+with open("ignore_missing_links.txt") as f:
+	lines = f.read().splitlines()
+	for line in lines:
+		ignore_missing.add(line.strip() + ".bsp")
 
 maps_dir = json_dat["maps"]
 maps_dir = {key.lower(): value for key, value in maps_dir.items()}
@@ -95,7 +101,8 @@ for line in mapcycle:
 			}
 			mapdb.append(item)
 		else:
-			print("No link found for %s" % bsp)
+			if bsp not in ignore_missing:
+				print("No link found for '%s'" % bsp)
 	elif maps[0] in manual_links:
 		item = {
 			"maps": maps,
@@ -103,7 +110,8 @@ for line in mapcycle:
 		}
 		mapdb.append(item)
 	else:
-		print("No link found for %s" % bsp)
+		if bsp not in ignore_missing:
+			print("No link found for %s" % bsp)
 
 for item in mapdb:
 	img_name = item["maps"][0] + ".jpg"
