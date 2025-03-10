@@ -57,3 +57,7 @@ doomfest_hl=doomfest
 rv_c2ac1_hl=the-cataclysm
 scv_20_cristales=20-cristales
 uboabrasil_hl=uboa-brasil
+high_speed_hl=high-speed
+letonguebase_hl=letongue-base
+poolday_hl=poolday
+scv_instalaciones_invadidas=scv-instalaciones-invadidas
