@@ -89,7 +89,13 @@ for line in mapcycle:
 	maps = line.split()
 	bsp = maps[0] + ".bsp"
 	
-	if bsp in maps_dir:
+	if maps[0] in manual_links:
+		item = {
+			"maps": maps,
+			"link": manual_links[maps[0]] # skip first dash
+		}
+		mapdb.append(item)
+	elif bsp in maps_dir:
 		refs = maps_dir[bsp]["refs"]
 		
 		if len(refs) > 1:
@@ -103,12 +109,6 @@ for line in mapcycle:
 		else:
 			if bsp not in ignore_missing:
 				print("No link found for '%s'" % bsp)
-	elif maps[0] in manual_links:
-		item = {
-			"maps": maps,
-			"link": manual_links[maps[0]] # skip first dash
-		}
-		mapdb.append(item)
 	else:
 		if bsp not in ignore_missing:
 			print("No link found for %s" % bsp)
