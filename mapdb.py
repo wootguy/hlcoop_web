@@ -26,6 +26,8 @@ def download_map_image(mapname, checkpath, outpath):
 	if os.path.exists(checkpath) or os.path.exists(outpath):
 		return
 	
+	print("Download map image for %s" % mapname)
+	
 	domain_name = 'http://scmapdb.wikidot.com'
 	page_contents = ''
 	try:
@@ -46,7 +48,6 @@ def download_map_image(mapname, checkpath, outpath):
 		thumb = thumb[0]
 		file_contents = ''
 		try:
-			print("Download map image: %s" % outpath)
 			file_contents = read_url_safe(thumb.attrib['src'])
 		except urllib.error.HTTPError as e:
 			print(e)
