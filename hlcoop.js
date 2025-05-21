@@ -1,20 +1,19 @@
 var g_socket;
 var g_server_url = 'wss://w00tguy.ddns.net:3000/';
 //var g_server_url = 'ws://localhost:3000/'; // for Visual Studio debugging
-var g_player_data = [];
-var g_map_stats = [];
+var g_player_data = []; // players currently in the server
+var g_player_states = {}; // extra player info and map stats by steam id
 var g_server_name = "Half-Life Co-op";
 var g_selected_map = "";
 var g_reset_table_timer;
 var g_mouseover_state = false;
 var g_auth_params;
 var g_auth_token;
-var g_map_data = {};
+var g_map_data = {}; // information about each map (link)
 var g_web_clients = [];
 var g_map_cycle = [];
 var g_total_maps = 0;
-var g_total_plays = {}; // maps a steam id to total number of maps played
-var g_multi_plays = {}; // maps a steam id to total number of maps played 2+ times
+var g_upcoming_maps = new Set(); // set of maps in the upcoming maps pool
 var g_steamid = 0;
 var g_current_map;
 var g_next_map;
@@ -22,18 +21,30 @@ var g_map_start_time; // epoch millis when map started
 var g_map_time_limit; // map time limit in seconds
 var g_map_frag_limit;
 
-const WEBMSG_SERVER_NAME = 0;
-const WEBMSG_PLAYER_LIST = 1;
-const WEBMSG_NEXT_MAPS = 2;
-const WEBMSG_CHAT = 3;
-const WEBMSG_AUTH = 4;
-const WEBMSG_WEB_CLIENTS = 5;
-const WEBMSG_NOT_AUTHED = 6;
-const WEBMSG_LOGOUT = 7;
-const WEBMSG_RATING = 8;
-const WEBMSG_MAP_LIST = 9;
-const WEBMSG_OWN_MAP_STATS = 10;
-const WEBMSG_MAP_INFO = 11;
+const MESSAGE_TYPE = {
+	WEBMSG_SERVER_NAME: 0,
+	WEBMSG_PLAYER_LIST: 1,
+	WEBMSG_CHAT: 3,
+	WEBMSG_AUTH: 4,
+	WEBMSG_WEB_CLIENTS: 5,
+	WEBMSG_NOT_AUTHED: 6,
+	WEBMSG_LOGOUT: 7,
+	WEBMSG_RATING: 8,
+	WEBMSG_MAP_LIST: 9,
+	WEBMSG_MAP_INFO: 11,
+	WEBMSG_PLAYER_STATE: 12,
+	WEBMSG_UPCOMING_MAPS: 13
+};
+
+function get_message_type_name(value) {
+  for (const [key, val] of Object.entries(MESSAGE_TYPE)) {
+    if (val === value) {
+      return key;
+    }
+  }
+  return "unknown";
+}
+
 
 function get_utf8_data_len(str) {
 	return new TextEncoder().encode(str).length+1;
@@ -56,21 +67,7 @@ function read_string(view, offset) {
 function update_table_state() {
 	let plist = document.getElementById('player_list').querySelector('tbody');
 	
-	if (g_selected_map) {
-		
-		let map_stats = undefined;
-		for (let i = 0; i < g_map_stats.length; i++) {
-			if (g_map_stats[i].map == g_selected_map) {
-				map_stats = g_map_stats[i];
-				break;
-			}
-		}
-		
-		if (!map_stats) {
-			console.log("Missing map stats for " + g_selected_map);
-			return;
-		}
-		
+	if (g_selected_map) {		
 		for (let i = 0; i < plist.rows.length; i++) {
 			let row = plist.rows[i];
 			let id = row.getAttribute("steamid");
@@ -82,13 +79,8 @@ function update_table_state() {
 				break;
 			}
 			
-			let player_stats = undefined;
-			for (let k = 0; k < map_stats.player_stats.length; k++) {
-				if (map_stats.player_stats[k].steamid == id) {
-					player_stats = map_stats.player_stats[k];
-					break;
-				}
-			}
+			let player_state = g_player_states[id];
+			let player_stats = player_state.mapstats[g_selected_map];
 			
 			if (player_stats && player_stats.lastPlay && player_stats.totalPlays) {
 				row.cells[5].classList.remove("green");
@@ -156,13 +148,20 @@ function refresh_player_table() {
 		let row = plist.rows[i];
 		let rank = row.cells[0].getElementsByClassName('rank')[0];
 		let name = row.cells[0].getElementsByTagName('a')[0];
+		let state = g_player_states[dat.steamid64];
 		
-		let mapsPlayed = g_total_plays[dat.steamid64];
-		let mapMutliPlayed = g_multi_plays[dat.steamid64];
+		let mapsPlayed = 0;
+		let mapMutliPlayed = 0;
+		
+		if (state) {
+			mapsPlayed = state.mapsPlayed;
+			mapMutliPlayed = state.mapsMultiplayed;
+		}
+		
 		//console.log("map plays for " + dat.name + " is " + mapsPlayed + " / " + g_map_cycle.length);
 		
 		rank.classList.remove("hidden");
-		if (g_map_stats.length == 0) {
+		if (!state) {
 			rank.classList.add("hidden");
 		}
 		else if (mapMutliPlayed >= g_map_cycle.length) {
@@ -406,6 +405,7 @@ function parse_auth(view) {
 		currentDate.setFullYear(currentDate.getFullYear() + 1);
 		const expires = "expires=" + currentDate.toUTCString();
 		document.cookie = "token=" + token + "; " + expires + "; path=/; SameSite=Strict; secure";
+		console.log("Stored Steam authentication cookie");
 	}
 	
 	let login_but = document.getElementById("login_but");
@@ -458,34 +458,17 @@ function parse_rating(view) {
 	let map = read_string(view, offset);
 	offset += get_utf8_data_len(map);
 	
-	let map_stats = undefined;
-	for (let i = 0; i < g_map_stats.length; i++) {
-		if (g_map_stats[i].map == map) {
-			map_stats = g_map_stats[i];
-			break;
-		}
-	}
+	let state = g_player_states[steamid64];
+	let map_stats = state.mapstats[map];
 	
 	if (!map_stats) {
-		console.log("Missing map stats for " + map);
+		console.log("Player " + steamid64 + " missing map stats for " + map);
 		return;
 	}
 	
-	let player_stats = undefined;
-	for (let k = 0; k < map_stats.player_stats.length; k++) {
-		if (map_stats.player_stats[k].steamid == steamid64) {
-			player_stats = map_stats.player_stats[k];
-			break;
-		}
-	}
-	
-	if (player_stats) {
-		player_stats.rating = rating;
-		update_map_ratings();
-		refresh_player_table();
-	} else {
-		console.log("No player stats found for " + steamid64);
-	}
+	map_stats.rating = rating;
+	update_map_ratings();
+	refresh_player_table();
 }
 
 function logout(ev) {
@@ -555,123 +538,81 @@ function handle_img_error(event) {
     event.target.onerror = null; // Prevent infinite loop if the fallback also fails
 }
 
-function parse_map_stats(view, isOwnStats) {
+function parse_player_state(view) {
 	let offset = 1; // skip message type byte
-	let next_maps = [];
 
-	let numPlayers = view.getUint8(offset, true);
-	offset += 1;
-	
-	let player_ids = [];
-	for (let j = 0; j < numPlayers; j++) {
-		player_ids.push(view.getBigUint64(offset, true));
-		offset += 8;
-	}
+	let steamid64 = view.getBigUint64(offset, true);
+	offset += 8;
 
-	console.log("Player ids: ", player_ids)
+	g_player_states[steamid64] = {
+		mapstats: {},
+		mapsPlayed: 0,		// number of unique maps played
+		mapsMultiplayed: 0	// number of unique maps played 2+ times
+	};
 	
-	if (!isOwnStats) {
-		console.log("Parse map stats for all players");
-		g_map_stats = [];
-		g_total_plays = {};
-		g_multi_plays = {};
-	}
-	else {
-		console.log("Parse map stats for self");
-		// TODO: check if already loaded stats because of being in the server
-	}
+	let lang = read_string(view, offset);
+	offset += get_utf8_data_len(lang);
+	g_player_states[steamid64].language = lang;
 	
 	let mapIdx = 0;
-	let datIdx = 0;
 	
 	for (let j = offset; j < view.byteLength && mapIdx < g_map_cycle.length; j++) {
 		let map = g_map_cycle[mapIdx][0];
-		let readingCurrentAndNextMap = datIdx < 2 && !isOwnStats;
-		datIdx++;
+		mapIdx++;
 		
-		if (readingCurrentAndNextMap) {
-			// map name only written for current and next map, in case they are not cycle maps
-			map = read_string(view, offset);
-			offset += get_utf8_data_len(map);
-		} else {
-			mapIdx++;
-		}
+		let lastPlay = view.getUint32(offset, true)
+		offset += 4;
 		
-		let mapType = view.getUint8(offset, true)
+		let totalPlays = view.getUint16(offset, true)
+		offset += 2;
+		
+		let rating = view.getUint8(offset, true)
 		offset += 1;
 		
-		let player_stats = [];
-		
-		for (let k = 0; k < numPlayers; k++) {
-			let steamid = player_ids[k];
-			
-			let lastPlay = view.getUint32(offset, true)
-			offset += 4;
-			
-			let totalPlays = view.getUint16(offset, true)
-			offset += 2;
-			
-			let rating = view.getUint8(offset, true)
-			offset += 1;
-			
-			if (!readingCurrentAndNextMap) {
-				if (totalPlays > 0) {
-					if (!g_total_plays.hasOwnProperty(steamid)) {
-						g_total_plays[steamid] = 0;
-					}
-					g_total_plays[steamid] += 1;
-				}
-				if (totalPlays > 1) {
-					if (!g_multi_plays.hasOwnProperty(steamid)) {
-						g_multi_plays[steamid] = 0;
-					}
-					g_multi_plays[steamid] += 1;
-				}
-			}
-			
-			player_stats.push({steamid, lastPlay, totalPlays, rating});
+		if (totalPlays > 0) {
+			g_player_states[steamid64].mapsPlayed += 1;
+		}
+		if (totalPlays > 1) {
+			g_player_states[steamid64].mapsMultiplayed += 1;
 		}
 		
-		if (isOwnStats) {
-			for (let k = 0; k < g_map_stats.length; k++) {
-				if (g_map_stats[k].map == map) {
-					g_map_stats[k].player_stats.push(player_stats[0]);
-				}
-			}
-		} else {
-			g_map_stats.push({map, mapType, player_stats});
-		}
+		g_player_states[steamid64].mapstats[map] = {
+			lastPlay: lastPlay,
+			totalPlays: totalPlays,
+			rating: rating
+		};
 	}
 	
-	if (g_map_stats.length) {
-		g_current_map = g_map_stats[0].map;
-		g_next_map = g_map_stats[1].map;
-		
-		let series_counter = document.getElementById("series_counter");
-		
-		let seriesLength = 1;
-		let seriesIdx = 1;
-		for (let i = 0; i < g_map_cycle.length; i++) {
-			for (let k = 0; k < g_map_cycle[i].length; k++) {
-				if (g_map_cycle[i][k] == g_current_map) {
-					seriesLength = g_map_cycle[i].length;
-					seriesIdx = k+1;
-					break;
-				}
-			}
-		}
-		
-		if (seriesLength > 1) {
-			series_counter.textContent = " (" + seriesIdx + " of " + seriesLength + ")";
-		} else {
-			series_counter.textContent = "";
-		}
-	}
-	
-	console.log("Map stats:", g_map_stats);
+	console.log("Player state: ", g_player_states[steamid64]);
 	
 	update_map_data();
 }
+
+function parse_upcoming_maps(view) {
+	let offset = 1; // skip message type byte
+
+	g_next_map = read_string(view, offset);
+	offset += get_utf8_data_len(g_next_map);
+	
+	console.log("Read count at offset " + offset);
+	
+	let upcomingMapsCount = view.getUint16(offset, true);
+	offset += 2;
+	
+	g_upcoming_maps.clear();
+	
+	for (let i = 0; i < upcomingMapsCount; i++) {		
+		let mapId = view.getUint16(offset, true);
+		offset += 2;
+		
+		g_upcoming_maps.add(g_map_cycle[mapId][0]);
+	}
+	
+	console.log("Next map: " + g_next_map + ", upcoming maps: ", g_upcoming_maps);
+	
+	update_map_data();
+}
+
 
 function parse_map_list(view) {
 	g_map_cycle = [];
@@ -698,7 +639,10 @@ function parse_map_list(view) {
 }
 
 function parse_map_info(view) {
-	let offset = 1;
+	let offset = 1; // skip message type byte
+	
+	g_current_map = read_string(view, offset);
+	offset += get_utf8_data_len(g_current_map);
 	
 	g_map_start_time = view.getBigUint64(offset, true);
 	offset += 8;
@@ -708,6 +652,26 @@ function parse_map_info(view) {
 	
 	g_map_frag_limit = view.getFloat32(offset, true);
 	offset += 4;
+	
+	let series_counter = document.getElementById("series_counter");
+		
+	let seriesLength = 1;
+	let seriesIdx = 1;
+	for (let i = 0; i < g_map_cycle.length; i++) {
+		for (let k = 0; k < g_map_cycle[i].length; k++) {
+			if (g_map_cycle[i][k] == g_current_map) {
+				seriesLength = g_map_cycle[i].length;
+				seriesIdx = k+1;
+				break;
+			}
+		}
+	}
+	
+	if (seriesLength > 1) {
+		series_counter.textContent = " (" + seriesIdx + " of " + seriesLength + ")";
+	} else {
+		series_counter.textContent = "";
+	}
 }
 
 function get_map_dat(mapname) {
@@ -739,22 +703,19 @@ function get_first_map_in_series(mapname) {
 }
 
 function update_map_data() {
-	if (!g_map_stats.length) {
-		return;
-	}
-
 	document.getElementById('current_map').setAttribute("map", g_current_map);
 	document.getElementById('next_map').setAttribute("map", g_next_map);
 	
 	let upcoming = document.getElementById('upcoming_maps_grid');
 	upcoming.innerHTML = "";
 	
-	for (let i = 1; i < g_map_stats.length-1; i++) {
+	for (let i = 1; i < g_map_cycle.length; i++) {
 		let map = document.createElement('a');
+		let mapname = g_map_cycle[i][0];
 		map.classList.add("map_container");
-		map.setAttribute("map", g_map_stats[i].map);
+		map.setAttribute("map", mapname);
 		
-		if (g_map_stats[i].mapType == 1) {
+		if (g_upcoming_maps.has(mapname)) {
 			map.classList.add("upcoming");
 		}
 	
@@ -859,7 +820,7 @@ function update_map_ratings() {
 		}
 		connectedIds[id] = true;
 	}
-	if (!ownIdPushed) {
+	if (!ownIdPushed && g_steamid > 0) {
 		steamids.push(g_steamid);
 	}
 	let shouldCountOwnId = ownIdPushed;
@@ -875,32 +836,17 @@ function update_map_ratings() {
 		let numLike = 0;
 		let numDislike = 0;
 		
-		let first_map = get_first_map_in_series(map);
-		let map_stats = undefined;
-		for (let i = 0; i < g_map_stats.length; i++) {
-			if (g_map_stats[i].map == first_map) {
-				map_stats = g_map_stats[i];
-				break;
-			}
-		}
-		
-		if (!map_stats) {
-			console.log("Missing map stats for " + map);
-			return;
-		}
-		
+		let first_map = get_first_map_in_series(map);		
 		let was_played = false;
 		
 		for (let i = 0; i < steamids.length; i++) {
 			let id = steamids[i];
 			
-			let player_stats = undefined;
-			for (let k = 0; k < map_stats.player_stats.length; k++) {
-				if (map_stats.player_stats[k].steamid == id) {
-					player_stats = map_stats.player_stats[k];
-					break;
-				}
+			let player_state = g_player_states[id];
+			if (!player_state) {
+				continue;
 			}
+			let player_stats = player_state.mapstats[first_map];
 			
 			if (player_stats) {
 				if (player_stats.totalPlays > 0 && id in connectedIds) {
@@ -1102,7 +1048,7 @@ async function setup() {
 		
 		// remove previous cookie/login
 		document.cookie = "token=DELETED; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Strict; secure";
-		console.log("ZOMG DELETE COOKIE");
+		console.log("Deleted Steam authentication cookie");
 		
 		//console.log("GOT AUTH");
 		//console.log(params);
@@ -1152,43 +1098,43 @@ function createWebSocket() {
 
 		let msgType = view.getUint8(0);
 		
-		console.log("Got " + event.data.size + " byte message, type " + msgType);
+		console.log("Got " + get_message_type_name(msgType) + " (" + event.data.size + " bytes)");
 		
-		if (msgType == WEBMSG_SERVER_NAME) {
+		if (msgType == MESSAGE_TYPE.WEBMSG_SERVER_NAME) {
 			update_server_name(view);
 		}
-		else if (msgType == WEBMSG_PLAYER_LIST) {
+		else if (msgType == MESSAGE_TYPE.WEBMSG_PLAYER_LIST) {
 			update_player_data(view);
 		}
-		else if (msgType == WEBMSG_NEXT_MAPS) {
-			parse_map_stats(view, false);
-		}
-		else if (msgType == WEBMSG_CHAT) {
+		else if (msgType == MESSAGE_TYPE.WEBMSG_CHAT) {
 			parse_chat_message(view);
 		}
-		else if (msgType == WEBMSG_AUTH) {
+		else if (msgType == MESSAGE_TYPE.WEBMSG_AUTH) {
 			parse_auth(view);
 		}
-		else if (msgType == WEBMSG_WEB_CLIENTS) {
+		else if (msgType == MESSAGE_TYPE.WEBMSG_WEB_CLIENTS) {
 			parse_web_clients(view);
 		}
-		else if (msgType == WEBMSG_NOT_AUTHED) {
+		else if (msgType == MESSAGE_TYPE.WEBMSG_NOT_AUTHED) {
 			action_denied_popup();
 		}
-		else if (msgType == WEBMSG_LOGOUT) {
+		else if (msgType == MESSAGE_TYPE.WEBMSG_LOGOUT) {
 			finish_logout();
 		}
-		else if (msgType == WEBMSG_RATING) {
+		else if (msgType == MESSAGE_TYPE.WEBMSG_RATING) {
 			parse_rating(view);
 		}
-		else if (msgType == WEBMSG_MAP_LIST) {
+		else if (msgType == MESSAGE_TYPE.WEBMSG_MAP_LIST) {
 			parse_map_list(view);
 		}
-		else if (msgType == WEBMSG_OWN_MAP_STATS) {
-			parse_map_stats(view, true);
-		}
-		else if (msgType == WEBMSG_MAP_INFO) {
+		else if (msgType == MESSAGE_TYPE.WEBMSG_MAP_INFO) {
 			parse_map_info(view, true);
+		}
+		else if (msgType == MESSAGE_TYPE.WEBMSG_PLAYER_STATE) {
+			parse_player_state(view, true);
+		}
+		else if (msgType == MESSAGE_TYPE.WEBMSG_UPCOMING_MAPS) {
+			parse_upcoming_maps(view, true);
 		}
 		else {
 			console.error("Unrecognized socket message type " + msgType);
