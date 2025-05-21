@@ -194,8 +194,43 @@ function refresh_player_table() {
 		name.textContent = dat.name;
 		name.href = "https://steamcommunity.com/profiles/" + dat.steamid64;
 		name.target = "_blank";
-		name.title = dat.name + "\n\nMaps played: " + (mapsPlayed ? mapsPlayed : 0);
-		
+		name.title = dat.name;
+
+		if (state) {
+			const firstSeenDate = new Date(state.firstSeen*1000);
+			let firstSeenText = firstSeenDate.toLocaleString(undefined, {
+				year: 'numeric', 
+				month: 'short', 
+				day: 'numeric'
+			});
+			
+			name.title += "\n\nMaps played:    " + state.mapsPlayed;
+			name.title += "\nTotal Play Time:    " + format_age(state.totalPlayTime);
+			name.title += "\nFirst Seen:    " + firstSeenText;
+			
+			if (state.aliases.length) {
+				name.title += "\n\nThis user has played as:";
+				
+				for (let i = 0; i < state.aliases.length; i++) {
+					let alias = state.aliases[i];
+					let lastUsed = alias.lastUsed*24*60*60*1000;
+					let firstUsed = alias.lastUsed*24*60*60*1000;
+					let timeUsed = alias.timeUsed;
+					const deltaTime = Number(new Date()) - Number(lastUsed);
+					let timeSince = format_age(deltaTime/1000, true);
+					
+					name.title += "\n    " + alias.name + "    (for ";
+					if (alias.name == state.name) {
+						name.title += format_age(timeUsed, true) + ")";
+					} else {
+						name.title += format_age(timeUsed, true) + ". Last used " + timeSince + " ago)";
+					}
+				}
+			}
+			
+			
+		}
+		//3435973836
 		let status_col = row.cells[1];
 		status_col.className = "";
 		if (dat.status == 0 || dat.status == 1) {
@@ -546,6 +581,7 @@ function parse_player_state(view) {
 
 	g_player_states[steamid64] = {
 		mapstats: {},
+		aliases: [],
 		mapsPlayed: 0,		// number of unique maps played
 		mapsMultiplayed: 0	// number of unique maps played 2+ times
 	};
@@ -554,19 +590,56 @@ function parse_player_state(view) {
 	offset += get_utf8_data_len(lang);
 	g_player_states[steamid64].language = lang;
 	
+	let name = read_string(view, offset);
+	offset += get_utf8_data_len(name);
+	g_player_states[steamid64].name = name;
+	
+	g_player_states[steamid64].lastSeen = view.getUint32(offset, true);
+	offset += 4;
+	
+	g_player_states[steamid64].firstSeen = view.getUint32(offset, true);
+	offset += 4;
+	
+	g_player_states[steamid64].totalPlayTime = view.getUint32(offset, true);
+	offset += 4;
+	
+	let aliasCount = view.getUint8(offset, true);
+	offset += 1;
+	
+	for (let i = 0; i < aliasCount; i++) {
+		let name = read_string(view, offset);
+		offset += get_utf8_data_len(name);
+	
+		let firstUsed = view.getUint16(offset, true);
+		offset += 2;
+		
+		let lastUsed = view.getUint16(offset, true);
+		offset += 2;
+		
+		let timeUsed = view.getUint32(offset, true);
+		offset += 4;
+		
+		g_player_states[steamid64].aliases.push({
+			name: name,
+			firstUsed: firstUsed,
+			lastUsed: lastUsed,
+			timeUsed: timeUsed
+		});
+	}
+	
 	let mapIdx = 0;
 	
 	for (let j = offset; j < view.byteLength && mapIdx < g_map_cycle.length; j++) {
 		let map = g_map_cycle[mapIdx][0];
 		mapIdx++;
 		
-		let lastPlay = view.getUint32(offset, true)
+		let lastPlay = view.getUint32(offset, true);
 		offset += 4;
 		
-		let totalPlays = view.getUint16(offset, true)
+		let totalPlays = view.getUint16(offset, true);
 		offset += 2;
 		
-		let rating = view.getUint8(offset, true)
+		let rating = view.getUint8(offset, true);
 		offset += 1;
 		
 		if (totalPlays > 0) {
@@ -917,12 +990,20 @@ function format_timer(secondsPassed) {
 	}
 }
 
-function format_age(secondsPassed) {
+function format_age(secondsPassed, oneUnitOnly) {
 	let seconds = secondsPassed;
 	let minutes = Math.floor(secondsPassed / 60);
 	let hours = Math.floor(secondsPassed / (60*60));
+	let days = Math.floor(secondsPassed / (60*60*24));
 	
-	if (hours > 2) {
+	if (days > 2) {
+		if (oneUnitOnly) {
+			return "" + days + "d";
+		} else {
+			return "" + days + "d" + " " + (hours % 24) + "h";
+		}
+	}
+	else if (hours > 2) {
 		return "" + hours + "h";
 	}
 	else if (minutes > 2) {
