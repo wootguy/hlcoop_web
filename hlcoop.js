@@ -2,6 +2,7 @@ var g_socket;
 var g_server_url = 'wss://w00tguy.ddns.net:3000/';
 //var g_server_url = 'ws://localhost:3000/'; // for Visual Studio debugging
 var g_player_data = []; // players currently in the server
+var g_web_player_data = []; // web client info
 var g_player_states = {}; // extra player info and map stats by steam id
 var g_server_name = "Half-Life Co-op";
 var g_selected_map = "";
@@ -10,7 +11,7 @@ var g_mouseover_state = false;
 var g_auth_params;
 var g_auth_token;
 var g_map_data = {}; // information about each map (link)
-var g_web_clients = [];
+var g_web_clients = []; // list of steam ids
 var g_map_cycle = [];
 var g_total_maps = 0;
 var g_upcoming_maps = new Set(); // set of maps in the upcoming maps pool
@@ -20,6 +21,7 @@ var g_next_map;
 var g_map_start_time; // epoch millis when map started
 var g_map_time_limit; // map time limit in seconds
 var g_map_frag_limit;
+var g_list_web_users = false; // list web users instead of players
 
 const MESSAGE_TYPE = {
 	WEBMSG_SERVER_NAME: 0,
@@ -85,6 +87,22 @@ function read_string(view, offset) {
 
 function update_table_state() {
 	let plist = document.getElementById('player_list').querySelector('tbody');
+	
+	if (g_list_web_users) {
+		for (let i = 0; i < plist.rows.length; i++) {
+			let row = plist.rows[i];
+			let id = row.getAttribute("steamid");
+			if (id != 0 && id in g_player_states) {
+				row.cells[8].textContent = format_age(g_player_states[id].totalPlayTime);
+			} else {
+				row.cells[8].textContent = "none";
+			}
+		}
+		
+		document.getElementById('player_list').classList.add("web_users");
+	} else {
+		document.getElementById('player_list').classList.remove("web_users");
+	}
 	
 	if (g_selected_map) {		
 		for (let i = 0; i < plist.rows.length; i++) {
@@ -193,17 +211,19 @@ function refresh_player_table() {
 	
 	let oldRowCount = plist.rows.length;
 	
+	let player_data = g_list_web_users ? g_web_player_data : g_player_data;
+	
 	// remove extra rows
-	for (let i = g_player_data.length; i < plist.rows.length; i++) {
+	for (let i = player_data.length; i < plist.rows.length; i++) {
 		plist.deleteRow(i);
 	}
 	
-	for (let i = 0; i < g_player_data.length; i++) {
-		let dat = g_player_data[i];
+	for (let i = 0; i < player_data.length; i++) {
+		let dat = player_data[i];
 		
 		if (i >= plist.rows.length) {
 			let row = plist.insertRow(plist.rows.length);
-			row.innerHTML = "<tr><td><a></a><img class=\"rank\"/></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>";;
+			row.innerHTML = "<tr><td><a></a><img class=\"rank\"/></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>";
 		}
 		
 		let row = plist.rows[i];
@@ -262,8 +282,16 @@ function refresh_player_table() {
 		} else {
 			name.classList.remove("bad_guy");
 		}
+		
+		if (dat.steamid64 == 0) {
+			name.href = "#";
+			name.target = "";
+			name.title = "Web clients who have not signed in to Steam.";
+			rank.classList.add("hidden");
+			name.classList.add("anon");
+		}
 
-		if (state) {
+		if (state && dat.steamid64 > 0) {
 			name.title = get_player_hover_info(dat.name, dat.steamid64);
 		}
 		//3435973836
@@ -314,6 +342,7 @@ function refresh_player_table() {
 	}
 	
 	document.getElementById('pcount').textContent = g_player_data.length;
+	document.getElementById('wcount').textContent = g_web_player_data.length;
 	document.getElementById('tab_title').textContent = "Half-Life Co-op (" + g_player_data.length + "/32)";
 	
 	update_table_state();
@@ -463,11 +492,61 @@ function parse_chat_message(view) {
 	}
 }
 
+function update_web_client_info() {
+	g_web_player_data = [];
+	let anonCounter = 0;
+	let addedIds = new Set();
+	
+	for (let i = 0; i < g_web_clients.length; i++) {
+		let id = g_web_clients[i];
+		let name = "\\unknown\\";
+		let steamid64 = id;
+		let status = PLAYER_STATUS_ALIVE;
+		let flags = 0;
+		let score = 0;
+		let deaths = 0;
+		let ping = 0;
+		let idleTime = 0;
+		
+		if (id > 1) {
+			if (id in g_player_states) {
+				name = g_player_states[id].name;
+			}		
+		} else {
+			anonCounter += 1;
+			steamid64 = 0;
+		}
+		
+		if (steamid64 > 0) {
+			if (addedIds.has(steamid64)) {
+				continue;
+			}
+			addedIds.add(steamid64);
+			g_web_player_data.push({ name, steamid64, status, flags, score, deaths, ping, idleTime });
+		}
+	}
+	
+	g_web_player_data.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
+	
+	if (anonCounter > 0) {
+		let name = "" + anonCounter + " guest" + (anonCounter != 1 ? "s" : "");
+		let steamid64 = 0;
+		let status = PLAYER_STATUS_ALIVE;
+		let flags = 0;
+		let score = 0;
+		let deaths = 0;
+		let ping = 0;
+		let idleTime = 0;
+		g_web_player_data.push({ name, steamid64, status, flags, score, deaths, ping, idleTime });
+	}
+	
+	document.getElementById("wcount").textContent = g_web_clients.length;
+}
+
 function parse_web_clients(view) {
 	let offset = 1; // skip message type byte
 	
 	g_web_clients = [];
-	
 	while (offset < view.byteLength) {
 		let steamid64 = view.getBigUint64(offset, true);
 		offset += 8;
@@ -475,7 +554,7 @@ function parse_web_clients(view) {
 		g_web_clients.push(steamid64);
 	}
 	
-	document.getElementById("client_anon_counter").textContent = g_web_clients.length;
+	update_web_client_info();
 }
 
 function getCookie(name) {
@@ -620,7 +699,7 @@ function rate_map(ev) {
 	ev.preventDefault();
 	
 	if (g_steamid == 0) {
-		action_denied_popup();
+		action_denied_popup(WEBDENY_NOT_LOGGED_IN_RATE);
 		return;
 	}
 	
@@ -733,6 +812,7 @@ function parse_player_state(view) {
 	
 	console.log("Player state: ", g_player_states[steamid64]);
 	
+	update_web_client_info();
 	update_map_data();
 }
 
@@ -1154,6 +1234,10 @@ function remove_old_player_states() {
 		used_ids.add("" + g_player_data[i].steamid64);
 	}
 	
+	for (let i = 0; i < g_web_clients.length; i++) {
+		used_ids.add("" + g_web_clients[i]);
+	}
+	
 	Object.keys(g_player_states).forEach(id => {
 		if (!used_ids.has("" + id)) {
 			console.log("Removed unused player state for ID " + id);
@@ -1198,6 +1282,27 @@ async function setup() {
 	});
 	
 	document.getElementById("maps_filter").addEventListener('onchange', filter_maps);
+
+	document.getElementById("pcount_header").addEventListener('click', function() {
+		document.getElementById("pcount_header").classList.add("selected");
+		document.getElementById("wcount_header").classList.remove("selected");
+		g_list_web_users = false;
+		let plist = document.getElementById('player_list').querySelector('tbody');
+		for (let i = 0; i < plist.rows.length; i++) {
+			plist.deleteRow(i);
+		}
+		refresh_player_table();
+	});
+	document.getElementById("wcount_header").addEventListener('click', function() {
+		document.getElementById("pcount_header").classList.remove("selected");
+		document.getElementById("wcount_header").classList.add("selected");
+		g_list_web_users = true;
+		let plist = document.getElementById('player_list').querySelector('tbody');
+		for (let i = 0; i < plist.rows.length; i++) {
+			plist.deleteRow(i);
+		}
+		refresh_player_table();
+	});
 
 	document.getElementById('send_message').addEventListener('keydown', (event) => {
 		let input_box = document.getElementById("send_message");
