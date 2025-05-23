@@ -33,8 +33,16 @@ const MESSAGE_TYPE = {
 	WEBMSG_MAP_LIST: 9,
 	WEBMSG_MAP_INFO: 11,
 	WEBMSG_PLAYER_STATE: 12,
-	WEBMSG_UPCOMING_MAPS: 13
+	WEBMSG_UPCOMING_MAPS: 13,
+	WEBMSG_WEBUSER_CHAT: 14
 };
+
+const WEBDENY_NOT_LOGGED_IN_RATE = 0;
+const WEBDENY_NOT_LOGGED_IN_CHAT = 1;
+const WEBDENY_BANNED = 2;
+const WEBDENY_TOO_NEW = 3;
+const WEBDENY_RATE_LIMITED = 4;
+const WEBDENY_STEAM_ERROR = 5;
 
 function get_message_type_name(value) {
   for (const [key, val] of Object.entries(MESSAGE_TYPE)) {
@@ -204,7 +212,8 @@ function refresh_player_table() {
 				day: 'numeric'
 			});
 			
-			name.title += "\n\nMaps played:    " + state.mapsPlayed;
+			name.title += "\n\nLanguage:    " + state.language;
+			name.title += "\nMaps played:    " + state.mapsPlayed;
 			name.title += "\nTotal Play Time:    " + format_age(state.totalPlayTime);
 			name.title += "\nFirst Seen:    " + firstSeenText;
 			
@@ -214,7 +223,7 @@ function refresh_player_table() {
 				for (let i = 0; i < state.aliases.length; i++) {
 					let alias = state.aliases[i];
 					let lastUsed = alias.lastUsed*24*60*60*1000;
-					let firstUsed = alias.lastUsed*24*60*60*1000;
+					let firstUsed = alias.firstUsed*24*60*60*1000;
 					let timeUsed = alias.timeUsed;
 					const deltaTime = Number(new Date()) - Number(lastUsed);
 					let timeSince = format_age(deltaTime/1000, true);
@@ -227,8 +236,6 @@ function refresh_player_table() {
 					}
 				}
 			}
-			
-			
 		}
 		//3435973836
 		let status_col = row.cells[1];
@@ -312,6 +319,12 @@ function update_player_data(view) {
 		let idleTime = view.getUint16(offset, true);
 		offset += 2;
 
+		if (g_steamid != 0 && steamid64 == g_steamid && name.length) {
+			let login_name = document.getElementById("login_text");
+			login_name.textContent = name;
+			login_name.title = name + "\n\n" + "The name shown here and in chat may not be your most recently used in-game name. A more common name is chosen if you haven't used your new name long enough.";
+		}
+
 		g_player_data.push({ name, steamid64, status, score, deaths, ping, idleTime });
 	}
 	
@@ -335,7 +348,7 @@ function update_server_name(view) {
 	document.getElementById('tab_title').textContent = name;
 }
 
-function add_message(steamid64, name, msg, time) {
+function add_message(steamid64, name, msg, time, isWebChat) {
 	let chatbox = document.getElementById('chat_box');
 	
 	let chat_container = document.createElement('div');
@@ -358,6 +371,10 @@ function add_message(steamid64, name, msg, time) {
 	chat_name.href = "https://steamcommunity.com/profiles/" + steamid64;
 	chat_name.target = "_blank";
 	chat_name.textContent = name;
+	if (isWebChat) {
+		chat_name.textContent = "(WEB) " + chat_name.textContent;
+		chat_name.classList.add("web_chat");
+	}
 	
 	let chat_msg = document.createElement('span');
 	if (steamid64 != 0) {
@@ -378,10 +395,13 @@ function add_message(steamid64, name, msg, time) {
 	chatbox.scrollTop = chatbox.scrollHeight;
 }
 
-function parse_chat_message(view) {
-	let offset = 1; // skip message type byte
-	
+function parse_chat_message(view) {	
+	let offset = 0;
+
 	while (offset < view.byteLength) {
+		let msgtype = view.getUint8(offset, true);
+		offset += 1;
+		
 		let time = view.getBigUint64(offset, true);
 		offset += 8;
 		
@@ -396,7 +416,7 @@ function parse_chat_message(view) {
 		
 		msg = msg.replace(/\n$/, ''); // remove trailing newline if it exists
 		
-		add_message(steamid64, name, msg, time);
+		add_message(steamid64, name, msg, time, msgtype == MESSAGE_TYPE.WEBMSG_WEBUSER_CHAT);
 	}
 }
 
@@ -593,6 +613,12 @@ function parse_player_state(view) {
 	let name = read_string(view, offset);
 	offset += get_utf8_data_len(name);
 	g_player_states[steamid64].name = name;
+	
+	if (g_steamid != 0 && steamid64 == g_steamid && name.length) {
+		let login_name = document.getElementById("login_text");
+		login_name.textContent = name;
+		login_name.title = name + "\n\n" + "The name shown here and in chat may not be your most recently used in-game name. A more common name is chosen if you haven't used your new name long enough.";
+	}
 	
 	g_player_states[steamid64].lastSeen = view.getUint32(offset, true);
 	offset += 4;
@@ -1071,6 +1097,8 @@ function filter_maps() {
 	});
 }
 
+let g_chat_cooldown_end = 0;
+
 async function setup() {
 	g_map_data = await downloadJson("mapdb.json");
 	update_map_data();
@@ -1105,9 +1133,33 @@ async function setup() {
 	document.getElementById("maps_filter").addEventListener('onchange', filter_maps);
 
 	document.getElementById('send_message').addEventListener('keydown', (event) => {
-		let message = document.getElementById("send_message").value.trim();
+		let input_box = document.getElementById("send_message");
+		let cooldown_div = document.getElementById("cooldown-text");
+		let cooldown_timer = document.getElementById("cooldown-timer");
+		let message = input_box.value.trim();
+		
 		if (event.key === 'Enter' && message.length) {
-			alert("Oopsie whoopsie! Chat message feature not implemented.");
+			if (input_box.classList.contains("cooldown")) {
+				cooldown_div.classList.remove("hidden");
+				setInterval(function() {
+					let timeleft = g_chat_cooldown_end - Number(new Date());
+					let secondsLeft = Math.floor(timeleft / 1000);
+					let tenthsLeft = Math.floor((timeleft % 1000) / 100);
+					cooldown_timer.textContent = secondsLeft + "." + tenthsLeft;
+				}, 20, 100);
+				return;
+			}
+			
+			g_socket.send("say;" + message);
+			input_box.value = "";
+			input_box.classList.add("cooldown");
+			
+			g_chat_cooldown_end = Number(new Date()) + 3100;
+			setTimeout(function() {
+				console.log("timeout done!");
+				input_box.classList.remove("cooldown");
+				cooldown_div.classList.add("hidden");
+			}, 3100);
 		}
 	});
 	
@@ -1145,8 +1197,34 @@ async function setup() {
 	createWebSocket();
 }
 
-function action_denied_popup() {
+function action_denied_popup(reason, errorCode) {
 	document.getElementById('popup').style.display = 'flex';
+	document.getElementById('popup-text-no-rate').style.display = 'none';
+	document.getElementById('popup-text-banned').style.display = 'none';
+	document.getElementById('popup-text-too-new').style.display = 'none';
+	document.getElementById('popup-text-rate-limit').style.display = 'none';
+	document.getElementById('popup-text-no-chat').style.display = 'none';
+	document.getElementById('popup-text-steam-error').style.display = 'none';
+	
+	if (reason == WEBDENY_NOT_LOGGED_IN_RATE) {
+		document.getElementById('popup-text-no-rate').style.display = 'block';
+	}
+	if (reason == WEBDENY_NOT_LOGGED_IN_CHAT) {
+		document.getElementById('popup-text-no-chat').style.display = 'block';
+	}
+	if (reason == WEBDENY_BANNED) {
+		document.getElementById('popup-text-banned').style.display = 'block';
+	}
+	if (reason == WEBDENY_TOO_NEW) {
+		document.getElementById('popup-text-too-new').style.display = 'block';
+	}
+	if (reason == WEBDENY_RATE_LIMITED) {
+		document.getElementById('popup-text-rate-limit').style.display = 'block';
+	}
+	if (reason == WEBDENY_STEAM_ERROR) {
+		document.getElementById('popup-error-code').textContent = errorCode
+		document.getElementById('popup-text-steam-error').style.display = 'block';
+	}
 }
 
 function createWebSocket() {
@@ -1187,7 +1265,7 @@ function createWebSocket() {
 		else if (msgType == MESSAGE_TYPE.WEBMSG_PLAYER_LIST) {
 			update_player_data(view);
 		}
-		else if (msgType == MESSAGE_TYPE.WEBMSG_CHAT) {
+		else if (msgType == MESSAGE_TYPE.WEBMSG_CHAT || msgType == MESSAGE_TYPE.WEBMSG_WEBUSER_CHAT) {
 			parse_chat_message(view);
 		}
 		else if (msgType == MESSAGE_TYPE.WEBMSG_AUTH) {
@@ -1197,7 +1275,8 @@ function createWebSocket() {
 			parse_web_clients(view);
 		}
 		else if (msgType == MESSAGE_TYPE.WEBMSG_NOT_AUTHED) {
-			action_denied_popup();
+			let errorCode = view.byteLength >= 4 ? view.getUint16(2, true) : 0;
+			action_denied_popup(view.getUint8(1), errorCode);
 		}
 		else if (msgType == MESSAGE_TYPE.WEBMSG_LOGOUT) {
 			finish_logout();
