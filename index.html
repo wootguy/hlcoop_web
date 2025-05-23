@@ -366,6 +366,7 @@
 			#send_message_container {
 				padding: 0px 0;
 				background: black;
+				position: relative;
 			}
 			#send_message {
 				background: black;
@@ -373,6 +374,18 @@
 				box-sizing: border-box;
 				font-size: 16px;
 				color: #ddd;
+			}
+			#cooldown-text {
+				background: black;
+				box-sizing: border-box;
+				font-size: 16px;
+				color: red;
+				text-align: center;
+				position: absolute;
+				top: 2px;
+				right: 2px;
+				padding: 0 10px;
+				pointer-events: none;
 			}
 			
 			#filter_maps_container {
@@ -403,6 +416,10 @@
 			.chat_message a {
 				text-decoration: none;
 				color: #99CCFF;
+			}
+			.chat_message a.web_chat {
+				text-decoration: none;
+				color: #99FF99;
 			}
 			.chat_message a:hover {
 				color: #D2E6FB;
@@ -497,7 +514,7 @@
 				max-width: 500px;
 				text-align: center;
 			}
-			#popup-text {
+			.popup-text {
 				text-align: initial;
 			}
 			.close {
@@ -587,7 +604,8 @@
 				<!--<div id="player_list">test stuff</div>-->
 				<div id="chat_box"></div>
 				<div id="send_message_container">
-					<input id="send_message" type="text" placeholder="Send message..." maxlength="180" title="Type here and press Enter to send a chat message to the server">
+					<input id="send_message" type="text" placeholder="Send message..." maxlength="123" title="Type here and press Enter to send a chat message to the server">
+					<div id="cooldown-text" class="hidden">Wait <span id="cooldown-timer">X</span> seconds</div>
 				</div>
 			</div>
 			
@@ -651,10 +669,29 @@ Red light = Negative ratings. Low priority. Selected only if all other maps are 
 		
 		<div id="popup" class="popup">
 			<div class="popup-content">
-				<p id="popup-text">
+				<p id="popup-text-no-rate" class="popup-text">
 					Sign in to Steam so the server can link ratings to your Steam ID.
 					<br><br>
 					If you don't want to do that, use the <span class="command-text">.rate</span> command in-game. You can pass a map name to rate a map other than the current one. For example, <span class="command-text">.rate ascii_art2</span> will bring up a rating menu for ascii_art2.
+				</p>
+				<p id="popup-text-no-chat" class="popup-text">
+					Sign in to Steam to send chat messages.
+				</p>
+				<p id="popup-text-banned" class="popup-text">
+					You are banned from the server and cannot sign in.
+				</p>
+				<p id="popup-text-steam-error" class="popup-text">
+					A problem occured while trying to communicate with Steam.
+					<br><br>
+					Error code: <span id="popup-error-code">0</span>
+				</p>
+				<p id="popup-text-too-new" class="popup-text">
+					You haven't played on the server long enough to use the web chat. Try again when you have at least 8 hours played.
+					<br><br>
+					You can check your hours by mousing over your name in the player list when connected to the server.
+				</p>
+				<p id="popup-text-rate-limit" class="popup-text">
+					You are sending messages too fast. The last message was not sent.
 				</p>
 				<div class="close" id="closePopup">OK</div>
 			</div>
