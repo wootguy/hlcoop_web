@@ -34,7 +34,6 @@ const MESSAGE_TYPE = {
 	WEBMSG_MAP_INFO: 11,
 	WEBMSG_PLAYER_STATE: 12,
 	WEBMSG_UPCOMING_MAPS: 13,
-	WEBMSG_WEBUSER_CHAT: 14
 };
 
 const WEBDENY_NOT_LOGGED_IN_RATE = 0;
@@ -43,6 +42,18 @@ const WEBDENY_BANNED = 2;
 const WEBDENY_TOO_NEW = 3;
 const WEBDENY_RATE_LIMITED = 4;
 const WEBDENY_STEAM_ERROR = 5;
+
+const PLAYER_FLAG_BAD_GUY = 1;
+
+const WEBMSG_CHAT_TYPE_NORMAL = 0;
+const WEBMSG_CHAT_TYPE_BAD_GUY = 1;
+const WEBMSG_CHAT_TYPE_WEB_USER = 2;
+
+const PLAYER_STATUS_ALIVE = 0;
+const PLAYER_STATUS_DEAD = 1;
+const PLAYER_STATUS_SPECTATOR = 2;
+const PLAYER_STATUS_IDLE = 3;
+const PLAYER_STATUS_CONNECTING = 4;
 
 function get_message_type_name(value) {
   for (const [key, val] of Object.entries(MESSAGE_TYPE)) {
@@ -135,6 +146,48 @@ function update_table_state() {
 	}
 }
 
+function get_player_hover_info(name, steamid64) {
+	let state = g_player_states[steamid64];
+	if (!state) {
+		return "" + steamid64;
+	}
+	
+	const firstSeenDate = new Date(state.firstSeen*1000);
+	let firstSeenText = firstSeenDate.toLocaleString(undefined, {
+		year: 'numeric', 
+		month: 'short', 
+		day: 'numeric'
+	});
+	
+	info = name + "\n";
+	info += "\nLanguage:    " + state.language;
+	info += "\nMaps played:    " + state.mapsPlayed;
+	info += "\nTotal Play Time:    " + format_age(state.totalPlayTime);
+	info += "\nFirst Seen:    " + firstSeenText;
+	
+	if (state.aliases.length) {
+		info += "\n\nThis user has played as:";
+		
+		for (let i = 0; i < state.aliases.length; i++) {
+			let alias = state.aliases[i];
+			let lastUsed = alias.lastUsed*24*60*60*1000;
+			let firstUsed = alias.firstUsed*24*60*60*1000;
+			let timeUsed = alias.timeUsed;
+			const deltaTime = Number(new Date()) - Number(lastUsed);
+			let timeSince = format_age(deltaTime/1000, true);
+			
+			info += "\n    " + alias.name + "    (for ";
+			if (alias.name == state.name) {
+				info += format_age(timeUsed, true) + ")";
+			} else {
+				info += format_age(timeUsed, true) + ". Last used " + timeSince + " ago)";
+			}
+		}
+	}
+	
+	return info;
+}
+
 function refresh_player_table() {
 	let plist = document.getElementById('player_list').querySelector('tbody');
 	
@@ -203,46 +256,22 @@ function refresh_player_table() {
 		name.href = "https://steamcommunity.com/profiles/" + dat.steamid64;
 		name.target = "_blank";
 		name.title = dat.name;
+		
+		if (dat.flags & PLAYER_FLAG_BAD_GUY) {
+			name.classList.add("bad_guy");
+		} else {
+			name.classList.remove("bad_guy");
+		}
 
 		if (state) {
-			const firstSeenDate = new Date(state.firstSeen*1000);
-			let firstSeenText = firstSeenDate.toLocaleString(undefined, {
-				year: 'numeric', 
-				month: 'short', 
-				day: 'numeric'
-			});
-			
-			name.title += "\n\nLanguage:    " + state.language;
-			name.title += "\nMaps played:    " + state.mapsPlayed;
-			name.title += "\nTotal Play Time:    " + format_age(state.totalPlayTime);
-			name.title += "\nFirst Seen:    " + firstSeenText;
-			
-			if (state.aliases.length) {
-				name.title += "\n\nThis user has played as:";
-				
-				for (let i = 0; i < state.aliases.length; i++) {
-					let alias = state.aliases[i];
-					let lastUsed = alias.lastUsed*24*60*60*1000;
-					let firstUsed = alias.firstUsed*24*60*60*1000;
-					let timeUsed = alias.timeUsed;
-					const deltaTime = Number(new Date()) - Number(lastUsed);
-					let timeSince = format_age(deltaTime/1000, true);
-					
-					name.title += "\n    " + alias.name + "    (for ";
-					if (alias.name == state.name) {
-						name.title += format_age(timeUsed, true) + ")";
-					} else {
-						name.title += format_age(timeUsed, true) + ". Last used " + timeSince + " ago)";
-					}
-				}
-			}
+			name.title = get_player_hover_info(dat.name, dat.steamid64);
 		}
 		//3435973836
 		let status_col = row.cells[1];
 		status_col.className = "";
-		if (dat.status == 0 || dat.status == 1) {
+		if (dat.status == PLAYER_STATUS_ALIVE || dat.status == PLAYER_STATUS_DEAD) {
 			if (dat.idleTime < 20) {
-				if (dat.status == 0) {
+				if (dat.status == PLAYER_STATUS_ALIVE) {
 					status_col.classList.add("alive");
 					status_col.textContent = "ALIVE";
 					status_col.title = "Player is alive";
@@ -264,10 +293,14 @@ function refresh_player_table() {
 				status_col.textContent = "IDLE";
 				status_col.title = "Player has been idle for " + dat.idleTime + " seconds";
 			}
-		} else if (dat.status == 2) {
+		} else if (dat.status == PLAYER_STATUS_SPECTATOR) {
 			status_col.classList.add("spec");
 			status_col.textContent = "SPEC";
 			status_col.title = "Player is spectating";
+		} else if (dat.status == PLAYER_STATUS_CONNECTING) {
+			status_col.classList.add("connecting");
+			status_col.textContent = "LOAD";
+			status_col.title = "Player is either connecting to the server, downloading content, or ghosting.";
 		}
 		
 		row.cells[2].textContent = dat.score;
@@ -291,10 +324,11 @@ function refresh_player_table() {
 	}
 }
 
-function update_player_data(view) {
+function parse_player_list(view) {
 	let offset = 1; // skip message type byte
 
 	let old_pdata_len = g_player_data.length;
+	
 	g_player_data = [];
 
 	while (offset < view.byteLength) {
@@ -305,6 +339,9 @@ function update_player_data(view) {
 		offset += get_utf8_data_len(name);
 
 		let status = view.getUint8(offset, true);
+		offset += 1;
+		
+		let flags = view.getUint8(offset, true);
 		offset += 1;
 
 		let score = view.getInt16(offset, true);
@@ -325,7 +362,7 @@ function update_player_data(view) {
 			login_name.title = name + "\n\n" + "The name shown here and in chat may not be your most recently used in-game name. A more common name is chosen if you haven't used your new name long enough.";
 		}
 
-		g_player_data.push({ name, steamid64, status, score, deaths, ping, idleTime });
+		g_player_data.push({ name, steamid64, status, flags, score, deaths, ping, idleTime });
 	}
 	
 	g_player_data.sort((a,b) => b.score - a.score);
@@ -338,7 +375,7 @@ function update_player_data(view) {
 		update_map_ratings();
 }
 
-function update_server_name(view) {
+function parse_server_name(view) {
 	let offset = 1; // skip message type byte
 
 	let name = read_string(view, offset);
@@ -348,7 +385,7 @@ function update_server_name(view) {
 	document.getElementById('tab_title').textContent = name;
 }
 
-function add_message(steamid64, name, msg, time, isWebChat) {
+function add_message(steamid64, name, msg, time, msgType) {
 	let chatbox = document.getElementById('chat_box');
 	
 	let chat_container = document.createElement('div');
@@ -371,9 +408,15 @@ function add_message(steamid64, name, msg, time, isWebChat) {
 	chat_name.href = "https://steamcommunity.com/profiles/" + steamid64;
 	chat_name.target = "_blank";
 	chat_name.textContent = name;
-	if (isWebChat) {
+	chat_name.setAttribute("id", steamid64);
+	chat_name.setAttribute("name", name);
+	chat_name.title = get_player_hover_info(name, steamid64);
+	if (msgType == WEBMSG_CHAT_TYPE_WEB_USER) {
 		chat_name.textContent = "(WEB) " + chat_name.textContent;
 		chat_name.classList.add("web_chat");
+	}
+	if (msgType == WEBMSG_CHAT_TYPE_BAD_GUY) {
+		chat_name.classList.add("bad_guy");
 	}
 	
 	let chat_msg = document.createElement('span');
@@ -396,7 +439,7 @@ function add_message(steamid64, name, msg, time, isWebChat) {
 }
 
 function parse_chat_message(view) {	
-	let offset = 0;
+	let offset = 1;
 
 	while (offset < view.byteLength) {
 		let msgtype = view.getUint8(offset, true);
@@ -416,7 +459,7 @@ function parse_chat_message(view) {
 		
 		msg = msg.replace(/\n$/, ''); // remove trailing newline if it exists
 		
-		add_message(steamid64, name, msg, time, msgtype == MESSAGE_TYPE.WEBMSG_WEBUSER_CHAT);
+		add_message(steamid64, name, msg, time, msgtype);
 	}
 }
 
@@ -682,6 +725,12 @@ function parse_player_state(view) {
 		};
 	}
 	
+	document.querySelectorAll('.chat_message .player_name').forEach(function(div) {
+		if (div.getAttribute("id") == steamid64) {
+			div.title = get_player_hover_info(div.getAttribute("name"), steamid64);
+		}
+	});
+	
 	console.log("Player state: ", g_player_states[steamid64]);
 	
 	update_map_data();
@@ -692,8 +741,6 @@ function parse_upcoming_maps(view) {
 
 	g_next_map = read_string(view, offset);
 	offset += get_utf8_data_len(g_next_map);
-	
-	console.log("Read count at offset " + offset);
 	
 	let upcomingMapsCount = view.getUint16(offset, true);
 	offset += 2;
@@ -711,7 +758,6 @@ function parse_upcoming_maps(view) {
 	
 	update_map_data();
 }
-
 
 function parse_map_list(view) {
 	g_map_cycle = [];
@@ -1097,6 +1143,25 @@ function filter_maps() {
 	});
 }
 
+function remove_old_player_states() {
+	let used_ids = new Set();
+	
+	document.querySelectorAll('.chat_message .player_name').forEach(function(div) {
+		used_ids.add("" + div.getAttribute("id"));
+	});
+	
+	for (let i = 0; i < g_player_data.length; i++) {
+		used_ids.add("" + g_player_data[i].steamid64);
+	}
+	
+	Object.keys(g_player_states).forEach(id => {
+		if (!used_ids.has("" + id)) {
+			console.log("Removed unused player state for ID " + id);
+			delete g_player_states[id];
+		}
+	});
+}
+
 let g_chat_cooldown_end = 0;
 
 async function setup() {
@@ -1104,6 +1169,8 @@ async function setup() {
 	update_map_data();
 	
 	setInterval(update_map_timer, 1000, -1);
+	
+	setInterval(remove_old_player_states, 1000*60, -1);
 
 	document.getElementById('closePopup').addEventListener('click', function() {
 		popup.style.display = 'none';
@@ -1260,12 +1327,12 @@ function createWebSocket() {
 		console.log("Got " + get_message_type_name(msgType) + " (" + event.data.size + " bytes)");
 		
 		if (msgType == MESSAGE_TYPE.WEBMSG_SERVER_NAME) {
-			update_server_name(view);
+			parse_server_name(view);
 		}
 		else if (msgType == MESSAGE_TYPE.WEBMSG_PLAYER_LIST) {
-			update_player_data(view);
+			parse_player_list(view);
 		}
-		else if (msgType == MESSAGE_TYPE.WEBMSG_CHAT || msgType == MESSAGE_TYPE.WEBMSG_WEBUSER_CHAT) {
+		else if (msgType == MESSAGE_TYPE.WEBMSG_CHAT) {
 			parse_chat_message(view);
 		}
 		else if (msgType == MESSAGE_TYPE.WEBMSG_AUTH) {
