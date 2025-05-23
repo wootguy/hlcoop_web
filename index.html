@@ -91,6 +91,9 @@
 			#player_list td:nth-child(8), #player_list th:nth-child(8) {
 				width: 88px;
 			}
+			#player_list td:nth-child(9), #player_list th:nth-child(9) {
+				width: 222px;
+			}
 			#player_list th {
 				text-align: left;
 			}
@@ -151,7 +154,8 @@
 			}
 			#player_list td:nth-child(6), #player_list th:nth-child(6),
 			#player_list td:nth-child(7), #player_list th:nth-child(7),
-			#player_list td:nth-child(8), #player_list th:nth-child(8) {
+			#player_list td:nth-child(8), #player_list th:nth-child(8),
+			#player_list td:nth-child(9), #player_list th:nth-child(9) {
 				display: none;
 			}
 			#player_list.stat_view td:nth-child(2), #player_list.stat_view th:nth-child(2),
@@ -165,6 +169,26 @@
 			#player_list.stat_view td:nth-child(8), #player_list.stat_view th:nth-child(8) {
 				display: table-cell;
 			}
+			#player_list.web_users td:nth-child(2), #player_list.web_users th:nth-child(2),
+			#player_list.web_users td:nth-child(3), #player_list.web_users th:nth-child(3),
+			#player_list.web_users td:nth-child(4), #player_list.web_users th:nth-child(4),
+			#player_list.web_users td:nth-child(5), #player_list.web_users th:nth-child(5) {
+				display: none;
+			}
+			#player_list.web_users td:nth-child(9), #player_list.web_users th:nth-child(9){
+				display: table-cell;
+			}
+			#player_list.web_users a {
+				color: #99FF99;
+			}
+			#player_list.web_users a:hover {
+				color: #BAEEBA;
+			}
+			#player_list.web_users a.anon {
+				color: #aaa;
+				cursor: initial;
+			}
+			
 			
 			h2 {
 				text-align: center;
@@ -572,6 +596,37 @@
 				right: 0;
 				font-size: 11px;
 			}
+			
+			.list_header_container {
+				text-align: left;
+				position: relative;
+				margin: 0;
+			}
+			.list_header {
+				display: inline-block;
+				padding: 5px 10px;
+				background: #333;
+				border-top-left-radius: 10px;
+				border-top-right-radius: 10px;
+				float: left;
+				cursor: pointer;
+				margin-right: 5px;
+			}
+			#pcount_header:hover {
+				background: #2c3b4a;
+			}
+			#pcount_header.selected {
+				background: #476079;
+			}
+			#wcount_header:hover {
+				background: #243E24;
+			}
+			#wcount_header.selected {
+				background: #3E683E;
+			}
+			#pcount, #wcount {
+				font-family: monospace;
+			}
 		</style>
 		<title id="tab_title">Half-Life Co-op</title>
 	</head>
@@ -588,14 +643,14 @@
 				<br/>
 				<div id="login_subtext">(required for some actions)</div>
 			</a>
-			<div id="client_counter_container">
-				<span id="client_anon_counter">0</span> connected web clients
-			</div>
 			
 			<hr>
 		
 			<div id="player_list_container">
-				<h2>Players (<span id="pcount">?</span>)</h2>
+				<h2 class="list_header_container">
+					<div id="pcount_header" class="list_header selected">Players (<span id="pcount">?</span>)</div>
+					<div id="wcount_header" class="list_header">Web Clients (<span id="wcount">?</span>)</div>
+				</h2>
 				<div id="player_table_container">
 					<table id="player_list">
 						<thead>
@@ -607,6 +662,7 @@
 							<th title="Player's opinion of the selected map">Opinion</th>
 							<th title="Last time this player played the selected map">Last play</th>
 							<th title="Total number of times the player played the selected map">Total plays</th>
+							<th title="Total time spent on the server">Play time</th>
 						</thead>
 						<tbody></tbody>
 					</table>
