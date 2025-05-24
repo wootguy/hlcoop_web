@@ -106,21 +106,25 @@
 			#player_list td {
 				height: 20px;
 			}
-			#player_list a {
+			#player_list div {
 				text-decoration: none;
 				color: #99CCFF;
 				overflow: hidden;
 				text-overflow: ellipsis;
 				max-width: 215px;
 				display: inline-block;
+				cursor: pointer;
 			}
-			#player_list a.bad_guy {
-				color: #FF3F3F;
-			}
-			#player_list a:hover {
+			.chat_message div:hover {
 				color: #D2E6FB;
 			}
-			#player_list a.bad_guy:hover {
+			#player_list div.bad_guy {
+				color: #FF3F3F;
+			}
+			#player_list div:hover {
+				color: #D2E6FB;
+			}
+			#player_list div.bad_guy:hover {
 				color: #FF9090;
 			}
 			#player_list thead {
@@ -178,13 +182,13 @@
 			#player_list.web_users td:nth-child(9), #player_list.web_users th:nth-child(9){
 				display: table-cell;
 			}
-			#player_list.web_users a {
+			#player_list.web_users div {
 				color: #99FF99;
 			}
-			#player_list.web_users a:hover {
+			#player_list.web_users div:hover {
 				color: #BAEEBA;
 			}
-			#player_list.web_users a.anon {
+			#player_list.web_users div.anon {
 				color: #aaa;
 				cursor: initial;
 			}
@@ -443,20 +447,21 @@
 				margin-top: 20px;
 				padding-bottom: 5px;
 			}
-			.chat_message a {
+			.chat_message .player_name {
 				text-decoration: none;
 				color: #99CCFF;
+				cursor: pointer;
 			}
-			.chat_message a.web_chat {
+			.chat_message .player_name.web_chat {
 				color: #99FF99;
 			}
-			.chat_message a:hover {
+			.chat_message .player_name:hover {
 				color: #D2E6FB;
 			}
-			.chat_message a.bad_guy {
+			.chat_message .player_name.bad_guy {
 				color: #FF3F3F;
 			}
-			.chat_message a.bad_guy:hover {
+			.chat_message .player_name.bad_guy:hover {
 				color: #FF9090;
 			}
 			.chat_message {
@@ -611,6 +616,7 @@
 				float: left;
 				cursor: pointer;
 				margin-right: 5px;
+				font-size: 16px;
 			}
 			#pcount_header:hover {
 				background: #2c3b4a;
@@ -626,6 +632,140 @@
 			}
 			#pcount, #wcount {
 				font-family: monospace;
+			}
+			
+			#player_profile {
+				display: none;
+				background: rgba(0,0,0,0.5);
+				position: fixed;
+				width: 100%;
+				height: 100%;
+				top: 0;
+				left: 0;
+				z-index: 99;
+				cursor: pointer;
+			}
+			#player_profile .content {
+				cursor: initial;
+				z-index: 100;
+				position: fixed;
+				top: 50%;
+				left: 50%;
+				transform: translate(-50%, -50%);
+				width: 550px;
+				height: 490px;
+				background: #2e1f00;
+				justify-content: center;
+				align-items: center;
+				z-index: 10;
+				border-radius: 10px;
+				padding: 10px 20px;
+				filter: drop-shadow(0 0 5px #aaa);
+			}
+			#player_profile .images {
+				width: 184px;
+				float: left;
+			}
+			#player_profile .caption {
+				text-align: center;
+				font-size: 14px;
+				color: #ffaa00;
+			}
+			#player_profile .img_container {
+				width: 184px;
+				height: 184px;
+				border: 1px solid black;
+				background: black;
+				filter: drop-shadow(0 0 3px #aaa);
+			}
+			#player_profile .spray_img_container {
+				margin-top: 20px;
+			}
+			#player_profile img {
+				object-fit: cover;
+				width: 100%;
+				height: 184px;
+			}
+			#player_profile .name {
+				text-align: center;
+				font-size: 32px;
+				margin-bottom: 15px;
+				border-bottom: 1px solid #666;
+				padding-bottom: 5px;
+				filter: drop-shadow(2px 2px 1px #000);
+			}
+			#player_profile .profile_details {
+				width: 346px;
+				float: left;
+				font-size: 14px;
+				margin-left: 20px;
+			}
+			#player_profile .profile_details a:visited {
+				color: #1a9fff;
+			}
+			#player_profile .profile_details .details {
+				margin-bottom: 20px;
+				width: 100%;
+				border-radius: 5px;
+			}
+			#player_profile .profile_details .details table {
+				background: #111;
+				width: 100%;
+				white-space: nowrap;
+				border-radius: 4px;
+				table-layout: fixed;
+			}
+			#player_profile table {
+				border-collapse: collapse;
+				border: 1px solid #666;
+			}
+			#player_profile .details_table td:nth-child(1) {
+				font-weight: bold;
+				color: #ffaa00;
+				width: 40px;
+			}
+			#player_profile .profile_details .details_table {
+				margin-bottom: 20px;
+			}
+			#player_profile .profile_details .alias_header {
+				font-size: 18px;
+				text-align: center;
+				margin-bottom: 5px;
+				color: #FFAA00;
+			}
+			#player_profile .profile_details .alias_details {
+				width: 100%;
+				text-align: left;
+			}
+			#player_profile th {
+				color: #FFAA00;
+			}
+			#player_profile th, #player_profile td {
+				padding: 3px 5px;
+			}
+			#player_profile th {
+				background: #222;
+			}
+			#player_profile .alias_details tr:nth-child(odd) {
+				background: #111;
+			}
+			#player_profile .alias_details tr:nth-child(even) {
+				background: #222;
+			}
+			#player_profile td:nth-child(1), #player_profile th:nth-child(1) {
+				width: 100px;
+				overflow: hidden;
+				text-overflow: ellipsis;
+			}
+			#player_profile td:nth-child(2), #player_profile th:nth-child(2) {
+				width: 50px;
+			}
+			#player_profile td:nth-child(3), #player_profile th:nth-child(3) {
+				width: 40px;
+			}
+			#player_profile .spray {
+				width: 184px;
+				float: left;
 			}
 		</style>
 		<title id="tab_title">Half-Life Co-op</title>
@@ -730,6 +870,45 @@ Red light = Negative ratings. Low priority. Selected only if all other maps are 
 					<input id="maps_filter" type="text" placeholder="Search..." onchange = "filter_maps();" onkeypress="this.onchange();" onpaste="this.onchange();" oninput="this.onchange();" title="Filter maps by name">
 					<input type="checkbox" id="show_all_maps" name="show_all_maps" value="asdf">
 					<label for="show_all_maps">Show all maps</label><br>
+				</div>
+			</div>
+		</div>
+		
+		<div id="player_profile">
+			<div class="content">
+				<div class="name">WoodGuy</div>
+				<div class="images">
+					<div class="img_container">
+						<img class="avatar_img" src="missing_avatar.png"></img>
+					</div>
+					<div class="caption">Steam avatar</div>
+					
+					<div class="spray_img_container img_container">
+						<img class="spray_img" src="missing_spray.png"></img>	
+					</div>
+					<div class="caption">Spray</div>				
+				</div>
+				<div class="profile_details">
+					<div class="details">
+						<table class="details_table">
+							<tbody>
+								<tr><td>Steam name</td><td class="steam_name">WoodGuy</td></tr>
+								<tr><td>Steam ID</td><td class="steam_id">STEAM_1234</td></tr>
+								<tr><td>Language</td><td class="lang">English</td></tr>
+								<tr><td>First joined</td><td class="first_seen">yesterday</td></tr>
+								<tr><td>Time played</td><td class="play_time">a million years</td></tr>
+								<tr><td>Maps played</td><td class="maps_played">1234</td></tr>
+							</tbody>
+						</table>
+						
+						<div class="alias_header">This user has played as:</div>
+						<table class="alias_details">
+							<thead>
+								<th>Alias</th><th>Time used</th><th>Last used</th>
+							</thead>
+							<tbody></tbody>
+						</table>
+					</div>
 				</div>
 			</div>
 		</div>
