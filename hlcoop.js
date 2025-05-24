@@ -1,7 +1,11 @@
+// TODO:
+// - special messages for join/leave/mapchange
+
 var g_socket;
 var g_server_url = 'wss://w00tguy.ddns.net:3000/';
-var g_server_url = 'ws://localhost:3000/'; // for Visual Studio debugging
-var g_fastdl_server_url = 'http://207.148.12.159/';
+//var g_server_url = 'wss://w00tguy.ddns.net:3001/';
+//var g_server_url = 'ws://localhost:3000/'; // for Visual Studio debugging
+var g_fastdl_server_url = 'https://w00tguy.ddns.net/';
 var g_player_data = []; // players currently in the server
 var g_web_player_data = []; // web client info
 var g_player_states = {}; // extra player info and map stats by steam id
@@ -365,48 +369,6 @@ function update_table_state() {
 	}
 }
 
-function get_player_hover_info(name, steamid64) {
-	let state = g_player_states[steamid64];
-	if (!state) {
-		return "" + steamid64;
-	}
-	
-	const firstSeenDate = new Date(state.firstSeen*1000);
-	let firstSeenText = firstSeenDate.toLocaleString(undefined, {
-		year: 'numeric', 
-		month: 'short', 
-		day: 'numeric'
-	});
-	
-	info = name + "\n";
-	info += "\nLanguage:    " + state.language;
-	info += "\nMaps played:    " + state.mapsPlayed;
-	info += "\nTotal Play Time:    " + format_age(state.totalPlayTime);
-	info += "\nFirst Seen:    " + firstSeenText;
-	
-	if (state.aliases.length) {
-		info += "\n\nThis user has played as:";
-		
-		for (let i = 0; i < state.aliases.length; i++) {
-			let alias = state.aliases[i];
-			let lastUsed = alias.lastUsed*24*60*60*1000;
-			let firstUsed = alias.firstUsed*24*60*60*1000;
-			let timeUsed = alias.timeUsed;
-			const deltaTime = Number(new Date()) - Number(lastUsed);
-			let timeSince = format_age(deltaTime/1000, true);
-			
-			info += "\n    " + alias.name + "    (for ";
-			if (alias.name == state.name) {
-				info += format_age(timeUsed, true) + ")";
-			} else {
-				info += format_age(timeUsed, true) + ". Last used " + timeSince + " ago)";
-			}
-		}
-	}
-	
-	return info;
-}
-
 function steamid64_to_steamid(steam64) {
 	const base = BigInt("76561197960265728");
 	let id = BigInt(steam64) - base;
@@ -454,6 +416,7 @@ function open_player_profile(event) {
 	for (let i = 0; i < state.aliases.length; i++) {
 		let alias = state.aliases[i];
 		let lastUsed = alias.lastUsed*24*60*60*1000;
+		let firstUsed = alias.firstUsed*24*60*60*1000;
 		const deltaTime = Number(new Date()) - Number(lastUsed);
 		let timeSince = format_age(deltaTime/1000, true) + " ago";
 		let timeUsed = format_age(alias.timeUsed, true, true);
@@ -461,15 +424,32 @@ function open_player_profile(event) {
 		const lastUseDate = new Date(lastUsed);
 		let lastUseText = lastUseDate.toLocaleString(undefined, {
 			year: 'numeric', 
-			month: 'short'
+			month: 'short',
+			day: 'numeric'
+		});
+		
+		const firstUseDate = new Date(firstUsed);
+		let firstUseText = firstUseDate.toLocaleString(undefined, {
+			year: 'numeric', 
+			month: 'short',
+			day: 'numeric'
 		});
 		
 		if (alias.name == state.name) {
 			lastUseText = "Now";
 		}
 		
+		let nameCell = document.createElement('td');
+		nameCell.textContent = alias.name;
+		nameCell.title = alias.name;
+		
+		let timeUsedCell = document.createElement('td');
+		timeUsedCell.textContent = timeUsed;
+		timeUsedCell.title = "First used: " + firstUseText + "\nLast used: " + lastUseText;
+		
 		let row = alias_list.insertRow(alias_list.rows.length);
-		row.innerHTML = "<tr><td>" + alias.name + "</td><td>" + timeUsed + "</td><td>" + lastUseText + "</td></tr>";
+		row.appendChild(nameCell);
+		row.appendChild(timeUsedCell);
 	}
 }
 
@@ -558,6 +538,8 @@ function refresh_player_table() {
 			rank.classList.add("hidden");
 			name.classList.add("anon");
 			name.removeEventListener('click', open_player_profile);
+		} else {
+			name.classList.remove("anon");
 		}
 
 
@@ -669,6 +651,9 @@ function parse_player_list(view) {
 	
 	if (old_pdata_len != g_player_data.length)
 		update_map_ratings();
+	
+	if (old_pdata_len && !g_player_data.length)
+		update_map_data();
 }
 
 function parse_server_name(view) {
@@ -704,7 +689,7 @@ function add_message(steamid64, name, msg, time, msgType) {
 	chat_name.textContent = name;
 	chat_name.setAttribute("id", steamid64);
 	chat_name.setAttribute("name", name);
-	chat_name.title = get_player_hover_info(name, steamid64);
+	chat_name.title = name;
 	if (msgType == WEBMSG_CHAT_TYPE_WEB_USER) {
 		chat_name.textContent = "(WEB) " + chat_name.textContent;
 		chat_name.classList.add("web_chat");
@@ -835,12 +820,6 @@ function parse_auth(view) {
 	let steamid64 = view.getBigUint64(offset, true);
 	offset += 8;
 	
-	let name = read_string(view, offset);
-	offset += get_utf8_data_len(name);
-	
-	let avatar = read_string(view, offset);
-	offset += get_utf8_data_len(avatar);
-	
 	let token = read_string(view, offset);
 	offset += get_utf8_data_len(token);
 	
@@ -864,21 +843,15 @@ function parse_auth(view) {
 	}
 	else if (steamid64 == 1) {
 		// failed to auth
-		login_text.textContent= "Sign in through Steam";
+		login_text.textContent= "Sign in with Steam";
 		login_subtext.textContent= "(authentication failed)";
 		login_subtext.classList.add("red");
 		login_icon.src = "icon/steam_icon_logo.svg";
 	}
 	else {
 		// valid id
-		if (name.length == 0) {
-			name = steamid64;
-		}
-		if (avatar.length) {
-			login_icon.src = "https://avatars.steamstatic.com/" + avatar;
-		}
 		
-		login_text.textContent = name;
+		login_text.textContent = "Signing in...";
 		login_text.title = name;
 		login_but.classList.add("authed");
 		login_subtext.textContent= "(click to sign out)";
@@ -929,7 +902,7 @@ function finish_logout() {
 	login_but.removeEventListener('click', logout);
 	
 	login_but.classList.remove("authed");
-	login_text.textContent= "Sign in through Steam";
+	login_text.textContent= "Sign in with Steam";
 	login_subtext.textContent= "(required for some actions)";
 	login_subtext.classList.remove("red");
 	login_icon.src = "icon/steam_icon_logo.svg";
@@ -1014,8 +987,10 @@ function parse_player_state(view) {
 	
 	if (g_steamid != 0 && steamid64 == g_steamid && name.length) {
 		let login_name = document.getElementById("login_text");
+		let login_icon = document.getElementById("login_icon");
 		login_name.textContent = name;
 		login_name.title = name + "\n\n" + "The name shown here and in chat may not be your most recently used in-game name. A more common name is chosen if you haven't used your new name long enough.";
+		login_icon.src = "https://avatars.steamstatic.com/" + steamAvatar;
 	}
 	
 	g_player_states[steamid64].lastSeen = view.getUint32(offset, true);
@@ -1079,12 +1054,6 @@ function parse_player_state(view) {
 			rating: rating
 		};
 	}
-	
-	document.querySelectorAll('.chat_message .player_name').forEach(function(div) {
-		if (div.getAttribute("id") == steamid64) {
-			div.title = get_player_hover_info(div.getAttribute("name"), steamid64);
-		}
-	});
 	
 	console.log("Player state: ", g_player_states[steamid64]);
 	
@@ -1289,13 +1258,14 @@ function update_map_data() {
 	}
 	
 	if (g_player_data.length == 0) {
-		document.getElementById("content").classList.add("empty_server");
 		document.getElementById('upcoming_maps_count').textContent = "0";
 		
 		if (document.getElementById("show_all_maps").checked) {
 			document.getElementById("empty_notice").classList.add("hidden");
+			document.getElementById("content").classList.remove("empty_server");
 		} else {
 			document.getElementById("empty_notice").classList.remove("hidden");
+			document.getElementById("content").classList.add("empty_server");
 		}
 	} else {
 		document.getElementById("content").classList.remove("empty_server");
@@ -1431,7 +1401,7 @@ function format_age(secondsPassed, oneUnitOnly, longUnits) {
 	let separator = longUnits ? ", " : " ";
 	let minUnit = oneUnitOnly ? 2 : 1;
 	
-	if (days > 2) {
+	if (days > 2 || (!oneUnitOnly && days > 0)) {
 		if (oneUnitOnly) {
 			return "" + days + dayUnit;
 		} else {
@@ -1554,12 +1524,14 @@ async function setup() {
 			document.getElementById("upcoming_title").textContent = "All maps";
 			document.getElementById('upcoming_maps_count').textContent = upcoming.getElementsByClassName("map_container").length;
 			document.getElementById("empty_notice").classList.add("hidden");
+			document.getElementById("content").classList.remove("empty_server");
 		} else {
 			document.getElementById("upcoming_maps").classList.remove("all_maps");
 			document.getElementById("upcoming_title").textContent = "Upcoming maps";
 			document.getElementById('upcoming_maps_count').textContent = upcoming.getElementsByClassName("upcoming").length;
 			if (g_player_data.length == 0) {
 				document.getElementById("empty_notice").classList.remove("hidden");
+				document.getElementById("content").classList.add("empty_server");
 			}
 		}
 	});
