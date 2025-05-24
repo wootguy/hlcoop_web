@@ -363,6 +363,7 @@ function update_table_state() {
 			}
 		}
 		
+		document.getElementById('player_list').classList.remove("web_users");
 		document.getElementById('player_list').classList.add("stat_view");
 	} else {
 		document.getElementById('player_list').classList.remove("stat_view");
