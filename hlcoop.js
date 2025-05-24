@@ -1,6 +1,7 @@
 var g_socket;
 var g_server_url = 'wss://w00tguy.ddns.net:3000/';
-//var g_server_url = 'ws://localhost:3000/'; // for Visual Studio debugging
+var g_server_url = 'ws://localhost:3000/'; // for Visual Studio debugging
+var g_fastdl_server_url = 'http://207.148.12.159/';
 var g_player_data = []; // players currently in the server
 var g_web_player_data = []; // web client info
 var g_player_states = {}; // extra player info and map stats by steam id
@@ -56,6 +57,206 @@ const PLAYER_STATUS_DEAD = 1;
 const PLAYER_STATUS_SPECTATOR = 2;
 const PLAYER_STATUS_IDLE = 3;
 const PLAYER_STATUS_CONNECTING = 4;
+
+const g_languages = {
+  "ab": "Abkhaz",
+  "ace": "Acehnese",
+  "ach": "Acholi",
+  "af": "Afrikaans",
+  "sq": "Albanian",
+  "alz": "Alur",
+  "am": "Amharic",
+  "ar": "Arabic",
+  "hy": "Armenian",
+  "as": "Assamese",
+  "awa": "Awadhi",
+  "ay": "Aymara",
+  "az": "Azerbaijani",
+  "ban": "Balinese",
+  "bm": "Bambara",
+  "ba": "Bashkir",
+  "eu": "Basque",
+  "btx": "Batak Karo",
+  "bts": "Batak Simalungun",
+  "bbc": "Batak Toba",
+  "be": "Belarusian",
+  "bem": "Bemba",
+  "bn": "Bengali",
+  "bew": "Betawi",
+  "bho": "Bhojpuri",
+  "bik": "Bikol",
+  "bs": "Bosnian",
+  "br": "Breton",
+  "bg": "Bulgarian",
+  "bua": "Buryat",
+  "yue": "Cantonese",
+  "ca": "Catalan",
+  "ceb": "Cebuano",
+  "ny": "Chichewa (Nyanja)",
+  "zh-cn": "Chinese (Simplified)",
+  "zh-tw": "Chinese (Traditional)",
+  "cv": "Chuvash",
+  "co": "Corsican",
+  "crh": "Crimean Tatar",
+  "hr": "Croatian",
+  "cs": "Czech",
+  "da": "Danish",
+  "din": "Dinka",
+  "dv": "Divehi",
+  "doi": "Dogri",
+  "dov": "Dombe",
+  "nl": "Dutch",
+  "dz": "Dzongkha",
+  "en": "English",
+  "eo": "Esperanto",
+  "et": "Estonian",
+  "ee": "Ewe",
+  "fj": "Fijian",
+  "fil": "Filipino (Tagalog)",
+  "tl": "Filipino (Tagalog)",
+  "fi": "Finnish",
+  "fr": "French",
+  "fr-fr": "French (French)",
+  "fr-ca": "French (Canadian)",
+  "fy": "Frisian",
+  "ff": "Fulfulde",
+  "gaa": "Ga",
+  "gl": "Galician",
+  "lg": "Ganda (Luganda)",
+  "ka": "Georgian",
+  "de": "German",
+  "el": "Greek",
+  "gn": "Guarani",
+  "gu": "Gujarati",
+  "ht": "Haitian Creole",
+  "cnh": "Hakha Chin",
+  "ha": "Hausa",
+  "haw": "Hawaiian",
+  "iw": "Hebrew",
+  "he": "Hebrew",
+  "hil": "Hiligaynon",
+  "hi": "Hindi",
+  "hmn": "Hmong",
+  "hu": "Hungarian",
+  "hrx": "Hunsrik",
+  "is": "Icelandic",
+  "ig": "Igbo",
+  "ilo": "Iloko",
+  "id": "Indonesian",
+  "ga": "Irish",
+  "it": "Italian",
+  "ja": "Japanese",
+  "jw": "Javanese",
+  "jv": "Javanese",
+  "kn": "Kannada",
+  "pam": "Kapampangan",
+  "kk": "Kazakh",
+  "km": "Khmer",
+  "cgg": "Kiga",
+  "rw": "Kinyarwanda",
+  "ktu": "Kituba",
+  "gom": "Konkani",
+  "ko": "Korean",
+  "kri": "Krio",
+  "ku": "Kurdish (Kurmanji)",
+  "ckb": "Kurdish (Sorani)",
+  "ky": "Kyrgyz",
+  "lo": "Lao",
+  "ltg": "Latgalian",
+  "la": "Latin",
+  "lv": "Latvian",
+  "lij": "Ligurian",
+  "li": "Limburgan",
+  "ln": "Lingala",
+  "lt": "Lithuanian",
+  "lmo": "Lombard",
+  "luo": "Luo",
+  "lb": "Luxembourgish",
+  "mk": "Macedonian",
+  "mai": "Maithili",
+  "mak": "Makassar",
+  "mg": "Malagasy",
+  "ms": "Malay",
+  "ms-arab": "Malay (Jawi)",
+  "ml": "Malayalam",
+  "mt": "Maltese",
+  "mi": "Maori",
+  "mr": "Marathi",
+  "chm": "Meadow Mari",
+  "mni-mtei": "Meiteilon (Manipuri)",
+  "min": "Minang",
+  "lus": "Mizo",
+  "mn": "Mongolian",
+  "my": "Myanmar (Burmese)",
+  "nr": "Ndebele (South)",
+  "new": "Nepalbhasa (Newari)",
+  "ne": "Nepali",
+  "nso": "Northern Sotho (Sepedi)",
+  "no": "Norwegian",
+  "nus": "Nuer",
+  "oc": "Occitan",
+  "or": "Odia (Oriya)",
+  "om": "Oromo",
+  "pag": "Pangasinan",
+  "pap": "Papiamento",
+  "ps": "Pashto",
+  "fa": "Persian",
+  "pl": "Polish",
+  "pt": "Portuguese",
+  "pt-pt": "Portuguese (Portugal)",
+  "pt-br": "Portuguese (Brazil)",
+  "pa": "Punjabi",
+  "pa-arab": "Punjabi (Shahmukhi)",
+  "qu": "Quechua",
+  "rom": "Romani",
+  "ro": "Romanian",
+  "rn": "Rundi",
+  "ru": "Russian",
+  "sm": "Samoan",
+  "sg": "Sango",
+  "sa": "Sanskrit",
+  "gd": "Scots Gaelic",
+  "sr": "Serbian",
+  "st": "Sesotho",
+  "crs": "Seychellois Creole",
+  "shn": "Shan",
+  "sn": "Shona",
+  "scn": "Sicilian",
+  "szl": "Silesian",
+  "sd": "Sindhi",
+  "si": "Sinhala (Sinhalese)",
+  "sk": "Slovak",
+  "sl": "Slovenian",
+  "so": "Somali",
+  "es": "Spanish",
+  "su": "Sundanese",
+  "sw": "Swahili",
+  "ss": "Swati",
+  "sv": "Swedish",
+  "tg": "Tajik",
+  "ta": "Tamil",
+  "tt": "Tatar",
+  "te": "Telugu",
+  "tet": "Tetum",
+  "th": "Thai",
+  "ti": "Tigrinya",
+  "ts": "Tsonga",
+  "tn": "Tswana",
+  "tr": "Turkish",
+  "tk": "Turkmen",
+  "ak": "Twi (Akan)",
+  "uk": "Ukrainian",
+  "ur": "Urdu",
+  "ug": "Uyghur",
+  "uz": "Uzbek",
+  "vi": "Vietnamese",
+  "cy": "Welsh",
+  "xh": "Xhosa",
+  "yi": "Yiddish",
+  "yo": "Yoruba",
+  "yua": "Yucatec Maya",
+  "zu": "Zulu"
+};
 
 function get_message_type_name(value) {
   for (const [key, val] of Object.entries(MESSAGE_TYPE)) {
@@ -206,6 +407,72 @@ function get_player_hover_info(name, steamid64) {
 	return info;
 }
 
+function steamid64_to_steamid(steam64) {
+	const base = BigInt("76561197960265728");
+	let id = BigInt(steam64) - base;
+
+	const Y = id % 2n;
+	const Z = (id - Y) / 2n;
+
+	return `STEAM_0:${Y}:${Z}`;
+}
+
+function open_player_profile(event) {	
+	let clickedId = event.currentTarget.getAttribute("id");
+	if (!clickedId)
+		clickedId = event.currentTarget.parentElement.parentElement.getAttribute("steamid");
+	let player_profile = document.getElementById("player_profile");
+
+	const state = g_player_states[clickedId];
+	const avatar = "https://avatars.steamstatic.com/" + state.steamAvatar;
+	const spray = g_fastdl_server_url + "sprays/" + clickedId + ".png";
+	const firstSeenDate = new Date(state.firstSeen*1000);
+	let firstSeenText = firstSeenDate.toLocaleString(undefined, {
+		year: 'numeric', 
+		month: 'short', 
+		day: 'numeric'
+	});
+	const lang = (state.language in g_languages) ? g_languages[state.language] : state.language;
+	let percentPlayed = Math.floor((state.mapsPlayed / g_map_cycle.length) * 100);
+	let mapsPlayed = state.mapsPlayed + " / " + g_map_cycle.length + " (" + percentPlayed + "%)";
+	let steamlink = "<a href=\"https://steamcommunity.com/profiles/" + clickedId + "\" target=\"_blank\">" + steamid64_to_steamid(clickedId) + "</a>";
+	
+	player_profile.style.display = "block";
+	player_profile.getElementsByClassName("avatar_img")[0].src = avatar;
+	player_profile.getElementsByClassName("spray_img")[0].src = spray + state.salt;
+	player_profile.getElementsByClassName("lang")[0].textContent = lang;
+	player_profile.getElementsByClassName("name")[0].textContent = state.name;
+	player_profile.getElementsByClassName("steam_name")[0].textContent = state.steamName;
+	player_profile.getElementsByClassName("steam_id")[0].innerHTML = steamlink;
+	player_profile.getElementsByClassName("maps_played")[0].textContent = mapsPlayed;
+	player_profile.getElementsByClassName("play_time")[0].textContent = format_age(state.totalPlayTime, false, true);
+	player_profile.getElementsByClassName("first_seen")[0].textContent = firstSeenText;
+	
+	let alias_list = player_profile.getElementsByClassName("alias_details")[0].querySelector('tbody');
+	alias_list.innerHTML = "";
+	
+	for (let i = 0; i < state.aliases.length; i++) {
+		let alias = state.aliases[i];
+		let lastUsed = alias.lastUsed*24*60*60*1000;
+		const deltaTime = Number(new Date()) - Number(lastUsed);
+		let timeSince = format_age(deltaTime/1000, true) + " ago";
+		let timeUsed = format_age(alias.timeUsed, true, true);
+		
+		const lastUseDate = new Date(lastUsed);
+		let lastUseText = lastUseDate.toLocaleString(undefined, {
+			year: 'numeric', 
+			month: 'short'
+		});
+		
+		if (alias.name == state.name) {
+			lastUseText = "Now";
+		}
+		
+		let row = alias_list.insertRow(alias_list.rows.length);
+		row.innerHTML = "<tr><td>" + alias.name + "</td><td>" + timeUsed + "</td><td>" + lastUseText + "</td></tr>";
+	}
+}
+
 function refresh_player_table() {
 	let plist = document.getElementById('player_list').querySelector('tbody');
 	
@@ -223,12 +490,12 @@ function refresh_player_table() {
 		
 		if (i >= plist.rows.length) {
 			let row = plist.insertRow(plist.rows.length);
-			row.innerHTML = "<tr><td><a></a><img class=\"rank\"/></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>";
+			row.innerHTML = "<tr><td><div></div><img class=\"rank\"/></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>";
 		}
 		
 		let row = plist.rows[i];
 		let rank = row.cells[0].getElementsByClassName('rank')[0];
-		let name = row.cells[0].getElementsByTagName('a')[0];
+		let name = row.cells[0].getElementsByTagName('div')[0];
 		let state = g_player_states[dat.steamid64];
 		
 		let mapsPlayed = 0;
@@ -273,8 +540,6 @@ function refresh_player_table() {
 		}
 		
 		name.textContent = dat.name;
-		name.href = "https://steamcommunity.com/profiles/" + dat.steamid64;
-		name.target = "_blank";
 		name.title = dat.name;
 		
 		if (dat.flags & PLAYER_FLAG_BAD_GUY) {
@@ -282,18 +547,20 @@ function refresh_player_table() {
 		} else {
 			name.classList.remove("bad_guy");
 		}
+
+		if (state) {
+			name.removeEventListener('click', open_player_profile);
+			name.addEventListener('click', open_player_profile);
+		}
 		
 		if (dat.steamid64 == 0) {
-			name.href = "#";
-			name.target = "";
 			name.title = "Web clients who have not signed in to Steam.";
 			rank.classList.add("hidden");
 			name.classList.add("anon");
+			name.removeEventListener('click', open_player_profile);
 		}
 
-		if (state && dat.steamid64 > 0) {
-			name.title = get_player_hover_info(dat.name, dat.steamid64);
-		}
+
 		//3435973836
 		let status_col = row.cells[1];
 		status_col.className = "";
@@ -432,10 +699,8 @@ function add_message(steamid64, name, msg, time, msgType) {
 		chat_time.title = format_age(Math.floor(deltaTime / 1000)) + " ago";
 	});
 	
-	let chat_name = document.createElement('a');
+	let chat_name = document.createElement('span');
 	chat_name.classList.add("player_name");
-	chat_name.href = "https://steamcommunity.com/profiles/" + steamid64;
-	chat_name.target = "_blank";
 	chat_name.textContent = name;
 	chat_name.setAttribute("id", steamid64);
 	chat_name.setAttribute("name", name);
@@ -447,6 +712,8 @@ function add_message(steamid64, name, msg, time, msgType) {
 	if (msgType == WEBMSG_CHAT_TYPE_BAD_GUY) {
 		chat_name.classList.add("bad_guy");
 	}
+	
+	chat_name.addEventListener('click', open_player_profile);
 	
 	let chat_msg = document.createElement('span');
 	if (steamid64 != 0) {
@@ -608,7 +875,7 @@ function parse_auth(view) {
 			name = steamid64;
 		}
 		if (avatar.length) {
-			login_icon.src = avatar;
+			login_icon.src = "https://avatars.steamstatic.com/" + avatar;
 		}
 		
 		login_text.textContent = name;
@@ -725,7 +992,8 @@ function parse_player_state(view) {
 		mapstats: {},
 		aliases: [],
 		mapsPlayed: 0,		// number of unique maps played
-		mapsMultiplayed: 0	// number of unique maps played 2+ times
+		mapsMultiplayed: 0,	// number of unique maps played 2+ times
+		salt: "?t=" + new Date().getTime() // for fetching spray image again
 	};
 	
 	let lang = read_string(view, offset);
@@ -735,6 +1003,14 @@ function parse_player_state(view) {
 	let name = read_string(view, offset);
 	offset += get_utf8_data_len(name);
 	g_player_states[steamid64].name = name;
+	
+	let steamName = read_string(view, offset);
+	offset += get_utf8_data_len(steamName);
+	g_player_states[steamid64].steamName = steamName;
+	
+	let steamAvatar = read_string(view, offset);
+	offset += get_utf8_data_len(steamAvatar);
+	g_player_states[steamid64].steamAvatar = steamAvatar;
 	
 	if (g_steamid != 0 && steamid64 == g_steamid && name.length) {
 		let login_name = document.getElementById("login_text");
@@ -1142,27 +1418,34 @@ function format_timer(secondsPassed) {
 	}
 }
 
-function format_age(secondsPassed, oneUnitOnly) {
+function format_age(secondsPassed, oneUnitOnly, longUnits) {
 	let seconds = secondsPassed;
 	let minutes = Math.floor(secondsPassed / 60);
 	let hours = Math.floor(secondsPassed / (60*60));
 	let days = Math.floor(secondsPassed / (60*60*24));
 	
+	let dayUnit = longUnits ? " days" : "d";
+	let hourUnit = longUnits ? " hours" : "h";
+	let minuteUnit = longUnits ? " minutes" : "m";
+	let secondUnit = longUnits ? " seconds" : "s";
+	let separator = longUnits ? ", " : " ";
+	let minUnit = oneUnitOnly ? 2 : 1;
+	
 	if (days > 2) {
 		if (oneUnitOnly) {
-			return "" + days + "d";
+			return "" + days + dayUnit;
 		} else {
-			return "" + days + "d" + " " + (hours % 24) + "h";
+			return "" + days + dayUnit + separator + (hours % 24) + hourUnit;
 		}
 	}
 	else if (hours > 2) {
-		return "" + hours + "h";
+		return "" + hours + hourUnit;
 	}
 	else if (minutes > 2) {
-		return "" + minutes + "m";
+		return "" + minutes + minuteUnit;
 	}
 	else {
-		return "" + seconds + "s";
+		return "" + seconds + secondUnit;
 	}
 }
 
@@ -1303,6 +1586,17 @@ async function setup() {
 		}
 		refresh_player_table();
 	});
+	
+	let player_profile = document.getElementById("player_profile");
+	player_profile.addEventListener('click', function() {
+		player_profile.style.display = "none";
+		player_profile.getElementsByClassName("avatar_img")[0].src = "";
+		player_profile.getElementsByClassName("spray_img")[0].src = "";
+	});
+	player_profile.getElementsByClassName("content")[0].addEventListener('click', function(event) {
+		event.stopPropagation();
+	});
+	
 
 	document.getElementById('send_message').addEventListener('keydown', (event) => {
 		let input_box = document.getElementById("send_message");
