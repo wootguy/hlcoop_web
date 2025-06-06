@@ -543,8 +543,6 @@ function refresh_player_table() {
 			name.classList.remove("anon");
 		}
 
-
-		//3435973836
 		let status_col = row.cells[1];
 		status_col.className = "";
 		if (dat.status == PLAYER_STATUS_ALIVE || dat.status == PLAYER_STATUS_DEAD) {
@@ -1544,9 +1542,7 @@ async function setup() {
 		document.getElementById("wcount_header").classList.remove("selected");
 		g_list_web_users = false;
 		let plist = document.getElementById('player_list').querySelector('tbody');
-		for (let i = 0; i < plist.rows.length; i++) {
-			plist.deleteRow(i);
-		}
+		plist.innerHTML = "";
 		refresh_player_table();
 	});
 	document.getElementById("wcount_header").addEventListener('click', function() {
@@ -1554,9 +1550,7 @@ async function setup() {
 		document.getElementById("wcount_header").classList.add("selected");
 		g_list_web_users = true;
 		let plist = document.getElementById('player_list').querySelector('tbody');
-		for (let i = 0; i < plist.rows.length; i++) {
-			plist.deleteRow(i);
-		}
+		plist.innerHTML = "";
 		refresh_player_table();
 	});
 	
