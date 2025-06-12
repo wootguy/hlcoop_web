@@ -711,17 +711,17 @@ function add_message(steamid64, name, msg, time, msgType) {
 		chat_name.classList.add("bad_guy");
 	}
 	
-	chat_name.addEventListener('click', open_player_profile);
-	
 	let chat_msg = document.createElement('span');
-	if (steamid64 != 0) {
-		chat_msg.textContent = ": " + msg;
-	} else {
-		chat_msg.textContent = msg;
+	chat_msg.textContent = msg;
+	
+	chat_msg.innerHTML = chat_msg.innerHTML.replace(";name;", chat_name.outerHTML);
+	
+	let nametags = chat_msg.getElementsByClassName("player_name");
+	for (let i = 0; i < nametags.length; i++) {
+		nametags[i].addEventListener('click', open_player_profile);
 	}
 	
 	chat_container.appendChild(chat_time);
-	chat_container.appendChild(chat_name);
 	chat_container.appendChild(chat_msg);
 	chatbox.appendChild(chat_container);
 	
