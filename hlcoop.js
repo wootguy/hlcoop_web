@@ -321,8 +321,9 @@ function update_table_state() {
 				break;
 			}
 			
+			let first_map = get_first_map_in_series(g_selected_map);	
 			let player_state = g_player_states[id];
-			let player_stats = player_state.mapstats[g_selected_map];
+			let player_stats = player_state.mapstats[first_map];
 			
 			if (player_stats && player_stats.lastPlay && player_stats.totalPlays) {
 				row.cells[5].classList.remove("green");
@@ -452,6 +453,19 @@ function open_player_profile(event) {
 		row.appendChild(nameCell);
 		row.appendChild(timeUsedCell);
 	}
+}
+
+function update_web_player_count() {
+	let wcountStr = g_web_player_data.length;
+	for (let i = 0; i < g_web_player_data.length; i++) {
+		let dat = g_web_player_data[i];
+		if (dat.steamid64 == 0) {
+			wcountStr = "" + (g_web_player_data.length-1) + "+";
+			break;
+		}
+	}
+	
+	document.getElementById('wcount').textContent = wcountStr;
 }
 
 function refresh_player_table() {
@@ -589,8 +603,8 @@ function refresh_player_table() {
 		row.setAttribute("steamid", dat.steamid64);
 	}
 	
+	update_web_player_count();
 	document.getElementById('pcount').textContent = g_player_data.length;
-	document.getElementById('wcount').textContent = g_web_player_data.length;
 	document.getElementById('tab_title').textContent = "Half-Life Co-op (" + g_player_data.length + "/32)";
 	
 	update_table_state();
@@ -791,7 +805,7 @@ function update_web_client_info() {
 		g_web_player_data.push({ name, steamid64, status, flags, score, deaths, ping, idleTime });
 	}
 	
-	document.getElementById("wcount").textContent = g_web_clients.length;
+	update_web_player_count();
 }
 
 function parse_web_clients(view) {
@@ -1141,6 +1155,8 @@ function parse_map_info(view) {
 	} else {
 		series_counter.textContent = "";
 	}
+	
+	update_map_data();
 }
 
 function get_map_dat(mapname) {
@@ -1178,7 +1194,7 @@ function update_map_data() {
 	let upcoming = document.getElementById('upcoming_maps_grid');
 	upcoming.innerHTML = "";
 	
-	for (let i = 1; i < g_map_cycle.length; i++) {
+	for (let i = 0; i < g_map_cycle.length; i++) {
 		let map = document.createElement('a');
 		let mapname = g_map_cycle[i][0];
 		map.classList.add("map_container");
@@ -1422,6 +1438,8 @@ function update_map_timer() {
 	let timer = document.getElementById("map_timer");
 	
 	let secondsPassed = Math.floor((Date.now() / 1000) - Number(g_map_start_time));
+	if (secondsPassed < 0)
+		secondsPassed = 0;
 	
 	if (g_map_time_limit) {
 		timer.textContent = format_timer(secondsPassed) + " / " + format_timer(g_map_time_limit);
