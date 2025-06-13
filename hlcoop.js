@@ -508,19 +508,19 @@ function refresh_player_table() {
 			rank.classList.add("hidden");
 		}
 		else if (mapMutliPlayed >= g_map_cycle.length) {
-			rank.title = "AUTIST - Played every map 2+ times";
+			rank.title = "AUTIST - Played every map 10+ times";
 			rank.src = "icon/rank_5.png";
 		}
 		else if (mapsPlayed >= g_map_cycle.length) {
 			rank.title = "MASTER - Played every map";
 			rank.src = "icon/rank_4.png";
 		}
-		else if (mapsPlayed >= 400) {
-			rank.title = "VETERAN - Played 400+ maps";
+		else if (mapsPlayed >= 600) {
+			rank.title = "VETERAN - Played 600+ maps";
 			rank.src = "icon/rank_3.png";
 		}
-		else if (mapsPlayed >= 200) {
-			rank.title = "REGULAR - Played 200+ maps";
+		else if (mapsPlayed >= 300) {
+			rank.title = "REGULAR - Played 300+ maps";
 			rank.src = "icon/rank_2.png";
 		}
 		else if (mapsPlayed >= 100) {
@@ -1057,7 +1057,7 @@ function parse_player_state(view) {
 		if (totalPlays > 0) {
 			g_player_states[steamid64].mapsPlayed += 1;
 		}
-		if (totalPlays > 1) {
+		if (totalPlays >= 10) {
 			g_player_states[steamid64].mapsMultiplayed += 1;
 		}
 		
