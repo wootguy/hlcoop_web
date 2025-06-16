@@ -1,5 +1,5 @@
 // TODO:
-// - special messages for join/leave/mapchange
+// - special messages for mapchange
 
 var g_socket;
 var g_server_url = 'wss://w00tguy.ddns.net:3000/';
@@ -325,10 +325,10 @@ function update_table_state() {
 			let player_state = g_player_states[id];
 			let player_stats = player_state.mapstats[first_map];
 			
+			row.cells[5].classList.remove("green");
+			row.cells[5].classList.remove("red");
+			
 			if (player_stats && player_stats.lastPlay && player_stats.totalPlays) {
-				row.cells[5].classList.remove("green");
-				row.cells[5].classList.remove("red");
-				
 				if (player_stats.rating == 0) {
 					row.cells[5].textContent = "NONE";
 				} else if (player_stats.rating == 1) {
@@ -390,12 +390,18 @@ function open_player_profile(event) {
 	const state = g_player_states[clickedId];
 	const avatar = "https://avatars.steamstatic.com/" + state.steamAvatar;
 	const spray = g_fastdl_server_url + "sprays/" + clickedId + ".png";
-	const firstSeenDate = new Date(state.firstSeen*1000);
+	let firstSeenDate = new Date(state.firstSeen*1000);
+	
+	if (state.firstSeen == 0) {
+		firstSeenDate = new Date(); // new state just joined today
+	}
+	
 	let firstSeenText = firstSeenDate.toLocaleString(undefined, {
 		year: 'numeric', 
 		month: 'short', 
 		day: 'numeric'
 	});
+	
 	const lang = (state.language in g_languages) ? g_languages[state.language] : state.language;
 	let percentPlayed = Math.floor((state.mapsPlayed / g_map_cycle.length) * 100);
 	let mapsPlayed = state.mapsPlayed + " / " + g_map_cycle.length + " (" + percentPlayed + "%)";
@@ -662,11 +668,10 @@ function parse_player_list(view) {
 	
 	refresh_player_table();
 	
-	if (old_pdata_len != g_player_data.length)
+	if (old_pdata_len != g_player_data.length) {
 		update_map_ratings();
-	
-	if (old_pdata_len && !g_player_data.length)
 		update_map_data();
+	}
 }
 
 function parse_server_name(view) {
@@ -1297,8 +1302,9 @@ function update_map_ratings() {
 	let steamids = [];
 	let connectedIds = {};
 	let ownIdPushed = false;
-	for (let i = 0; i < plist.rows.length; i++) {
-		let id = plist.rows[i].getAttribute("steamid");
+	let player_data = g_player_data;	
+	for (let i = 0; i < player_data.length; i++) {
+		let id = player_data[i].steamid64;
 		if (id)
 			steamids.push(id);
 		if (id == g_steamid) {
