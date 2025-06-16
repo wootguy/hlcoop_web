@@ -848,7 +848,7 @@ Rejoining the server on the same map does not randomize the next map. This preve
 
 The server tries to pick maps that haven't been played in the longest time. Every map should feel fresh and no one should have to replay the same map for another month or so. Map ratings determine selection order after the upcoming maps pool is filled.
 
-You must play at least 50% of a map or 3 minutes of it (whichever is lesser) for it to count as played. Play enough of the map if you don't want to see it for a longer time. A negative map rating will not reduce its chance of showing up in the upcoming map pool (unless everyone dislikes it, in which case it will never be picked).
+You must play at least 50% of a map or 3 minutes of it (whichever is lesser) for it to count as played. Play enough of the map if you don't want to see it for a longer time. A negative map rating will not reduce its chance of showing up in the upcoming map pool. However, disliked maps are removed from the pool if 67% of players dislike them (these players would probably RTV the map anyway).
 
 The algorithm for picking upcoming maps is as follows:
 1) All maps start as potential candidates.
