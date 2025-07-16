@@ -1003,6 +1003,16 @@ function parse_player_state(view) {
 	offset += get_utf8_data_len(steamAvatar);
 	g_player_states[steamid64].steamAvatar = steamAvatar;
 	
+	let playerModel = read_string(view, offset);
+	offset += get_utf8_data_len(playerModel);
+	g_player_states[steamid64].playerModel = playerModel;
+	
+	g_player_states[steamid64].topcolor = view.getUint8(offset, true);
+	offset += 1;
+	
+	g_player_states[steamid64].bottomcolor = view.getUint8(offset, true);
+	offset += 1;
+	
 	if (g_steamid != 0 && steamid64 == g_steamid && name.length) {
 		let login_name = document.getElementById("login_text");
 		let login_icon = document.getElementById("login_icon");
