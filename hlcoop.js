@@ -27,6 +27,9 @@ var g_map_start_time; // epoch millis when map started
 var g_map_time_limit; // map time limit in seconds
 var g_map_frag_limit;
 var g_list_web_users = false; // list web users instead of players
+var g_game_id = "hl";
+var data_repo_count = 32;
+var data_repo_domain = "https://wootdata.github.io/";
 
 const MESSAGE_TYPE = {
 	WEBMSG_SERVER_NAME: 0,
@@ -381,6 +384,23 @@ function steamid64_to_steamid(steam64) {
 	return `STEAM_0:${Y}:${Z}`;
 }
 
+function hash_code(str) {
+	var hash = 0;
+
+	for (var i = 0; i < str.length; i++) {
+		var char = str.charCodeAt(i);
+		hash = ((hash<<5)-hash)+char;
+		hash = hash % 15485863; // prevent hash ever increasing beyond 31 bits
+
+	}
+	return hash;
+}
+
+function get_repo_url(model_name) {
+	var repoId = hash_code(model_name) % data_repo_count;
+	return data_repo_domain + g_game_id + "models_data_" + repoId + "/";
+}
+
 function open_player_profile(event) {	
 	let clickedId = event.currentTarget.getAttribute("id");
 	if (!clickedId)
@@ -417,6 +437,15 @@ function open_player_profile(event) {
 	player_profile.getElementsByClassName("maps_played")[0].textContent = mapsPlayed;
 	player_profile.getElementsByClassName("play_time")[0].textContent = format_age(state.totalPlayTime, false, true);
 	player_profile.getElementsByClassName("first_seen")[0].textContent = firstSeenText;
+	
+	let model_name = state.model;
+	let pmodel_img_src = get_repo_url(model_name) + "models/player/" + model_name + "/" + model_name + "_large.png";
+	if (!model_name) {
+		pmodel_img_src = "icon/missing_pmodel.png";
+		model_name = "<missing data>"
+	}
+	player_profile.getElementsByClassName("pmodel_img")[0].src = pmodel_img_src;
+	player_profile.getElementsByClassName("pmodel_name")[0].textContent = model_name;
 	
 	let alias_list = player_profile.getElementsByClassName("alias_details")[0].querySelector('tbody');
 	alias_list.innerHTML = "";
@@ -1005,7 +1034,7 @@ function parse_player_state(view) {
 	
 	let playerModel = read_string(view, offset);
 	offset += get_utf8_data_len(playerModel);
-	g_player_states[steamid64].playerModel = playerModel;
+	g_player_states[steamid64].model = playerModel;
 	
 	g_player_states[steamid64].topcolor = view.getUint8(offset, true);
 	offset += 1;
@@ -1593,6 +1622,7 @@ async function setup() {
 		player_profile.style.display = "none";
 		player_profile.getElementsByClassName("avatar_img")[0].src = "";
 		player_profile.getElementsByClassName("spray_img")[0].src = "";
+		player_profile.getElementsByClassName("pmodel_img")[0].src = "";
 	});
 	player_profile.getElementsByClassName("content")[0].addEventListener('click', function(event) {
 		event.stopPropagation();
