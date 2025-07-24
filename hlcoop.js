@@ -326,7 +326,7 @@ function update_table_state() {
 			
 			let first_map = get_first_map_in_series(g_selected_map);	
 			let player_state = g_player_states[id];
-			let player_stats = player_state.mapstats[first_map];
+			let player_stats = player_state ? player_state.mapstats[first_map] : undefined;
 			
 			row.cells[5].classList.remove("green");
 			row.cells[5].classList.remove("red");
@@ -1307,7 +1307,7 @@ function update_map_data() {
 		dislike.removeEventListener("click", rate_map);
 		dislike.addEventListener("click", rate_map);
 		dislike.title = "Rating this map negatively will lower its chance of being picked while you're on the server."
-		+ "\n\nIf everyone on the server dislikes this map, then it will never be picked.";
+		+ "\n\nIf 67% of players on the server dislike a map, then it will never be picked.";
 	});
 	
 	if (document.getElementById("show_all_maps").checked) {
