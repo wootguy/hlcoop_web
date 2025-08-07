@@ -1427,7 +1427,7 @@ function update_map_ratings() {
 			div.classList.add("liked");
 		}
 		else if (numDislike > 0) {
-			div.title = "This map is highlighted red due to negative ratings and is selected with the lowest priority.\n\nIf all players currently in the server rate it negatively then it will never be chosen as the next map.";
+			div.title = "This map is highlighted red due to negative ratings and is selected with the lowest priority.\n\nIf 67% of players currently in the server rate it negatively then it will never be chosen as the next map.";
 			div.classList.add("disliked");
 		} else {
 			div.title = "This map isn't highlighted due to neutral ratings and is selected with normal priority.";
