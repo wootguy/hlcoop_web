@@ -25,7 +25,6 @@ temp-916-r
 ey_compo
 isp2
 die_way
-oasis_v3_hl
 tsm_r_v3
 canal-r
 pve_building_rb
@@ -36,7 +35,6 @@ casarosada_r_old
 deltapreview
 id-ow
 k_soldier
-aiglass_lab
 d_trick1_hl
 forum
 intrvw1

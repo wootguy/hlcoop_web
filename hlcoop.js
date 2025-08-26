@@ -9,6 +9,7 @@ var g_fastdl_server_url = 'https://w00tguy.ddns.net/';
 var g_player_data = []; // players currently in the server
 var g_web_player_data = []; // web client info
 var g_player_states = {}; // extra player info and map stats by steam id
+var g_player_clients = {}; // client details by steam id
 var g_server_name = "Half-Life Co-op";
 var g_selected_map = "";
 var g_reset_table_timer;
@@ -44,6 +45,7 @@ const MESSAGE_TYPE = {
 	WEBMSG_MAP_INFO: 11,
 	WEBMSG_PLAYER_STATE: 12,
 	WEBMSG_UPCOMING_MAPS: 13,
+	WEBMSG_CLIENT_DETAILS: 14,
 };
 
 const WEBDENY_NOT_LOGGED_IN_RATE = 0;
@@ -301,9 +303,9 @@ function update_table_state() {
 			let row = plist.rows[i];
 			let id = row.getAttribute("steamid");
 			if (id != 0 && id in g_player_states) {
-				row.cells[8].textContent = format_age(g_player_states[id].totalPlayTime);
+				row.cells[9].textContent = format_age(g_player_states[id].totalPlayTime);
 			} else {
-				row.cells[8].textContent = "none";
+				row.cells[9].textContent = "none";
 			}
 		}
 		
@@ -318,9 +320,9 @@ function update_table_state() {
 			let id = row.getAttribute("steamid");
 			
 			if (!id) {
-				row.cells[5].textContent = "";
 				row.cells[6].textContent = "";
 				row.cells[7].textContent = "";
+				row.cells[8].textContent = "";
 				break;
 			}
 			
@@ -328,18 +330,18 @@ function update_table_state() {
 			let player_state = g_player_states[id];
 			let player_stats = player_state ? player_state.mapstats[first_map] : undefined;
 			
-			row.cells[5].classList.remove("green");
-			row.cells[5].classList.remove("red");
+			row.cells[6].classList.remove("green");
+			row.cells[6].classList.remove("red");
 			
 			if (player_stats && player_stats.lastPlay && player_stats.totalPlays) {
 				if (player_stats.rating == 0) {
-					row.cells[5].textContent = "NONE";
+					row.cells[6].textContent = "NONE";
 				} else if (player_stats.rating == 1) {
-					row.cells[5].classList.add("green");
-					row.cells[5].textContent = "LIKE";
+					row.cells[6].classList.add("green");
+					row.cells[6].textContent = "LIKE";
 				} else if (player_stats.rating == 2) {
-					row.cells[5].classList.add("red");
-					row.cells[5].textContent = "DISLIKE";
+					row.cells[6].classList.add("red");
+					row.cells[6].textContent = "DISLIKE";
 				}
 				
 				let minutesSinceEpoch = Math.floor(Date.now() / (1000*60));
@@ -349,21 +351,21 @@ function update_table_state() {
 				let days = Math.round(timeSincePlay / (60 * 24));
 				
 				if (hours > 48) {
-					row.cells[6].textContent = days + "d";
+					row.cells[7].textContent = days + "d";
 				}
 				else if (minutes > 120) {
-					row.cells[6].textContent = hours + "h";
+					row.cells[7].textContent = hours + "h";
 				}
 				else {
-					row.cells[6].textContent = minutes + "m";
+					row.cells[7].textContent = minutes + "m";
 				}
 				
 				
-				row.cells[7].textContent = player_stats.totalPlays;
+				row.cells[8].textContent = player_stats.totalPlays;
 			} else {
-				row.cells[5].textContent = "NONE";
-				row.cells[6].textContent = "NEVER";
-				row.cells[7].textContent = "0";
+				row.cells[6].textContent = "NONE";
+				row.cells[7].textContent = "NEVER";
+				row.cells[8].textContent = "0";
 			}
 		}
 		
@@ -401,6 +403,39 @@ function get_repo_url(model_name) {
 	return data_repo_domain + g_game_id + "models_data_" + repoId + "/";
 }
 
+function get_client_details_tip(steamid) {
+	let clientStr_tip = "Client details are unknown. This player either hasn't joined recently or failed to respond to client queries.";
+	
+	if (steamid in g_player_clients) {
+		let deetz = g_player_clients[steamid];
+		
+		clientStr_tip = "Mod: " + deetz.modStr + "\n";
+		
+		clientStr_tip += "OS: ";
+		if (deetz.os == 1) {
+			clientStr_tip += "Windows";
+		} else if (deetz.os == 2) {
+			clientStr_tip += "Linux";
+		}
+		
+		clientStr_tip += "\nEngine: ";
+		if (deetz.engine == 1) {
+			clientStr_tip += "Steam";
+		} else if (deetz.engine == 2) {
+			clientStr_tip += "steam_legacy";
+		}
+		
+		clientStr_tip += "\nRenderer: ";
+		if (deetz.renderer == 1) {
+			clientStr_tip += "OpenGL";
+		} else if (deetz.renderer == 2) {
+			clientStr_tip += "Software";
+		}
+	}
+	
+	return clientStr_tip;
+}
+
 function open_player_profile(event) {	
 	let clickedId = event.currentTarget.getAttribute("id");
 	if (!clickedId)
@@ -427,6 +462,15 @@ function open_player_profile(event) {
 	let mapsPlayed = state.mapsPlayed + " / " + g_map_cycle.length + " (" + percentPlayed + "%)";
 	let steamlink = "<a href=\"https://steamcommunity.com/profiles/" + clickedId + "\" target=\"_blank\">" + steamid64_to_steamid(clickedId) + "</a>";
 	
+	let clientStr = "Unknown";
+	
+	if (clickedId in g_player_clients) {
+		if (g_player_clients[clickedId].modStr)
+			clientStr = g_player_clients[clickedId].modStr;
+	}
+	
+	let clientStr_tip = get_client_details_tip(clickedId);
+	
 	player_profile.style.display = "block";
 	player_profile.getElementsByClassName("avatar_img")[0].src = avatar;
 	player_profile.getElementsByClassName("spray_img")[0].src = spray + state.salt;
@@ -437,6 +481,8 @@ function open_player_profile(event) {
 	player_profile.getElementsByClassName("maps_played")[0].textContent = mapsPlayed;
 	player_profile.getElementsByClassName("play_time")[0].textContent = format_age(state.totalPlayTime, false, true);
 	player_profile.getElementsByClassName("first_seen")[0].textContent = firstSeenText;
+	player_profile.getElementsByClassName("client_type")[0].textContent = clientStr;
+	player_profile.getElementsByClassName("client_type")[0].title = clientStr_tip;
 	
 	let model_name = state.model;
 	let pmodel_img_src = get_repo_url(model_name) + "models/player/" + model_name + "/" + model_name + "_large.png";
@@ -520,7 +566,7 @@ function refresh_player_table() {
 		
 		if (i >= plist.rows.length) {
 			let row = plist.insertRow(plist.rows.length);
-			row.innerHTML = "<tr><td><div></div><img class=\"rank\"/></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>";
+			row.innerHTML = "<tr><td><div></div><img class=\"rank\"/></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>";
 		}
 		
 		let row = plist.rows[i];
@@ -628,12 +674,32 @@ function refresh_player_table() {
 			status_col.title = "Player is either connecting to the server, downloading content, or ghosting.";
 		}
 		
+		
+		let clientLogo = "?";
+		if (dat.steamid64 in g_player_clients) {
+			let clientType = g_player_clients[dat.steamid64].mod;
+			
+			let client_logo_suffix = "hl";
+			if (clientType == 2) {
+				client_logo_suffix = "sk";
+			} else if (clientType == 3) {
+				client_logo_suffix = "bf";
+			} else if (clientType == 4) {
+				client_logo_suffix = "ag";
+			}
+			
+			clientLogo = '<img class="client_icon" src="icon/client_' + client_logo_suffix + '.png"></img>'
+		}
+		
 		row.cells[2].textContent = dat.score;
 		row.cells[3].textContent = dat.deaths;
 		row.cells[4].textContent = dat.ping;
-		row.cells[5].textContent = "";
+		row.cells[5].innerHTML = clientLogo;
+		row.cells[5].title = get_client_details_tip(dat.steamid64);
 		row.cells[6].textContent = "";
 		row.cells[7].textContent = "";
+		row.cells[8].textContent = "";
+		row.cells[9].textContent = "";
 		
 		row.setAttribute("steamid", dat.steamid64);
 	}
@@ -1141,6 +1207,39 @@ function parse_upcoming_maps(view) {
 	update_map_data();
 }
 
+function parse_client_details(view) {
+	let offset = 1; // skip message type byte
+
+	let steamid64 = view.getBigUint64(offset, true);
+	offset += 8;
+
+	g_player_clients[steamid64] = {
+		os: {},
+		engine: [],
+		mod: 0,
+		modStr: "",
+		renderer: 0
+	};
+	
+	g_player_clients[steamid64].os = view.getUint8(offset, true);
+	offset += 1;
+	
+	g_player_clients[steamid64].engine = view.getUint8(offset, true);
+	offset += 1;
+	
+	g_player_clients[steamid64].mod = view.getUint8(offset, true);
+	offset += 1;
+	
+	g_player_clients[steamid64].renderer = view.getUint8(offset, true);
+	offset += 1;
+	
+	let modStr = read_string(view, offset);
+	offset += get_utf8_data_len(name);
+	g_player_clients[steamid64].modStr = modStr;
+	
+	console.log("Player client " + steamid64 + ": ", g_player_clients[steamid64]);
+}
+
 function parse_map_list(view) {
 	g_map_cycle = [];
 	
@@ -1557,6 +1656,7 @@ function remove_old_player_states() {
 		if (!used_ids.has("" + id)) {
 			console.log("Removed unused player state for ID " + id);
 			delete g_player_states[id];
+			delete g_player_clients[id];
 		}
 	});
 }
@@ -1792,6 +1892,9 @@ function createWebSocket() {
 		}
 		else if (msgType == MESSAGE_TYPE.WEBMSG_UPCOMING_MAPS) {
 			parse_upcoming_maps(view, true);
+		}
+		else if (msgType == MESSAGE_TYPE.WEBMSG_CLIENT_DETAILS) {
+			parse_client_details(view, true);
 		}
 		else {
 			console.error("Unrecognized socket message type " + msgType);

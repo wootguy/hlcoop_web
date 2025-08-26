@@ -80,18 +80,21 @@
 				width: 50px;
 			}
 			#player_list td:nth-child(5), #player_list th:nth-child(5) {
-				width: 66px;
+				width: 40px;
 			}
 			#player_list td:nth-child(6), #player_list th:nth-child(6) {
-				width: 60px;
+				width: 24px;
 			}
 			#player_list td:nth-child(7), #player_list th:nth-child(7) {
-				width: 70px;
+				width: 60px;
 			}
 			#player_list td:nth-child(8), #player_list th:nth-child(8) {
-				width: 88px;
+				width: 70px;
 			}
 			#player_list td:nth-child(9), #player_list th:nth-child(9) {
+				width: 88px;
+			}
+			#player_list td:nth-child(10), #player_list th:nth-child(10) {
 				width: 222px;
 			}
 			#player_list th {
@@ -156,30 +159,32 @@
 			#player_list .shortidle {
 				color: #ff0;
 			}
-			#player_list td:nth-child(6), #player_list th:nth-child(6),
 			#player_list td:nth-child(7), #player_list th:nth-child(7),
 			#player_list td:nth-child(8), #player_list th:nth-child(8),
-			#player_list td:nth-child(9), #player_list th:nth-child(9) {
+			#player_list td:nth-child(9), #player_list th:nth-child(9),
+			#player_list td:nth-child(10), #player_list th:nth-child(10) {
 				display: none;
 			}
 			#player_list.stat_view td:nth-child(2), #player_list.stat_view th:nth-child(2),
 			#player_list.stat_view td:nth-child(3), #player_list.stat_view th:nth-child(3),
 			#player_list.stat_view td:nth-child(4), #player_list.stat_view th:nth-child(4),
-			#player_list.stat_view td:nth-child(5), #player_list.stat_view th:nth-child(5) {
+			#player_list.stat_view td:nth-child(5), #player_list.stat_view th:nth-child(5),
+			#player_list.stat_view td:nth-child(6), #player_list.stat_view th:nth-child(6) {
 				display: none;
 			}
-			#player_list.stat_view td:nth-child(6), #player_list.stat_view th:nth-child(6),
 			#player_list.stat_view td:nth-child(7), #player_list.stat_view th:nth-child(7),
-			#player_list.stat_view td:nth-child(8), #player_list.stat_view th:nth-child(8) {
+			#player_list.stat_view td:nth-child(8), #player_list.stat_view th:nth-child(8),
+			#player_list.stat_view td:nth-child(9), #player_list.stat_view th:nth-child(9) {
 				display: table-cell;
 			}
 			#player_list.web_users td:nth-child(2), #player_list.web_users th:nth-child(2),
 			#player_list.web_users td:nth-child(3), #player_list.web_users th:nth-child(3),
 			#player_list.web_users td:nth-child(4), #player_list.web_users th:nth-child(4),
+			#player_list.web_users td:nth-child(6), #player_list.web_users th:nth-child(6),
 			#player_list.web_users td:nth-child(5), #player_list.web_users th:nth-child(5) {
 				display: none;
 			}
-			#player_list.web_users td:nth-child(9), #player_list.web_users th:nth-child(9){
+			#player_list.web_users td:nth-child(10), #player_list.web_users th:nth-child(10){
 				display: table-cell;
 			}
 			#player_list.web_users div {
@@ -191,6 +196,9 @@
 			#player_list.web_users div.anon {
 				color: #aaa;
 				cursor: initial;
+			}
+			#player_list .client_icon {
+				height: 17px;
 			}
 			
 			
@@ -743,6 +751,10 @@
 				width: 100%;
 				text-align: left;
 			}
+			.alias_details_container {
+				max-height: 210px;
+				overflow-y: scroll;
+			}
 			#player_profile th {
 				color: #FFAA00;
 			}
@@ -821,6 +833,7 @@
 							<th title="Points awarded for damage dealt in the current map">Score</th>
 							<th title="The number of times the player has died in the current map">Deaths</th>
 							<th title="Player's latency to the server">Ping</th>
+							<th title="Player's game client">CL</th>
 							<th title="Player's opinion of the selected map">Opinion</th>
 							<th title="Last time this player played the selected map">Last play</th>
 							<th title="Total number of times the player played the selected map">Total plays</th>
@@ -920,16 +933,19 @@ Red light = Negative ratings. Low priority. Selected only if all other maps are 
 								<tr><td>First joined</td><td class="first_seen">yesterday</td></tr>
 								<tr><td>Time played</td><td class="play_time">a million years</td></tr>
 								<tr><td>Maps played</td><td class="maps_played">1234</td></tr>
+								<tr><td>Client</td><td class="client_type">videogame.dll</td></tr>
 							</tbody>
 						</table>
 						
 						<div class="alias_header">This user has played as:</div>
-						<table class="alias_details">
-							<thead>
-								<th>Alias</th><th>Time used</th>
-							</thead>
-							<tbody></tbody>
-						</table>
+						<div class="alias_details_container">
+							<table class="alias_details">
+								<thead>
+									<th>Alias</th><th>Time used</th>
+								</thead>
+								<tbody></tbody>
+							</table>
+						</div>
 					</div>
 				</div>
 				<div class="pmodel_container">
