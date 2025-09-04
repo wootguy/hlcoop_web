@@ -444,8 +444,12 @@ function open_player_profile(event) {
 
 	const state = g_player_states[clickedId];
 	const avatar = "https://avatars.steamstatic.com/" + state.steamAvatar;
-	const spray = g_fastdl_server_url + "sprays/" + clickedId + ".png";
+	let spray = g_fastdl_server_url + "sprays/" + clickedId + ".png";
 	let firstSeenDate = new Date(state.firstSeen*1000);
+	
+	if (state.sprayBanReason) {
+		spray = "icon/spray_banned.png";
+	}
 	
 	if (state.firstSeen == 0) {
 		firstSeenDate = new Date(); // new state just joined today
@@ -483,6 +487,12 @@ function open_player_profile(event) {
 	player_profile.getElementsByClassName("first_seen")[0].textContent = firstSeenText;
 	player_profile.getElementsByClassName("client_type")[0].textContent = clientStr;
 	player_profile.getElementsByClassName("client_type")[0].title = clientStr_tip;
+	
+	if (state.sprayBanReason) {
+		player_profile.getElementsByClassName("spray_img")[0].title = 'This player lost their spray prviledge.\n\nBan reason: "' + state.sprayBanReason + '"';
+	} else {
+		player_profile.getElementsByClassName("spray_img")[0].title = "";
+	}
 	
 	let model_name = state.model;
 	let pmodel_img_src = get_repo_url(model_name) + "models/player/" + model_name + "/" + model_name + "_large.png";
@@ -1125,6 +1135,10 @@ function parse_player_state(view) {
 	g_player_states[steamid64].totalPlayTime = view.getUint32(offset, true);
 	offset += 4;
 	
+	let sprayBanReason = read_string(view, offset);
+	offset += get_utf8_data_len(sprayBanReason);
+	g_player_states[steamid64].sprayBanReason = sprayBanReason;
+	
 	let aliasCount = view.getUint8(offset, true);
 	offset += 1;
 	
@@ -1720,9 +1734,9 @@ async function setup() {
 	let player_profile = document.getElementById("player_profile");
 	player_profile.addEventListener('click', function() {
 		player_profile.style.display = "none";
-		player_profile.getElementsByClassName("avatar_img")[0].src = "";
-		player_profile.getElementsByClassName("spray_img")[0].src = "";
-		player_profile.getElementsByClassName("pmodel_img")[0].src = "";
+		player_profile.getElementsByClassName("avatar_img")[0].src = "icon/blank.png";
+		player_profile.getElementsByClassName("spray_img")[0].src = "icon/blank.png";
+		player_profile.getElementsByClassName("pmodel_img")[0].src = "icon/blank.png";
 	});
 	player_profile.getElementsByClassName("content")[0].addEventListener('click', function(event) {
 		event.stopPropagation();
