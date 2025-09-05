@@ -1403,8 +1403,15 @@ function update_map_data() {
 		}
 		
 		let img = div.getElementsByClassName("map_image")[0];
-		img.src = "img/" + first_map + ".jpg";
+		img.setAttribute("loadUrl", "img/" + first_map + ".jpg");
 		img.onerror = handle_img_error;
+		
+		let isUpcoming = div.classList.contains("upcoming") || div.id == "current_map" || div.id == "next_map";
+		let showingAllMaps = document.getElementById("show_all_maps").checked;
+		
+		if (isUpcoming || showingAllMaps) {
+			img.setAttribute("src", img.getAttribute("loadUrl"));
+		}
 		
 		let like = div.getElementsByClassName("like_button")[0];
 		like.setAttribute("rating", "1");
@@ -1710,6 +1717,8 @@ async function setup() {
 				document.getElementById("content").classList.add("empty_server");
 			}
 		}
+		
+		update_map_data(); // update image urls
 	});
 	
 	document.getElementById("maps_filter").addEventListener('onchange', filter_maps);
