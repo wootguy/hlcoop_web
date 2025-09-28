@@ -688,9 +688,13 @@ function refresh_player_table() {
 		let clientLogo = "?";
 		if (dat.steamid64 in g_player_clients) {
 			let clientType = g_player_clients[dat.steamid64].mod;
+			let modStr = g_player_clients[dat.steamid64].modStr.toLowerCase();
 			
 			let client_logo_suffix = "hl";
-			if (clientType == 2) {
+			
+			if (modStr.indexOf("gay furry") != -1) {
+				client_logo_suffix = "gf";
+			} else if (clientType == 2) {
 				client_logo_suffix = "sk";
 			} else if (clientType == 3) {
 				client_logo_suffix = "bf";
