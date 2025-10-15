@@ -60,6 +60,8 @@ const PLAYER_FLAG_BAD_GUY = 1;
 const WEBMSG_CHAT_TYPE_NORMAL = 0;
 const WEBMSG_CHAT_TYPE_BAD_GUY = 1;
 const WEBMSG_CHAT_TYPE_WEB_USER = 2;
+const WEBMSG_CHAT_TYPE_SERVER = 3;
+const WEBMSG_CHAT_TYPE_GAME = 4;
 
 const PLAYER_STATUS_ALIVE = 0;
 const PLAYER_STATUS_DEAD = 1;
@@ -827,6 +829,14 @@ function add_message(steamid64, name, msg, time, msgType) {
 	
 	let chat_msg = document.createElement('span');
 	chat_msg.textContent = msg;
+	
+	if (msgType == WEBMSG_CHAT_TYPE_GAME) {
+		chat_msg.classList.add("hud_msg");
+		chat_msg.title = "This message was sent by the map"
+	}
+	if (msgType == WEBMSG_CHAT_TYPE_SERVER) {
+		chat_msg.title = "This message was sent by the server"
+	}
 	
 	chat_msg.innerHTML = chat_msg.innerHTML.replace(";name;", chat_name.outerHTML);
 	
