@@ -20,7 +20,7 @@ of_office
 renegade_r
 saving_private_tower
 sb3
-sigur
+sigur_hl
 temp-916-r
 ey_compo
 isp2
@@ -46,3 +46,14 @@ quad_2v2
 aiglass_hl
 cs_snowy
 adv_office_robbery
+oasis_v3_hl
+dig_r_hl
+freeman_v1-hl
+nightshift_rb
+e1m1_d1
+e1m1_sc
+blow_up_hla
+fescape_hl
+minecraftworld1
+agpain_rb
+hq_rb
