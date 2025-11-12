@@ -4,7 +4,7 @@
 var g_socket;
 var g_server_url = 'wss://w00tguy.ddns.net:3000/';
 //var g_server_url = 'wss://w00tguy.ddns.net:3001/';
-//var g_server_url = 'ws://localhost:3000/'; // for Visual Studio debugging
+//var g_server_url = 'ws://localhost:3000/'; // for Visual Studio debugging (also required for logging in locally)
 var g_fastdl_server_url = 'https://w00tguy.ddns.net/';
 var g_player_data = []; // players currently in the server
 var g_web_player_data = []; // web client info
@@ -1023,6 +1023,7 @@ function parse_rating(view) {
 	map_stats.rating = rating;
 	update_map_ratings();
 	refresh_player_table();
+	update_map_data();
 }
 
 function logout(ev) {
@@ -1396,6 +1397,11 @@ function update_map_data() {
 		upcoming.appendChild(map);
 	}
 	
+	let mapFilterType = document.getElementById("map-filter-type").value;
+	let showingAllMaps = mapFilterType != "opt-upcoming";
+	
+	let mystats = g_steamid > 1 ? g_player_states[g_steamid].mapstats : {};
+	
 	document.querySelectorAll('.map_container').forEach(function(div) {
 		let map = div.getAttribute("map");
 		let dat = get_map_dat(map);
@@ -1421,7 +1427,19 @@ function update_map_data() {
 		img.onerror = handle_img_error;
 		
 		let isUpcoming = div.classList.contains("upcoming") || div.id == "current_map" || div.id == "next_map";
-		let showingAllMaps = document.getElementById("show_all_maps").checked;
+		
+		div.classList.remove("filter_wrong_opinion");
+		if (g_steamid > 1) {
+			if (mapFilterType == "opt-my-liked" && mystats[first_map].rating != 1) {
+				div.classList.add("filter_wrong_opinion");
+			}
+			else if (mapFilterType == "opt-my-disliked" && mystats[first_map].rating != 2) {
+				div.classList.add("filter_wrong_opinion");
+			}
+		}
+		else if (mapFilterType == "opt-my-liked" || mapFilterType == "opt-my-disliked") {
+			div.classList.add("filter_wrong_opinion");
+		}
 		
 		if (isUpcoming || showingAllMaps) {
 			img.setAttribute("src", img.getAttribute("loadUrl"));
@@ -1444,16 +1462,8 @@ function update_map_data() {
 		+ "\n\nIf 67% of players on the server dislike a map, then it will never be picked.";
 	});
 	
-	if (document.getElementById("show_all_maps").checked) {
-		document.getElementById('upcoming_maps_count').textContent = upcoming.getElementsByClassName("map_container").length;
-	} else {
-		document.getElementById('upcoming_maps_count').textContent = upcoming.getElementsByClassName("upcoming").length;
-	}
-	
 	if (g_player_data.length == 0) {
-		document.getElementById('upcoming_maps_count').textContent = "0";
-		
-		if (document.getElementById("show_all_maps").checked) {
+		if (showingAllMaps) {
 			document.getElementById("empty_notice").classList.add("hidden");
 			document.getElementById("content").classList.remove("empty_server");
 		} else {
@@ -1466,6 +1476,23 @@ function update_map_data() {
 	}
 	
 	update_map_ratings();
+	
+	if (mapFilterType == "opt-my-liked") {
+		document.getElementById('upcoming_maps_count').textContent = upcoming.querySelectorAll(".like_button.own_rating").length;
+	}
+	else if (mapFilterType == "opt-my-disliked") {
+		document.getElementById('upcoming_maps_count').textContent = upcoming.querySelectorAll(".dislike_button.own_rating").length;
+	}
+	else if (showingAllMaps) {
+		document.getElementById('upcoming_maps_count').textContent = upcoming.getElementsByClassName("map_container").length;
+	}
+	else {
+		if (g_player_data.length == 0) {
+			document.getElementById('upcoming_maps_count').textContent = "0";
+		} else {
+			document.getElementById('upcoming_maps_count').textContent = upcoming.getElementsByClassName("upcoming").length;
+		}
+	}
 }
 
 function update_map_ratings() {
@@ -1712,24 +1739,38 @@ async function setup() {
 
 	document.getElementById("maps_filter").value = "";
 	document.getElementById("send_message").value = "";
-	document.getElementById('show_all_maps').checked = false;
-	document.getElementById("show_all_maps").addEventListener("change", function() {
+	document.getElementById("map-filter-type").value = "opt-upcoming";
+	document.getElementById("map-filter-type").addEventListener("change", function() {
 		let upcoming = document.getElementById("upcoming_maps");
 		
-		if (this.checked) {
+		if (this.value == "opt-all") {
 			upcoming.classList.add("all_maps");
 			document.getElementById("upcoming_title").textContent = "All maps";
-			document.getElementById('upcoming_maps_count').textContent = upcoming.getElementsByClassName("map_container").length;
 			document.getElementById("empty_notice").classList.add("hidden");
 			document.getElementById("content").classList.remove("empty_server");
-		} else {
-			document.getElementById("upcoming_maps").classList.remove("all_maps");
+		}
+		else if (this.value == "opt-my-liked") {
+			upcoming.classList.add("all_maps");
+			document.getElementById("upcoming_title").textContent = "Your Liked Maps";
+			document.getElementById("empty_notice").classList.add("hidden");
+			document.getElementById("content").classList.remove("empty_server");
+		}
+		else if (this.value == "opt-my-disliked") {
+			upcoming.classList.add("all_maps");
+			document.getElementById("upcoming_title").textContent = "Your Disliked Maps";
+			document.getElementById("empty_notice").classList.add("hidden");
+			document.getElementById("content").classList.remove("empty_server");
+		}
+		else if (this.value == "opt-upcoming") {
+			upcoming.classList.remove("all_maps");
 			document.getElementById("upcoming_title").textContent = "Upcoming maps";
-			document.getElementById('upcoming_maps_count').textContent = upcoming.getElementsByClassName("upcoming").length;
 			if (g_player_data.length == 0) {
 				document.getElementById("empty_notice").classList.remove("hidden");
 				document.getElementById("content").classList.add("empty_server");
 			}
+		}
+		else {
+			console.error("Invalid map filter type: " + this.value);
 		}
 		
 		update_map_data(); // update image urls

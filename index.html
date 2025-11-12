@@ -392,6 +392,9 @@
 			#upcoming_maps .map_container.filtered {
 				display: none !important;
 			}
+			#upcoming_maps .map_container.filter_wrong_opinion {
+				display: none !important;
+			}
 			#upcoming_maps .map_container.upcoming {
 				display: inline-block;
 			}
@@ -914,8 +917,12 @@ Red light = Negative ratings. Low priority. Selected only if all other maps are 
 				</div>
 				<div id="filter_maps_container">
 					<input id="maps_filter" type="text" placeholder="Search..." onchange = "filter_maps();" onkeypress="this.onchange();" onpaste="this.onchange();" oninput="this.onchange();" title="Filter maps by name">
-					<input type="checkbox" id="show_all_maps" name="show_all_maps" value="asdf">
-					<label for="show_all_maps">Show all maps</label><br>
+					<select id="map-filter-type">
+						<option value="opt-upcoming">Upcoming Maps</option>
+						<option value="opt-all">All Maps</option>
+						<option value="opt-my-liked">Your Liked Maps</option>
+						<option value="opt-my-disliked">Your Disliked Maps</option>
+					</select>
 				</div>
 			</div>
 		</div>
