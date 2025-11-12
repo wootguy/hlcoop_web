@@ -32,6 +32,8 @@ var g_game_id = "hl";
 var data_repo_count = 32;
 var data_repo_domain = "https://wootdata.github.io/";
 
+var debug_logging = false;
+
 const MESSAGE_TYPE = {
 	WEBMSG_SERVER_NAME: 0,
 	WEBMSG_PLAYER_LIST: 1,
@@ -1207,7 +1209,8 @@ function parse_player_state(view) {
 		};
 	}
 	
-	console.log("Player state: ", g_player_states[steamid64]);
+	if (debug_logging)
+		console.log("Player state: ", g_player_states[steamid64]);
 	
 	update_web_client_info();
 	update_map_data();
@@ -1231,7 +1234,8 @@ function parse_upcoming_maps(view) {
 		g_upcoming_maps.add(g_map_cycle[mapId][0]);
 	}
 	
-	console.log("Next map: " + g_next_map + ", upcoming maps: ", g_upcoming_maps);
+	if (debug_logging)
+		console.log("Next map: " + g_next_map + ", upcoming maps: ", g_upcoming_maps);
 	
 	update_map_data();
 }
@@ -1266,7 +1270,8 @@ function parse_client_details(view) {
 	offset += get_utf8_data_len(name);
 	g_player_clients[steamid64].modStr = modStr;
 	
-	console.log("Player client " + steamid64 + ": ", g_player_clients[steamid64]);
+	if (debug_logging)
+		console.log("Player client " + steamid64 + ": ", g_player_clients[steamid64]);
 }
 
 function parse_map_list(view) {
@@ -1290,7 +1295,8 @@ function parse_map_list(view) {
 		}
 	}
 	
-	console.log("Map cycle:", g_map_cycle);
+	if (debug_logging)
+		console.log("Map cycle:", g_map_cycle);
 }
 
 function parse_map_info(view) {
@@ -1426,8 +1432,6 @@ function update_map_data() {
 		img.setAttribute("loadUrl", "img/" + first_map + ".jpg");
 		img.onerror = handle_img_error;
 		
-		let isUpcoming = div.classList.contains("upcoming") || div.id == "current_map" || div.id == "next_map";
-		
 		div.classList.remove("filter_wrong_opinion");
 		if (g_steamid > 1) {
 			if (mapFilterType == "opt-my-liked" && mystats[first_map].rating != 1) {
@@ -1441,7 +1445,8 @@ function update_map_data() {
 			div.classList.add("filter_wrong_opinion");
 		}
 		
-		if (isUpcoming || showingAllMaps) {
+		// always load image for current/next
+		if (div.id == "current_map" || div.id == "next_map") {
 			img.setAttribute("src", img.getAttribute("loadUrl"));
 		}
 		
@@ -1493,6 +1498,7 @@ function update_map_data() {
 			document.getElementById('upcoming_maps_count').textContent = upcoming.getElementsByClassName("upcoming").length;
 		}
 	}
+
 }
 
 function update_map_ratings() {
@@ -1725,6 +1731,70 @@ function remove_old_player_states() {
 
 let g_chat_cooldown_end = 0;
 
+// GPT image observing code
+function observeImage(img, observer) {
+	if (!img.hasAttribute('loadurl')) return;
+	observer.observe(img);
+}
+function isActuallyVisible(el) {
+	let current = el;
+	while (current && current !== document) {
+		const style = getComputedStyle(current);
+		if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') {
+		  return false;
+		}
+		current = current.parentElement;
+	}
+	return true;
+}
+function lazy_image_loader_setup() {
+	const container = document.getElementById('upcoming_maps_grid');
+	
+	// IntersectionObserver for lazy loading
+	const io = new IntersectionObserver(
+	  (entries, obs) => {
+		for (const entry of entries) {
+		  if (entry.isIntersecting) {
+			const img = entry.target;
+			const url = img.getAttribute('loadurl');
+			
+			if (!isActuallyVisible(img)) {
+				continue;
+			}
+			
+			if (url) {
+				img.src = url;
+				img.removeAttribute('loadurl');
+				obs.unobserve(img);
+			}
+		  }
+		}
+	  },
+	  {
+		root: container,
+		threshold: 0.1,
+	  }
+	);
+
+	// Observe existing images
+	container.querySelectorAll('img[loadurl]').forEach(img => observeImage(img, io));
+
+	// MutationObserver for dynamically added images
+	const mo = new MutationObserver(mutations => {
+	  for (const m of mutations) {
+		for (const node of m.addedNodes) {
+		  if (node.tagName === 'IMG' && node.hasAttribute('loadurl')) {
+			observeImage(node, io);
+		  } else if (node.querySelectorAll) {
+			node.querySelectorAll('img[loadurl]').forEach(img => observeImage(img, io));
+		  }
+		}
+	  }
+	});
+
+	mo.observe(container, { childList: true, subtree: true });
+}
+
 async function setup() {
 	g_map_data = await downloadJson("mapdb.json");
 	update_map_data();
@@ -1870,6 +1940,8 @@ async function setup() {
 	}
 	
 	createWebSocket();
+	
+	lazy_image_loader_setup();
 }
 
 function action_denied_popup(reason, errorCode) {
@@ -1932,7 +2004,8 @@ function createWebSocket() {
 
 		let msgType = view.getUint8(0);
 		
-		console.log("Got " + get_message_type_name(msgType) + " (" + event.data.size + " bytes)");
+		if (debug_logging)
+			console.log("Got " + get_message_type_name(msgType) + " (" + event.data.size + " bytes)");
 		
 		if (msgType == MESSAGE_TYPE.WEBMSG_SERVER_NAME) {
 			parse_server_name(view);
