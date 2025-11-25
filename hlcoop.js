@@ -799,6 +799,7 @@ function parse_server_name(view) {
 
 function add_message(steamid64, name, msg, time, msgType) {
 	let chatbox = document.getElementById('chat_box');
+	let scrolledToBottom = chatbox.scrollTop + chatbox.clientHeight >= chatbox.scrollHeight;
 	
 	let chat_container = document.createElement('div');
 	chat_container.classList.add("chat_message");
@@ -851,11 +852,13 @@ function add_message(steamid64, name, msg, time, msgType) {
 	chat_container.appendChild(chat_msg);
 	chatbox.appendChild(chat_container);
 	
-	while (chatbox.childElementCount > 100) {
+	while (chatbox.childElementCount > 200) {
 		chatbox.removeChild(chatbox.firstChild);
 	}
 	
-	chatbox.scrollTop = chatbox.scrollHeight;
+	// auto-scroll if at bottom
+	if (scrolledToBottom)
+		chatbox.scrollTop = chatbox.scrollHeight;
 }
 
 function parse_chat_message(view) {	
@@ -1821,13 +1824,13 @@ async function setup() {
 		}
 		else if (this.value == "opt-my-liked") {
 			upcoming.classList.add("all_maps");
-			document.getElementById("upcoming_title").textContent = "Your Liked Maps";
+			document.getElementById("upcoming_title").textContent = "Your liked maps";
 			document.getElementById("empty_notice").classList.add("hidden");
 			document.getElementById("content").classList.remove("empty_server");
 		}
 		else if (this.value == "opt-my-disliked") {
 			upcoming.classList.add("all_maps");
-			document.getElementById("upcoming_title").textContent = "Your Disliked Maps";
+			document.getElementById("upcoming_title").textContent = "Your disliked maps";
 			document.getElementById("empty_notice").classList.add("hidden");
 			document.getElementById("content").classList.remove("empty_server");
 		}
