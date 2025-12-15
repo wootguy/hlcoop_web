@@ -799,7 +799,8 @@ function parse_server_name(view) {
 
 function add_message(steamid64, name, msg, time, msgType) {
 	let chatbox = document.getElementById('chat_box');
-	let scrolledToBottom = chatbox.scrollTop + chatbox.clientHeight >= chatbox.scrollHeight;
+	const epsilon = 10;
+	let scrolledToBottom = chatbox.scrollTop + chatbox.clientHeight + epsilon >= chatbox.scrollHeight;
 	
 	let chat_container = document.createElement('div');
 	chat_container.classList.add("chat_message");
