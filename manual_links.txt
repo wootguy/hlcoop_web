@@ -132,3 +132,4 @@ craxnhax_hl=craxnhax
 sc_wilkes_hl=wilkes-series
 cryocell_hl=cryocell
 ectopit_hl=ectopit
+poke646_hl_1=poke646-poke646:vendetta-co-op

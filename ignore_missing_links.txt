@@ -80,3 +80,6 @@ quoffee2e3_1
 plague
 house_raid
 gauss_race
+ze_marinebhop
+poke646_hl_1
+aomdc_intro
