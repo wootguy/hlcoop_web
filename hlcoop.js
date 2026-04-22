@@ -2,9 +2,9 @@
 // - special messages for mapchange
 
 var g_socket;
-var g_server_url = 'wss://w00tguy.ddns.net:3000/';
+//var g_server_url = 'wss://w00tguy.ddns.net:3000/';
 //var g_server_url = 'wss://w00tguy.ddns.net:3001/';
-//var g_server_url = 'ws://localhost:3000/'; // for Visual Studio debugging (also required for logging in locally)
+var g_server_url = 'ws://localhost:3000/'; // for Visual Studio debugging (also required for logging in locally)
 var g_fastdl_server_url = 'https://w00tguy.ddns.net/';
 var g_player_data = []; // players currently in the server
 var g_web_player_data = []; // web client info
@@ -70,6 +70,9 @@ const PLAYER_STATUS_DEAD = 1;
 const PLAYER_STATUS_SPECTATOR = 2;
 const PLAYER_STATUS_IDLE = 3;
 const PLAYER_STATUS_CONNECTING = 4;
+const PLAYER_STATUS_DROPPING = 5;
+const PLAYER_STATUS_CHAT = 6;
+const PLAYER_STATUS_CONSOLE = 7;
 
 const g_languages = {
   "ab": "Abkhaz",
@@ -685,7 +688,19 @@ function refresh_player_table() {
 		} else if (dat.status == PLAYER_STATUS_CONNECTING) {
 			status_col.classList.add("connecting");
 			status_col.textContent = "LOAD";
-			status_col.title = "Player is either connecting to the server, downloading content, or ghosting.";
+			status_col.title = "Player is either connecting to the server, downloading content, ghosting, or crashed.";
+		} else if (dat.status == PLAYER_STATUS_DROPPING) {
+			status_col.classList.add("connecting");
+			status_col.textContent = "DROP";
+			status_col.title = "Player either lost connection to the server, crashed, or closed the game window instead of quitting normally.";
+		} else if (dat.status == PLAYER_STATUS_CHAT) {
+			status_col.classList.add("connecting");
+			status_col.textContent = "CHAT";
+			status_col.title = "Player is typing in chat.";
+		} else if (dat.status == PLAYER_STATUS_CONSOLE) {
+			status_col.classList.add("connecting");
+			status_col.textContent = "BUSY";
+			status_col.title = "Player is either in menus, typing in console, or switched to another program.";
 		}
 		
 		
