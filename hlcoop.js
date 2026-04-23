@@ -1,6 +1,8 @@
 // TODO:
 // - special messages for mapchange
 
+const WEBAPP_VERSION = 1;
+
 var g_socket;
 var g_server_url = 'wss://w00tguy.ddns.net:3000/';
 //var g_server_url = 'wss://w00tguy.ddns.net:3001/';
@@ -32,6 +34,7 @@ var g_list_web_users = false; // list web users instead of players
 var g_game_id = "hl";
 var data_repo_count = 32;
 var data_repo_domain = "https://wootdata.github.io/";
+var g_lost_connection = false;
 
 var debug_logging = false;
 
@@ -57,6 +60,7 @@ const WEBDENY_BANNED = 2;
 const WEBDENY_TOO_NEW = 3;
 const WEBDENY_RATE_LIMITED = 4;
 const WEBDENY_STEAM_ERROR = 5;
+const WEBDENY_BAD_VERSION = 6;
 
 const PLAYER_FLAG_BAD_GUY = 1;
 
@@ -65,6 +69,9 @@ const WEBMSG_CHAT_TYPE_BAD_GUY = 1;
 const WEBMSG_CHAT_TYPE_WEB_USER = 2;
 const WEBMSG_CHAT_TYPE_SERVER = 3;
 const WEBMSG_CHAT_TYPE_GAME = 4;
+const WEBMSG_CHAT_TYPE_ERROR = 255;
+const WEBMSG_CHAT_TYPE_GREEN = 256;
+
 
 const PLAYER_STATUS_ALIVE = 0;
 const PLAYER_STATUS_DEAD = 1;
@@ -886,6 +893,14 @@ function add_message(steamid64, name, msg, time, msgType) {
 	}
 	if (msgType == WEBMSG_CHAT_TYPE_SERVER) {
 		chat_msg.title = "This message was sent by the server"
+	}
+	if (msgType == WEBMSG_CHAT_TYPE_ERROR) {
+		chat_msg.classList.add("red");
+		chat_msg.title = "This message was sent by your web browser, and only to you";
+	}
+	if (msgType == WEBMSG_CHAT_TYPE_GREEN) {
+		chat_msg.classList.add("green");
+		chat_msg.title = "This message was sent by your web browser, and only to you";
 	}
 	
 	chat_msg.innerHTML = chat_msg.innerHTML.replace(";name;", chat_name.outerHTML);
@@ -2065,19 +2080,26 @@ function action_denied_popup(reason, errorCode) {
 		document.getElementById('popup-text-rate-limit').style.display = 'block';
 	}
 	if (reason == WEBDENY_STEAM_ERROR) {
-		document.getElementById('popup-error-code').textContent = errorCode
+		document.getElementById('popup-error-code').textContent = errorCode;
 		document.getElementById('popup-text-steam-error').style.display = 'block';
+	}
+	if (reason == WEBDENY_BAD_VERSION) {
+		document.getElementById('popup-text-bad-version').style.display = 'block';
+		document.getElementById('web-version-local').textContent = WEBAPP_VERSION;
+		document.getElementById('web-version-server').textContent = errorCode;
+		document.getElementById('closePopup').remove();
 	}
 }
 
 function createWebSocket() {
 	console.log("Connecting to " + g_server_url);
 	g_socket = new WebSocket(g_server_url);
+	lastMessageTime = Date.now();
 	
 	// Handle connection open
 	g_socket.addEventListener('open', function () {
 		console.log("WebSocket connection established");
-		let connect_msg = "hey";
+		let connect_msg = "hey;" + WEBAPP_VERSION;
 		
 		if (g_auth_params) {
 			let claimed_id = g_auth_params.get('openid.claimed_id').replace("https://steamcommunity.com/openid/id/", "");
@@ -2099,6 +2121,12 @@ function createWebSocket() {
 		const view = new DataView(arrayBuffer);
 
 		let msgType = view.getUint8(0);
+		lastMessageTime = Date.now();
+		
+		if (g_lost_connection) {
+			g_lost_connection = false;
+			add_message(0, "", "Reconnected!", Date.now(), WEBMSG_CHAT_TYPE_GREEN);
+		}
 		
 		if (debug_logging)
 			console.log("Got " + get_message_type_name(msgType) + " (" + event.data.size + " bytes)");
@@ -2158,6 +2186,15 @@ function createWebSocket() {
 	g_socket.addEventListener('error', function (error) {
 		console.error("WebSocket error:", error);
 	});
+	
+	setInterval(() => {
+		if (Date.now() - lastMessageTime > 10*1000) {
+			if (!g_lost_connection) {
+				g_lost_connection = true;
+				add_message(0, "", "Lost connection to the server...", Date.now(), WEBMSG_CHAT_TYPE_ERROR);
+			}
+		}
+	}, 1000);
 }
 
 function ready(fn) {
