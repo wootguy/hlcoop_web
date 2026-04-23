@@ -2,9 +2,9 @@
 // - special messages for mapchange
 
 var g_socket;
-//var g_server_url = 'wss://w00tguy.ddns.net:3000/';
+var g_server_url = 'wss://w00tguy.ddns.net:3000/';
 //var g_server_url = 'wss://w00tguy.ddns.net:3001/';
-var g_server_url = 'ws://localhost:3000/'; // for Visual Studio debugging (also required for logging in locally)
+//var g_server_url = 'ws://localhost:3000/'; // for Visual Studio debugging (also required for logging in locally)
 var g_fastdl_server_url = 'https://w00tguy.ddns.net/';
 var g_player_data = []; // players currently in the server
 var g_web_player_data = []; // web client info
@@ -22,6 +22,7 @@ var g_map_cycle = [];
 var g_total_maps = 0;
 var g_upcoming_maps = new Set(); // set of maps in the upcoming maps pool
 var g_steamid = 0;
+var g_opened_profile_id = 0;
 var g_current_map;
 var g_next_map;
 var g_map_start_time; // epoch millis when map started
@@ -338,6 +339,7 @@ function update_table_state() {
 			let player_stats = player_state ? player_state.mapstats[first_map] : undefined;
 			
 			row.cells[6].classList.remove("green");
+			row.cells[6].classList.remove("cyan");
 			row.cells[6].classList.remove("red");
 			
 			if (player_stats && player_stats.lastPlay && player_stats.totalPlays) {
@@ -346,6 +348,9 @@ function update_table_state() {
 				} else if (player_stats.rating == 1) {
 					row.cells[6].classList.add("green");
 					row.cells[6].textContent = "LIKE";
+				} else if (player_stats.rating == 3) {
+					row.cells[6].classList.add("cyan");
+					row.cells[6].textContent = "FAVORITE";
 				} else if (player_stats.rating == 2) {
 					row.cells[6].classList.add("red");
 					row.cells[6].textContent = "DISLIKE";
@@ -448,6 +453,8 @@ function open_player_profile(event) {
 	if (!clickedId)
 		clickedId = event.currentTarget.parentElement.parentElement.getAttribute("steamid");
 	let player_profile = document.getElementById("player_profile");
+	g_opened_profile_id = clickedId;
+	let is_own_profile = clickedId == g_steamid;
 
 	const state = g_player_states[clickedId];
 	const avatar = "https://avatars.steamstatic.com/" + state.steamAvatar;
@@ -490,6 +497,8 @@ function open_player_profile(event) {
 	player_profile.getElementsByClassName("steam_name")[0].textContent = state.steamName;
 	player_profile.getElementsByClassName("steam_id")[0].innerHTML = steamlink;
 	player_profile.getElementsByClassName("maps_played")[0].textContent = mapsPlayed;
+	player_profile.getElementsByClassName("like_cooldown")[0].value = state.likeCooldown;
+	player_profile.getElementsByClassName("like_cooldown")[0].disabled = !is_own_profile;
 	player_profile.getElementsByClassName("play_time")[0].textContent = format_age(state.totalPlayTime, false, true);
 	player_profile.getElementsByClassName("first_seen")[0].textContent = firstSeenText;
 	player_profile.getElementsByClassName("client_type")[0].textContent = clientStr;
@@ -551,6 +560,28 @@ function open_player_profile(event) {
 		row.appendChild(nameCell);
 		row.appendChild(timeUsedCell);
 	}
+}
+
+function close_player_profile() {
+	let player_profile = document.getElementById("player_profile");
+	let is_own_profile = g_opened_profile_id == g_steamid;
+	
+	player_profile.style.display = "none";
+	player_profile.getElementsByClassName("avatar_img")[0].src = "icon/blank.png";
+	player_profile.getElementsByClassName("spray_img")[0].src = "icon/blank.png";
+	player_profile.getElementsByClassName("pmodel_img")[0].src = "icon/blank.png";
+	
+	if (is_own_profile) {
+		const state = g_player_states[g_opened_profile_id];
+		const newLikeCooldown = player_profile.getElementsByClassName("like_cooldown")[0].value;
+		
+		if (state.likeCooldown != newLikeCooldown) {
+			g_socket.send("likecd;" + newLikeCooldown);
+			console.log("Set like cooldown to " + newLikeCooldown + " days ");
+		}
+	}
+	
+	g_opened_profile_id = 0;
 }
 
 function update_web_player_count() {
@@ -739,7 +770,7 @@ function refresh_player_table() {
 	
 	update_web_player_count();
 	document.getElementById('pcount').textContent = g_player_data.length;
-	document.getElementById('tab_title').textContent = "Half-Life Co-op (" + g_player_data.length + "/32)";
+	document.getElementById('tab_title').textContent = "(" + g_player_data.length + "/32) " + g_current_map + " - " + g_server_name;
 	
 	update_table_state();
 	
@@ -1171,6 +1202,9 @@ function parse_player_state(view) {
 	g_player_states[steamid64].totalPlayTime = view.getUint32(offset, true);
 	offset += 4;
 	
+	g_player_states[steamid64].likeCooldown = view.getUint8(offset, true);
+	offset += 1;
+	
 	let sprayBanReason = read_string(view, offset);
 	offset += get_utf8_data_len(sprayBanReason);
 	g_player_states[steamid64].sprayBanReason = sprayBanReason;
@@ -1411,6 +1445,10 @@ function update_map_data() {
 		like.classList.add("like_button");
 		like.src = "icon/thumbs_up.png";
 		
+		let fav = document.createElement('img');
+		fav.classList.add("fav_button");
+		fav.src = "icon/favorite.png";
+		
 		let dislike = document.createElement('img');
 		dislike.classList.add("dislike_button");
 		dislike.src = "icon/thumbs_down.png";
@@ -1418,6 +1456,7 @@ function update_map_data() {
 		map.appendChild(title);
 		map.appendChild(img);
 		map.appendChild(like);
+		map.appendChild(fav);
 		map.appendChild(dislike);
 		upcoming.appendChild(map);
 	}
@@ -1452,15 +1491,18 @@ function update_map_data() {
 		img.onerror = handle_img_error;
 		
 		div.classList.remove("filter_wrong_opinion");
-		if (g_steamid > 1) {
+		if (g_steamid > 1 && mystats[first_map]) {
 			if (mapFilterType == "opt-my-liked" && mystats[first_map].rating != 1) {
+				div.classList.add("filter_wrong_opinion");
+			}
+			else if (mapFilterType == "opt-my-favorited" && mystats[first_map].rating != 3) {
 				div.classList.add("filter_wrong_opinion");
 			}
 			else if (mapFilterType == "opt-my-disliked" && mystats[first_map].rating != 2) {
 				div.classList.add("filter_wrong_opinion");
 			}
 		}
-		else if (mapFilterType == "opt-my-liked" || mapFilterType == "opt-my-disliked") {
+		else if (mapFilterType == "opt-my-liked" || mapFilterType == "opt-my-disliked" || mapFilterType == "opt-my-favorited") {
 			div.classList.add("filter_wrong_opinion");
 		}
 		
@@ -1475,7 +1517,15 @@ function update_map_data() {
 		like.removeEventListener("click", rate_map);
 		like.addEventListener("click", rate_map);
 		like.title= "Rating this map positively will raise its chance of being picked while you're on the server."
-		+ "\n\nThe recent playtime filter doesn't apply to maps you rate positively, meaning you can potentially play them multiple times per day.";
+		+ "\n\nYou can configure your own cooldown for liked maps in your profile. By default, you can play them once per day.";
+		
+		let fav = div.getElementsByClassName("fav_button")[0];
+		fav.setAttribute("rating", "3");
+		fav.setAttribute("map", first_map);
+		fav.removeEventListener("click", rate_map);
+		fav.addEventListener("click", rate_map);
+		fav.title= "Rating this map as your favorite will raise its chance of being picked while you're on the server."
+		+ "\n\nThe recent playtime filter doesn't apply to your favorite maps, meaning you can potentially play them on loop forever with no cooldown. However, that almost never happens unless you're alone in the server. There's usually someone else in the server who played your favorite map recently and doesn't like it enough to play it again so soon.";
 		
 		let dislike = div.getElementsByClassName("dislike_button")[0];
 		dislike.setAttribute("rating", "2");
@@ -1503,6 +1553,9 @@ function update_map_data() {
 	
 	if (mapFilterType == "opt-my-liked") {
 		document.getElementById('upcoming_maps_count').textContent = upcoming.querySelectorAll(".like_button.own_rating").length;
+	}
+	else if (mapFilterType == "opt-my-favorited") {
+		document.getElementById('upcoming_maps_count').textContent = upcoming.querySelectorAll(".fav_button.own_rating").length;
 	}
 	else if (mapFilterType == "opt-my-disliked") {
 		document.getElementById('upcoming_maps_count').textContent = upcoming.querySelectorAll(".dislike_button.own_rating").length;
@@ -1545,12 +1598,15 @@ function update_map_ratings() {
 	divs.forEach(function(div) {
 		let map = div.getAttribute("map");
 		let like_button = div.getElementsByClassName("like_button")[0];
+		let fav_button = div.getElementsByClassName("fav_button")[0];
 		let dislike_button = div.getElementsByClassName("dislike_button")[0];
 		
 		like_button.classList.remove("own_rating");
+		fav_button.classList.remove("own_rating");
 		dislike_button.classList.remove("own_rating");
 		
 		let numLike = 0;
+		let numFav = 0;
 		let numDislike = 0;
 		
 		let first_map = get_first_map_in_series(map);		
@@ -1592,12 +1648,26 @@ function update_map_ratings() {
 					} else {
 						numDislike += 1;
 					}
+				} else if (player_stats.rating == 3) {
+					if (id == g_steamid) {
+						fav_button.classList.add("own_rating");
+						fav_button.title = "You've favorited this map. Clicking this button again will unfavorite it."
+						
+						if (shouldCountOwnId) {
+							numLike += 1;
+							numFav += 1;
+						}
+					} else {
+						numLike += 1;
+						numFav += 1;
+					}
 				}
 			}
 		}
 		
 		div.classList.remove("new");
 		div.classList.remove("liked");
+		div.classList.remove("favorited");
 		div.classList.remove("disliked");
 		if (!was_played && g_player_data.length) {
 			div.classList.add("new");
@@ -1607,6 +1677,10 @@ function update_map_ratings() {
 			div.classList.add("liked");
 			div.classList.add("disliked");
 			div.title = "This map is highlighted orange due to mixed ratings and is selected with normal priority.";
+		}
+		else if (numFav > 0 && numFav == numLike) {
+			div.title = "This map is highlighted cyan due to being favorited and is selected with high priority.";
+			div.classList.add("favorited");
 		}
 		else if (numLike > 0) {
 			div.title = "This map is highlighted green due to positive ratings and is selected with high priority.";
@@ -1844,6 +1918,12 @@ async function setup() {
 			document.getElementById("empty_notice").classList.add("hidden");
 			document.getElementById("content").classList.remove("empty_server");
 		}
+		else if (this.value == "opt-my-favorited") {
+			upcoming.classList.add("all_maps");
+			document.getElementById("upcoming_title").textContent = "Your favorited maps";
+			document.getElementById("empty_notice").classList.add("hidden");
+			document.getElementById("content").classList.remove("empty_server");
+		}
 		else if (this.value == "opt-my-disliked") {
 			upcoming.classList.add("all_maps");
 			document.getElementById("upcoming_title").textContent = "Your disliked maps";
@@ -1886,10 +1966,7 @@ async function setup() {
 	
 	let player_profile = document.getElementById("player_profile");
 	player_profile.addEventListener('click', function() {
-		player_profile.style.display = "none";
-		player_profile.getElementsByClassName("avatar_img")[0].src = "icon/blank.png";
-		player_profile.getElementsByClassName("spray_img")[0].src = "icon/blank.png";
-		player_profile.getElementsByClassName("pmodel_img")[0].src = "icon/blank.png";
+		close_player_profile();
 	});
 	player_profile.getElementsByClassName("content")[0].addEventListener('click', function(event) {
 		event.stopPropagation();

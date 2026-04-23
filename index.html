@@ -269,6 +269,9 @@
 			.map_container.liked {
 				filter: drop-shadow(0px 0px 4px #0f0);
 			}
+			.map_container.favorited {
+				filter: drop-shadow(0px 0px 4px #0ff);
+			}
 			.map_container.disliked {
 				filter: drop-shadow(0px 0px 4px #f00);
 			}
@@ -324,7 +327,7 @@
 				font-size: 12px;
 			}
 			
-			.like_button, .dislike_button {
+			.like_button, .dislike_button, .fav_button {
 				width: 40px;
 				height: 48px;
 				color: white;
@@ -335,27 +338,31 @@
 				opacity: 0.0;
 				z-index: 2;
 			}
-			.map_container:hover .like_button, .map_container:hover .dislike_button {
+			.map_container:hover .like_button, .map_container:hover .dislike_button, .map_container:hover .fav_button {
 				opacity: 0.4;
 			}
-			.map_container:hover .like_button:hover, .map_container:hover .dislike_button:hover {
+			.map_container:hover .like_button:hover, .map_container:hover .dislike_button:hover , .map_container:hover .fav_button:hover {
 				opacity: 1.0;
 			}
-			.like_button.own_rating, .dislike_button.own_rating,
-			.map_container:hover .like_button.own_rating, .map_container:hover .dislike_button.own_rating {
+			.like_button.own_rating, .dislike_button.own_rating, .fav_button.own_rating,
+			.map_container:hover .like_button.own_rating, .map_container:hover .dislike_button.own_rating, .map_container:hover .fav_button.own_rating  {
 				opacity: 1.0;
 			}
 			.like_button.own_rating:hover, .dislike_button.own_rating:hover,
-			.map_container:hover .like_button.own_rating:hover, .map_container:hover .dislike_button.own_rating:hover {
+			.map_container:hover .like_button.own_rating:hover, .map_container:hover .dislike_button.own_rating:hover , .map_container:hover .fav_button.own_rating:hover {
 				opacity: 0.6;
 			}
 			.like_button {
 				right: 0;
 			}
+			.fav_button {
+				left: 50%;
+				transform: translate(-50%, 0);
+			}
 			.dislike_button {
 				left: 0;
 			}
-			#upcoming_maps .like_button, #upcoming_maps .dislike_button {
+			#upcoming_maps .like_button, #upcoming_maps .dislike_button, #upcoming_maps .fav_button {
 				width: 30px;
 				height: 32px;
 			}
@@ -552,6 +559,9 @@
 			}
 			.green {
 				color: #0d0;
+			}
+			.cyan {
+				color: #0dd;
 			}
 			.red {
 				color: red;
@@ -763,7 +773,7 @@
 				text-align: left;
 			}
 			.alias_details_container {
-				max-height: 210px;
+				max-height: 185px;
 				overflow-y: scroll;
 			}
 			#player_profile th {
@@ -814,6 +824,11 @@
 			}
 			#player_profile .pmodel_name {
 				color: #ddd;
+			}
+			.like_cooldown {
+				width: 45px;
+				color: #ddd;
+				background: black;
 			}
 		</style>
 		<title id="tab_title">Half-Life Co-op</title>
@@ -873,6 +888,7 @@
 							<span class="map_title"></span>
 							<img class="map_image" src="">
 							<img class="like_button" src="icon/thumbs_up.png"/>
+							<img class="fav_button" src="icon/favorite.png"/>
 							<img class="dislike_button" src="icon/thumbs_down.png"/>
 							<div id="map_timer"></div>
 						</a>
@@ -885,6 +901,7 @@ Rejoining the server on the same map does not randomize the next map. This preve
 							<span class="map_title"></span>
 							<img class="map_image" src="">
 							<img class="like_button" src="icon/thumbs_up.png"/>
+							<img class="fav_button" src="icon/favorite.png"/>
 							<img class="dislike_button" src="icon/thumbs_down.png"/>
 						</a>
 					</div>
@@ -920,6 +937,7 @@ Red light = Negative ratings. Low priority. Selected only if all other maps are 
 					<select id="map-filter-type">
 						<option value="opt-upcoming">Upcoming maps</option>
 						<option value="opt-all">All maps</option>
+						<option value="opt-my-favorited">Your favorited maps</option>
 						<option value="opt-my-liked">Your liked maps</option>
 						<option value="opt-my-disliked">Your disliked maps</option>
 					</select>
@@ -951,6 +969,11 @@ Red light = Negative ratings. Low priority. Selected only if all other maps are 
 								<tr><td>First joined</td><td class="first_seen">yesterday</td></tr>
 								<tr><td>Time played</td><td class="play_time">a million years</td></tr>
 								<tr><td>Maps played</td><td class="maps_played">1234</td></tr>
+								<tr><td title="Minimum desired days before a map liked by this player can be replayed.
+								
+The map may be selected sooner if all other maps have been played too recently. If you want a cooldown of 0 days, favorite the map instead of liking it.
+
+You must be logged in with Steam to change this. If you don't want to do that, use the .likecd command in-game instead.">Like cooldown</td><td><input class="like_cooldown" type="number" placeholder="0" min="1" max="255"> days</td></tr>
 								<tr><td>Client</td><td class="client_type">videogame.dll</td></tr>
 							</tbody>
 						</table>
