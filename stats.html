@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<link rel="shortcut icon" type="image/x-icon" href="icon/favicon.ico">
+		<script type="text/javascript" src="shared.js"></script>
+		<script type="text/javascript" src="stats.js"></script>
+		<link rel="stylesheet" href="player_profile.css">
+		<style>
+			html, body {
+				min-height: 100%;
+				height: 100%;
+			}
+			body {
+				margin: 0;
+				background: #181818;
+				font-family: "Trebuchet MS", Trebuchet, Tahoma, Arial, Helvetica, sans-serif;
+				color: #ddd;
+			}
+			
+			#server_name {
+				margin: 0 0;
+				padding: 10px 0 0 0;
+				text-align: center;
+				height: 40px;
+			}
+			#server_link_container {
+				text-align: center;
+			}
+			.server_link {
+				display: inline-block;
+				margin: 0 10px;
+				color: #FFAA00;
+				font-family: monospace;
+				font-size: 14px;
+			}
+			.server_link:visited {
+				color: #FFAA00;
+			}
+			
+			#stats_table div {
+				text-decoration: none;
+				color: #99CCFF;
+				overflow: hidden;
+				text-overflow: ellipsis;
+				max-width: 210px;
+				display: inline-block;
+				cursor: pointer;
+				min-width: 5px;
+				text-wrap: nowrap;
+			}
+			.rank {
+				height: 16px;
+				margin-left: 5px;
+				cursor: help;
+			}
+			
+			.stats_container {
+				max-width: 850px;
+				margin: 0 auto;
+			}
+			#stats_table {
+				margin: 0 auto;
+			}
+			#stats_table th {
+				text-align: left;
+				background: #2e1f00;
+			}
+			#stats_table td:first-child, #stats_table th:first-child {
+				width: 20px;
+				padding: 0 15px 0 5px;
+			}
+			#stats_table td:nth-child(2), #stats_table th:nth-child(2) {
+				width: 240px;
+			}
+			#stats_table td:nth-child(3), #stats_table th:nth-child(3) {
+				width: 120px;
+			}
+			#stats_table td:nth-child(4), #stats_table th:nth-child(4) {
+				width: 120px;
+			}
+			#stats_table td:nth-child(5), #stats_table th:nth-child(5) {
+				width: 130px;
+			}
+			#stats_table td:nth-child(6), #stats_table th:nth-child(6) {
+				width: 130px;
+			}
+			#stats_table tr:nth-child(odd) {
+				background: #111;
+			}
+			#stats_table tr:nth-child(even) {
+				background: #222;
+			}
+			
+			#details_table tbody tr:nth-child(9) {
+				display: none;
+			}
+			
+			
+			.page-num-container {
+				text-align: center;
+				color: #eee;
+				margin-top: 10px;
+				margin-bottom: 10px;
+				user-select: none;
+				cursor: default;
+				position: relative;
+			}
+			.page-prev, .page-next, .page-first, .page-last {
+				border-top: 10px solid transparent;
+				border-bottom: 10px solid transparent;
+				width: 0; 
+				height: 0; 
+				vertical-align: middle;
+				display: inline-block;
+			}
+			.page-prev, .page-first {
+				border-right: 10px solid #eee;
+			}
+			.page-next, .page-last {
+				border-left: 10px solid #eee;
+			}
+			.page-close:hover > .page-prev , .page-far:hover > .page-first {
+				border-right: 10px solid #ccc;
+			}
+			.page-close:hover > .page-next, .page-far:hover > .page-last {
+				border-left: 10px solid #ccc;
+			}
+			.page-close:active > .page-prev, .page-far:active > .page-first {
+				border-right: 10px solid #fff;
+			}
+			.page-close:active > .page-next, .page-far:active > .page-last {
+				border-left: 10px solid #fff;
+			}
+			.page-far:hover  > .page-bar {
+				background: #ccc;
+			}
+			.page-far:active  > .page-bar {
+				background: #fff;
+			}
+			.page-far, .page-close {
+				cursor: pointer;
+				padding: 3px 10px;
+				cursor: pointer;
+			}
+			.page-bar {
+				background: #eee;
+				width: 3px;
+				height: 20px;
+				display: inline-block;
+				vertical-align: middle;
+				margin: 0 3px;
+			}
+			.page-num-text {
+				vertical-align: middle;
+				display: inline-block;
+				width: 150px;
+			}
+			
+			#results_per_page {
+				width: 60px;
+			}
+			.results-per-page-container {
+				display: inline-block;
+				position:absolute;
+				right: 40px;
+			}
+			#results_per_page {
+				width: 60px;
+			}
+			.active-players-container {
+				display: inline-block;
+				position:absolute;
+				left: 40px;
+			}
+			
+			.sort {
+				cursor: pointer;
+			}
+			.sort .dsc, .sort .asc {
+				display: none;
+			}
+			.sort.dsc .dsc, .sort.asc .asc {
+				display: inline;
+			}
+			
+			.footer {
+				text-align: center;
+				padding: 10px;
+				font-size: 12px;
+			}
+		</style>
+		<title id="tab_title">Half-Life Co-op</title>
+	</head>
+	
+	<body>
+		<div id="content">
+			<h1 id="server_name">Half-Life Co-op | Custom maps</h1>
+			<div id="server_link_container">
+				<a class="server_link" href="/">Dashboard</a>
+				<a class="server_link" target="_blank" href="steam://connect/207.148.12.159:27016">connect 207.148.12.159:27016</a>
+				<a class="server_link" href="stats.html">Player stats</a>
+			</div>
+			<hr>
+			
+			<div class="stats_container">
+				<div class="page-num-container">
+					<span class="page-far page-first-container"><span class="page-bar"></span><span class="page-first"></span></span>
+					<span class="page-close page-prev-container"><span class="page-prev"></span></span>
+					<span class="page-num-text"><span class="page-start">1</span> - <span class="page-end">X</span> of <span class="result-total">Y</span></span>
+					<span class="page-close page-next-container"><span class="page-next"></span></span>
+					<span class="page-far page-last-container"><span class="page-last"></span><span class="page-bar"></span></span>
+					
+					<div class="active-players-container">
+						<input type="checkbox" id="filter_active">
+						<label for="filter_active" title="Hide players who haven't joined in the past 2 weeks.">Hide inactive</label>
+					</div>
+					
+					<div class="results-per-page-container">
+						<input type="number" min="1" id="results_per_page" value="100">
+						<span>Results per page</span>
+					</div>
+				</div>
+				
+				<table id="stats_table">
+					<thead>
+						<th>#</th>
+						<th>Name</th>
+						<th title="Total time spent on the server" class="sort sort-total dsc">Total time<span class="asc"> ^</span><span class="dsc"> v</span></th>
+						<th title="Time spent on the server in the past 2 weeks" class="sort sort-recent">Last 2 weeks<span class="asc"> ^</span><span class="dsc"> v</span></th>
+						<th class="sort sort-first-seen">First seen<span class="asc"> ^</span><span class="dsc"> v</span></th>
+						<th class="sort sort-last-seen">Last seen<span class="asc"> ^</span><span class="dsc"> v</span></th>
+					</thead>
+					<tbody></tbody>
+				</table>
+			</div>
+		</div>
+		
+		<div class="footer">
+			Last updated: <span id="update_time">???</span>			
+		</div>
+		
+		<div id="player_profile"></div>
+	</body>
+</html>

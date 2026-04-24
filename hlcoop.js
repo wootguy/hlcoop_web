@@ -31,10 +31,9 @@ var g_map_start_time; // epoch millis when map started
 var g_map_time_limit; // map time limit in seconds
 var g_map_frag_limit;
 var g_list_web_users = false; // list web users instead of players
-var g_game_id = "hl";
-var data_repo_count = 32;
-var data_repo_domain = "https://wootdata.github.io/";
 var g_lost_connection = false;
+var g_map_total = 0;
+var g_is_stats_page = false;
 
 var debug_logging = false;
 
@@ -82,206 +81,6 @@ const PLAYER_STATUS_DROPPING = 5;
 const PLAYER_STATUS_CHAT = 6;
 const PLAYER_STATUS_CONSOLE = 7;
 
-const g_languages = {
-  "ab": "Abkhaz",
-  "ace": "Acehnese",
-  "ach": "Acholi",
-  "af": "Afrikaans",
-  "sq": "Albanian",
-  "alz": "Alur",
-  "am": "Amharic",
-  "ar": "Arabic",
-  "hy": "Armenian",
-  "as": "Assamese",
-  "awa": "Awadhi",
-  "ay": "Aymara",
-  "az": "Azerbaijani",
-  "ban": "Balinese",
-  "bm": "Bambara",
-  "ba": "Bashkir",
-  "eu": "Basque",
-  "btx": "Batak Karo",
-  "bts": "Batak Simalungun",
-  "bbc": "Batak Toba",
-  "be": "Belarusian",
-  "bem": "Bemba",
-  "bn": "Bengali",
-  "bew": "Betawi",
-  "bho": "Bhojpuri",
-  "bik": "Bikol",
-  "bs": "Bosnian",
-  "br": "Breton",
-  "bg": "Bulgarian",
-  "bua": "Buryat",
-  "yue": "Cantonese",
-  "ca": "Catalan",
-  "ceb": "Cebuano",
-  "ny": "Chichewa (Nyanja)",
-  "zh-cn": "Chinese (Simplified)",
-  "zh-tw": "Chinese (Traditional)",
-  "cv": "Chuvash",
-  "co": "Corsican",
-  "crh": "Crimean Tatar",
-  "hr": "Croatian",
-  "cs": "Czech",
-  "da": "Danish",
-  "din": "Dinka",
-  "dv": "Divehi",
-  "doi": "Dogri",
-  "dov": "Dombe",
-  "nl": "Dutch",
-  "dz": "Dzongkha",
-  "en": "English",
-  "eo": "Esperanto",
-  "et": "Estonian",
-  "ee": "Ewe",
-  "fj": "Fijian",
-  "fil": "Filipino (Tagalog)",
-  "tl": "Filipino (Tagalog)",
-  "fi": "Finnish",
-  "fr": "French",
-  "fr-fr": "French (French)",
-  "fr-ca": "French (Canadian)",
-  "fy": "Frisian",
-  "ff": "Fulfulde",
-  "gaa": "Ga",
-  "gl": "Galician",
-  "lg": "Ganda (Luganda)",
-  "ka": "Georgian",
-  "de": "German",
-  "el": "Greek",
-  "gn": "Guarani",
-  "gu": "Gujarati",
-  "ht": "Haitian Creole",
-  "cnh": "Hakha Chin",
-  "ha": "Hausa",
-  "haw": "Hawaiian",
-  "iw": "Hebrew",
-  "he": "Hebrew",
-  "hil": "Hiligaynon",
-  "hi": "Hindi",
-  "hmn": "Hmong",
-  "hu": "Hungarian",
-  "hrx": "Hunsrik",
-  "is": "Icelandic",
-  "ig": "Igbo",
-  "ilo": "Iloko",
-  "id": "Indonesian",
-  "ga": "Irish",
-  "it": "Italian",
-  "ja": "Japanese",
-  "jw": "Javanese",
-  "jv": "Javanese",
-  "kn": "Kannada",
-  "pam": "Kapampangan",
-  "kk": "Kazakh",
-  "km": "Khmer",
-  "cgg": "Kiga",
-  "rw": "Kinyarwanda",
-  "ktu": "Kituba",
-  "gom": "Konkani",
-  "ko": "Korean",
-  "kri": "Krio",
-  "ku": "Kurdish (Kurmanji)",
-  "ckb": "Kurdish (Sorani)",
-  "ky": "Kyrgyz",
-  "lo": "Lao",
-  "ltg": "Latgalian",
-  "la": "Latin",
-  "lv": "Latvian",
-  "lij": "Ligurian",
-  "li": "Limburgan",
-  "ln": "Lingala",
-  "lt": "Lithuanian",
-  "lmo": "Lombard",
-  "luo": "Luo",
-  "lb": "Luxembourgish",
-  "mk": "Macedonian",
-  "mai": "Maithili",
-  "mak": "Makassar",
-  "mg": "Malagasy",
-  "ms": "Malay",
-  "ms-arab": "Malay (Jawi)",
-  "ml": "Malayalam",
-  "mt": "Maltese",
-  "mi": "Maori",
-  "mr": "Marathi",
-  "chm": "Meadow Mari",
-  "mni-mtei": "Meiteilon (Manipuri)",
-  "min": "Minang",
-  "lus": "Mizo",
-  "mn": "Mongolian",
-  "my": "Myanmar (Burmese)",
-  "nr": "Ndebele (South)",
-  "new": "Nepalbhasa (Newari)",
-  "ne": "Nepali",
-  "nso": "Northern Sotho (Sepedi)",
-  "no": "Norwegian",
-  "nus": "Nuer",
-  "oc": "Occitan",
-  "or": "Odia (Oriya)",
-  "om": "Oromo",
-  "pag": "Pangasinan",
-  "pap": "Papiamento",
-  "ps": "Pashto",
-  "fa": "Persian",
-  "pl": "Polish",
-  "pt": "Portuguese",
-  "pt-pt": "Portuguese (Portugal)",
-  "pt-br": "Portuguese (Brazil)",
-  "pa": "Punjabi",
-  "pa-arab": "Punjabi (Shahmukhi)",
-  "qu": "Quechua",
-  "rom": "Romani",
-  "ro": "Romanian",
-  "rn": "Rundi",
-  "ru": "Russian",
-  "sm": "Samoan",
-  "sg": "Sango",
-  "sa": "Sanskrit",
-  "gd": "Scots Gaelic",
-  "sr": "Serbian",
-  "st": "Sesotho",
-  "crs": "Seychellois Creole",
-  "shn": "Shan",
-  "sn": "Shona",
-  "scn": "Sicilian",
-  "szl": "Silesian",
-  "sd": "Sindhi",
-  "si": "Sinhala (Sinhalese)",
-  "sk": "Slovak",
-  "sl": "Slovenian",
-  "so": "Somali",
-  "es": "Spanish",
-  "su": "Sundanese",
-  "sw": "Swahili",
-  "ss": "Swati",
-  "sv": "Swedish",
-  "tg": "Tajik",
-  "ta": "Tamil",
-  "tt": "Tatar",
-  "te": "Telugu",
-  "tet": "Tetum",
-  "th": "Thai",
-  "ti": "Tigrinya",
-  "ts": "Tsonga",
-  "tn": "Tswana",
-  "tr": "Turkish",
-  "tk": "Turkmen",
-  "ak": "Twi (Akan)",
-  "uk": "Ukrainian",
-  "ur": "Urdu",
-  "ug": "Uyghur",
-  "uz": "Uzbek",
-  "vi": "Vietnamese",
-  "cy": "Welsh",
-  "xh": "Xhosa",
-  "yi": "Yiddish",
-  "yo": "Yoruba",
-  "yua": "Yucatec Maya",
-  "zu": "Zulu"
-};
-
 function get_message_type_name(value) {
   for (const [key, val] of Object.entries(MESSAGE_TYPE)) {
     if (val === value) {
@@ -318,8 +117,8 @@ function update_table_state() {
 			let row = plist.rows[i];
 			let id = row.getAttribute("steamid");
 			if (id != 0 && id in g_player_states) {
-				row.cells[9].textContent = format_age(g_player_states[id].totalPlayTime);
-				row.cells[10].textContent = format_age(g_player_states[id].recentPlayTime);
+				row.cells[9].textContent = format_age(g_player_states[id].totalPlayTime, true, true, 2);
+				row.cells[10].textContent = format_age(g_player_states[id].recentPlayTime, true, true, 2);
 			} else {
 				row.cells[9].textContent = "none";
 				row.cells[10].textContent = "none";
@@ -397,181 +196,6 @@ function update_table_state() {
 	}
 }
 
-function steamid64_to_steamid(steam64) {
-	const base = BigInt("76561197960265728");
-	let id = BigInt(steam64) - base;
-
-	const Y = id % 2n;
-	const Z = (id - Y) / 2n;
-
-	return `STEAM_0:${Y}:${Z}`;
-}
-
-function hash_code(str) {
-	var hash = 0;
-
-	for (var i = 0; i < str.length; i++) {
-		var char = str.charCodeAt(i);
-		hash = ((hash<<5)-hash)+char;
-		hash = hash % 15485863; // prevent hash ever increasing beyond 31 bits
-
-	}
-	return hash;
-}
-
-function get_repo_url(model_name) {
-	var repoId = hash_code(model_name) % data_repo_count;
-	return data_repo_domain + g_game_id + "models_data_" + repoId + "/";
-}
-
-function get_client_details_tip(steamid) {
-	let clientStr_tip = "Client details are unknown. This player either hasn't joined recently or failed to respond to client queries.";
-	
-	if (steamid in g_player_clients) {
-		let deetz = g_player_clients[steamid];
-		
-		clientStr_tip = "Mod: " + deetz.modStr + "\n";
-		
-		clientStr_tip += "OS: ";
-		if (deetz.os == 1) {
-			clientStr_tip += "Windows";
-		} else if (deetz.os == 2) {
-			clientStr_tip += "Linux";
-		}
-		
-		clientStr_tip += "\nEngine: ";
-		if (deetz.engine == 1) {
-			clientStr_tip += "Steam";
-		} else if (deetz.engine == 2) {
-			clientStr_tip += "steam_legacy";
-		}
-		
-		clientStr_tip += "\nRenderer: ";
-		if (deetz.renderer == 1) {
-			clientStr_tip += "OpenGL";
-		} else if (deetz.renderer == 2) {
-			clientStr_tip += "Software";
-		}
-	}
-	
-	return clientStr_tip;
-}
-
-function open_player_profile(event) {	
-	let clickedId = event.currentTarget.getAttribute("id");
-	if (!clickedId)
-		clickedId = event.currentTarget.parentElement.parentElement.getAttribute("steamid");
-	let player_profile = document.getElementById("player_profile");
-	g_opened_profile_id = clickedId;
-	let is_own_profile = clickedId == g_steamid;
-
-	const state = g_player_states[clickedId];
-	const avatar = "https://avatars.steamstatic.com/" + state.steamAvatar;
-	let spray = g_fastdl_server_url + "sprays/" + clickedId + ".png";
-	let firstSeenDate = new Date(state.firstSeen*1000);
-	
-	if (state.sprayBanReason) {
-		spray = "icon/spray_banned.png";
-	}
-	
-	if (state.firstSeen == 0) {
-		firstSeenDate = new Date(); // new state just joined today
-	}
-	
-	let firstSeenText = firstSeenDate.toLocaleString(undefined, {
-		year: 'numeric', 
-		month: 'short', 
-		day: 'numeric'
-	});
-	
-	const lang = (state.language in g_languages) ? g_languages[state.language] : state.language;
-	let percentPlayed = Math.floor((state.mapsPlayed / g_map_cycle.length) * 100);
-	let mapsPlayed = state.mapsPlayed + " / " + g_map_cycle.length + " (" + percentPlayed + "%)";
-	let steamlink = "<a href=\"https://steamcommunity.com/profiles/" + clickedId + "\" target=\"_blank\">" + steamid64_to_steamid(clickedId) + "</a>";
-	
-	let clientStr = "Unknown";
-	
-	if (clickedId in g_player_clients) {
-		if (g_player_clients[clickedId].modStr)
-			clientStr = g_player_clients[clickedId].modStr;
-	}
-	
-	let clientStr_tip = get_client_details_tip(clickedId);
-	
-	player_profile.style.display = "block";
-	player_profile.getElementsByClassName("avatar_img")[0].src = avatar;
-	player_profile.getElementsByClassName("spray_img")[0].src = spray + state.salt;
-	player_profile.getElementsByClassName("lang")[0].textContent = lang;
-	player_profile.getElementsByClassName("name")[0].textContent = state.name;
-	player_profile.getElementsByClassName("steam_name")[0].textContent = state.steamName;
-	player_profile.getElementsByClassName("steam_id")[0].innerHTML = steamlink;
-	player_profile.getElementsByClassName("maps_played")[0].textContent = mapsPlayed;
-	player_profile.getElementsByClassName("like_cooldown")[0].value = state.likeCooldown;
-	player_profile.getElementsByClassName("like_cooldown")[0].disabled = !is_own_profile;
-	player_profile.getElementsByClassName("play_time")[0].textContent = format_age(state.totalPlayTime, false, true);
-	player_profile.getElementsByClassName("play_time_recent")[0].textContent = format_age(state.recentPlayTime, false, true);
-	player_profile.getElementsByClassName("first_seen")[0].textContent = firstSeenText;
-	player_profile.getElementsByClassName("client_type")[0].textContent = clientStr;
-	player_profile.getElementsByClassName("client_type")[0].title = clientStr_tip;
-	
-	if (state.sprayBanReason) {
-		player_profile.getElementsByClassName("spray_img")[0].title = 'This player lost their spray prviledge.\n\nBan reason: "' + state.sprayBanReason + '"';
-	} else {
-		player_profile.getElementsByClassName("spray_img")[0].title = "";
-	}
-	
-	let model_name = state.model;
-	let pmodel_img_src = get_repo_url(model_name) + "models/player/" + model_name + "/" + model_name + "_large.png";
-	if (!model_name) {
-		pmodel_img_src = "icon/missing_pmodel.png";
-		model_name = "<missing data>"
-	}
-	player_profile.getElementsByClassName("pmodel_img")[0].src = pmodel_img_src;
-	player_profile.getElementsByClassName("pmodel_name")[0].textContent = model_name;
-	
-	let alias_list = player_profile.getElementsByClassName("alias_details")[0].querySelector('tbody');
-	alias_list.innerHTML = "";
-	
-	for (let i = 0; i < state.aliases.length; i++) {
-		let alias = state.aliases[i];
-		let lastUsed = alias.lastUsed*24*60*60*1000;
-		let firstUsed = alias.firstUsed*24*60*60*1000;
-		const deltaTime = Number(new Date()) - Number(lastUsed);
-		let timeSince = format_age(deltaTime/1000, true) + " ago";
-		let timeUsed = format_age(alias.timeUsed, true, true);
-		
-		const lastUseDate = new Date(lastUsed);
-		let lastUseText = lastUseDate.toLocaleString(undefined, {
-			year: 'numeric', 
-			month: 'short',
-			day: 'numeric'
-		});
-		
-		const firstUseDate = new Date(firstUsed);
-		let firstUseText = firstUseDate.toLocaleString(undefined, {
-			year: 'numeric', 
-			month: 'short',
-			day: 'numeric'
-		});
-		
-		if (alias.name == state.name) {
-			lastUseText = "Now";
-		}
-		
-		let nameCell = document.createElement('td');
-		nameCell.textContent = alias.name;
-		nameCell.title = alias.name;
-		
-		let timeUsedCell = document.createElement('td');
-		timeUsedCell.textContent = timeUsed;
-		timeUsedCell.title = "First used: " + firstUseText + "\nLast used: " + lastUseText;
-		
-		let row = alias_list.insertRow(alias_list.rows.length);
-		row.appendChild(nameCell);
-		row.appendChild(timeUsedCell);
-	}
-}
-
 function close_player_profile() {
 	let player_profile = document.getElementById("player_profile");
 	let is_own_profile = g_opened_profile_id == g_steamid;
@@ -642,36 +266,7 @@ function refresh_player_table() {
 		
 		//console.log("map plays for " + dat.name + " is " + mapsPlayed + " / " + g_map_cycle.length);
 		
-		rank.classList.remove("hidden");
-		if (!state) {
-			rank.classList.add("hidden");
-		}
-		else if (mapMutliPlayed >= g_map_cycle.length) {
-			rank.title = "AUTIST - Played every map 10+ times";
-			rank.src = "icon/rank_5.png";
-		}
-		else if (mapsPlayed >= g_map_cycle.length) {
-			rank.title = "MASTER - Played every map";
-			rank.src = "icon/rank_4.png";
-		}
-		else if (mapsPlayed >= 600) {
-			rank.title = "VETERAN - Played 600+ maps";
-			rank.src = "icon/rank_3.png";
-		}
-		else if (mapsPlayed >= 300) {
-			rank.title = "REGULAR - Played 300+ maps";
-			rank.src = "icon/rank_2.png";
-		}
-		else if (mapsPlayed >= 100) {
-			rank.title = "NOVICE - Played 100+ maps";
-			rank.src = "icon/rank_1.png";
-		}
-		else if (!mapsPlayed || mapsPlayed < 10) {
-			rank.title = "NEWB - Played fewer than 10 maps";
-			rank.src = "icon/newb.png";
-		} else {
-			rank.classList.add("hidden");
-		}
+		set_badge(rank, mapsPlayed, mapMutliPlayed, g_map_cycle.length);
 		
 		name.textContent = dat.name;
 		name.title = dat.name;
@@ -1174,7 +769,7 @@ function parse_player_state(view) {
 		aliases: [],
 		mapsPlayed: 0,		// number of unique maps played
 		mapsMultiplayed: 0,	// number of unique maps played 2+ times
-		salt: "?t=" + new Date().getTime() // for fetching spray image again
+		salt: new Date().getTime() // for fetching spray image again
 	};
 	
 	let lang = read_string(view, offset);
@@ -1368,6 +963,8 @@ function parse_map_list(view) {
 			series.push(map);
 		}
 	}
+	
+	g_map_total = g_map_cycle.length;
 	
 	if (debug_logging)
 		console.log("Map cycle:", g_map_cycle);
@@ -1729,37 +1326,6 @@ function format_timer(secondsPassed) {
 	}
 }
 
-function format_age(secondsPassed, oneUnitOnly, longUnits) {
-	let seconds = secondsPassed;
-	let minutes = Math.floor(secondsPassed / 60);
-	let hours = Math.floor(secondsPassed / (60*60));
-	let days = Math.floor(secondsPassed / (60*60*24));
-	
-	let dayUnit = longUnits ? " days" : "d";
-	let hourUnit = longUnits ? " hours" : "h";
-	let minuteUnit = longUnits ? " minutes" : "m";
-	let secondUnit = longUnits ? " seconds" : "s";
-	let separator = longUnits ? ", " : " ";
-	let minUnit = oneUnitOnly ? 2 : 1;
-	
-	if (days > 2 || (!oneUnitOnly && days > 0)) {
-		if (oneUnitOnly) {
-			return "" + days + dayUnit;
-		} else {
-			return "" + days + dayUnit + separator + (hours % 24) + hourUnit;
-		}
-	}
-	else if (hours > 2) {
-		return "" + hours + hourUnit;
-	}
-	else if (minutes > 2) {
-		return "" + minutes + minuteUnit;
-	}
-	else {
-		return "" + seconds + secondUnit;
-	}
-}
-
 function update_map_timer() {
 	let timer = document.getElementById("map_timer");
 	
@@ -1910,6 +1476,8 @@ function lazy_image_loader_setup() {
 }
 
 async function setup() {
+	load_shared_html();
+	
 	g_map_data = await downloadJson("mapdb.json");
 	update_map_data();
 	
