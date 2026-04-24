@@ -2,9 +2,22 @@ var g_game_id = "hl";
 var data_repo_count = 32;
 var data_repo_domain = "https://wootdata.github.io/";
 
-function set_badge(rankDiv, mapsPlayed, mapsMultiPlayed, totalMaps) {
+function set_badge(id, recentTime, rankDiv, mapsPlayed, mapsMultiPlayed, totalMaps) {
 	rankDiv.classList.remove("hidden");
-	if (mapsMultiPlayed >= totalMaps) {
+	
+	if (id == g_most_active_id) {
+		rankDiv.title = "ADDICT - The most active player in the past 2 weeks.";
+		rankDiv.src = "icon/hot.png";
+	}
+	else if (!mapsPlayed || mapsPlayed < 10) {
+		rankDiv.title = "NEWB - Played fewer than 10 maps";
+		rankDiv.src = "icon/newb.png";
+	}
+	else if (recentTime > 0 && recentTime < 60*60) {
+		rankDiv.title = "FROSTY - Less than 1 hour of playtime in the past 2 weeks.";
+		rankDiv.src = "icon/frosty.png";
+	}
+	else if (mapsMultiPlayed >= totalMaps) {
 		rankDiv.title = "AUTIST - Played every map 10+ times";
 		rankDiv.src = "icon/rank_5.png";
 	}
@@ -24,10 +37,7 @@ function set_badge(rankDiv, mapsPlayed, mapsMultiPlayed, totalMaps) {
 		rankDiv.title = "NOVICE - Played 100+ maps";
 		rankDiv.src = "icon/rank_1.png";
 	}
-	else if (!mapsPlayed || mapsPlayed < 10) {
-		rankDiv.title = "NEWB - Played fewer than 10 maps";
-		rankDiv.src = "icon/newb.png";
-	} else {
+	else {
 		rankDiv.classList.add("hidden");
 	}
 }

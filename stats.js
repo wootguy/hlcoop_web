@@ -10,6 +10,7 @@ var g_update_time = 0;
 var g_player_clients = {};
 var g_is_stats_page = true;
 var result_offset = 0;
+var g_most_active_id = 0;
 
 function refresh_update_time() {
 	let timeText = new Date(g_update_time*1000).toLocaleString(undefined, {
@@ -45,6 +46,9 @@ async function load_misc_data() {
 		} else if (parts[0] == "update_time") {
 			g_update_time = parseInt(val);
 			console.log("Update time: " + g_update_time);
+		} else if (parts[0] == "most_active_id") {
+			g_most_active_id = BigInt(val);
+			console.log("Most active ID: " + g_most_active_id);
 		}
 	}
 	
@@ -268,7 +272,7 @@ function update_stat_table() {
 		let rank = row.cells[1].getElementsByClassName('rank')[0];
 		let name = row.cells[1].getElementsByTagName('div')[0];
 		
-		set_badge(rank, dat.mapsPlayed, dat.mapsMultiPlayed, g_map_total);
+		set_badge(g_filtered_ids[i], dat.recentPlayTime, rank, dat.mapsPlayed, dat.mapsMultiPlayed, g_map_total);
 		
 		name.textContent = dat.name;
 		name.title = dat.name;

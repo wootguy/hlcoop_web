@@ -34,6 +34,7 @@ var g_list_web_users = false; // list web users instead of players
 var g_lost_connection = false;
 var g_map_total = 0;
 var g_is_stats_page = false;
+var g_most_active_id = 0;
 
 var debug_logging = false;
 
@@ -51,6 +52,7 @@ const MESSAGE_TYPE = {
 	WEBMSG_PLAYER_STATE: 12,
 	WEBMSG_UPCOMING_MAPS: 13,
 	WEBMSG_CLIENT_DETAILS: 14,
+	WEBMSG_STATS: 15,
 };
 
 const WEBDENY_NOT_LOGGED_IN_RATE = 0;
@@ -266,7 +268,7 @@ function refresh_player_table() {
 		
 		//console.log("map plays for " + dat.name + " is " + mapsPlayed + " / " + g_map_cycle.length);
 		
-		set_badge(rank, mapsPlayed, mapMutliPlayed, g_map_cycle.length);
+		set_badge(dat.steamid64, state ? state.recentPlayTime : 0, rank, mapsPlayed, mapMutliPlayed, g_map_cycle.length);
 		
 		name.textContent = dat.name;
 		name.title = dat.name;
@@ -943,6 +945,15 @@ function parse_client_details(view) {
 		console.log("Player client " + steamid64 + ": ", g_player_clients[steamid64]);
 }
 
+function parse_stats(view) {
+	let offset = 1; // skip message type byte
+
+	let steamid64 = view.getBigUint64(offset, true);
+	offset += 8;
+
+	g_most_active_id = steamid64;
+}
+
 function parse_map_list(view) {
 	g_map_cycle = [];
 	
@@ -1135,7 +1146,7 @@ function update_map_data() {
 		like.removeEventListener("click", rate_map);
 		like.addEventListener("click", rate_map);
 		like.title= "Rating this map positively will raise its chance of being picked while you're on the server."
-		+ "\n\nYou can configure your own cooldown for liked maps in your profile. By default, you can play them once per day.";
+		+ "\n\nYou can configure the cooldown for your liked maps in your profile. By default, you can play a liked map no more than once per day.";
 		
 		let fav = div.getElementsByClassName("fav_button")[0];
 		fav.setAttribute("rating", "3");
@@ -1143,7 +1154,7 @@ function update_map_data() {
 		fav.removeEventListener("click", rate_map);
 		fav.addEventListener("click", rate_map);
 		fav.title= "Rating this map as your favorite will raise its chance of being picked while you're on the server."
-		+ "\n\nThe recent playtime filter doesn't apply to your favorite maps, meaning you can potentially play them on loop forever with no cooldown. However, that almost never happens unless you're alone in the server. There's usually someone else in the server who played your favorite map recently and doesn't like it enough to play it again so soon.";
+		+ "\n\nThe recent playtime filter doesn't apply to your favorite maps, meaning you can potentially play them on loop forever with no cooldown. However, that almost never happens unless you're alone. There's usually someone else in the server who played your favorite map(s) too recently.";
 		
 		let dislike = div.getElementsByClassName("dislike_button")[0];
 		dislike.setAttribute("rating", "2");
@@ -1750,6 +1761,9 @@ function createWebSocket() {
 		}
 		else if (msgType == MESSAGE_TYPE.WEBMSG_CLIENT_DETAILS) {
 			parse_client_details(view, true);
+		}
+		else if (msgType == MESSAGE_TYPE.WEBMSG_STATS) {
+			parse_stats(view, true);
 		}
 		else {
 			console.error("Unrecognized socket message type " + msgType);
