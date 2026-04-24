@@ -1,5 +1,5 @@
-//var g_fastdl_server_url = 'https://w00tguy.ddns.net/';
-var g_fastdl_server_url = '/';
+var g_fastdl_server_url = 'https://w00tguy.ddns.net/';
+//var g_fastdl_server_url = '/'; // for local testing
 var g_player_ids = [];
 var g_filtered_ids = [];
 var g_player_states = {};
