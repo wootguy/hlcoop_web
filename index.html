@@ -95,7 +95,10 @@
 				width: 88px;
 			}
 			#player_list td:nth-child(10), #player_list th:nth-child(10) {
-				width: 222px;
+				width: 111px;
+			}
+			#player_list td:nth-child(11), #player_list th:nth-child(11) {
+				width: 111px;
 			}
 			#player_list th {
 				text-align: left;
@@ -164,7 +167,8 @@
 			#player_list td:nth-child(7), #player_list th:nth-child(7),
 			#player_list td:nth-child(8), #player_list th:nth-child(8),
 			#player_list td:nth-child(9), #player_list th:nth-child(9),
-			#player_list td:nth-child(10), #player_list th:nth-child(10) {
+			#player_list td:nth-child(10), #player_list th:nth-child(10),
+			#player_list td:nth-child(11), #player_list th:nth-child(11) {
 				display: none;
 			}
 			#player_list.stat_view td:nth-child(2), #player_list.stat_view th:nth-child(2),
@@ -186,7 +190,8 @@
 			#player_list.web_users td:nth-child(5), #player_list.web_users th:nth-child(5) {
 				display: none;
 			}
-			#player_list.web_users td:nth-child(10), #player_list.web_users th:nth-child(10){
+			#player_list.web_users td:nth-child(10), #player_list.web_users th:nth-child(10),
+			#player_list.web_users td:nth-child(11), #player_list.web_users th:nth-child(11) {
 				display: table-cell;
 			}
 			#player_list.web_users div {
@@ -773,7 +778,7 @@
 				text-align: left;
 			}
 			.alias_details_container {
-				max-height: 185px;
+				max-height: 165px;
 				overflow-y: scroll;
 			}
 			#player_profile th {
@@ -866,7 +871,8 @@
 							<th title="Player's opinion of the selected map">Opinion</th>
 							<th title="Last time this player played the selected map">Last play</th>
 							<th title="Total number of times the player played the selected map">Total plays</th>
-							<th title="Total time spent on the server">Play time</th>
+							<th title="Total time spent on the server">Total time</th>
+							<th title="Time spent on the server in the past 2 weeks">Recent time</th>
 						</thead>
 						<tbody></tbody>
 					</table>
@@ -967,7 +973,8 @@ Red light = Negative ratings. Low priority. Selected only if all other maps are 
 								<tr><td>Steam ID</td><td class="steam_id">STEAM_1234</td></tr>
 								<tr><td>Language</td><td class="lang">English</td></tr>
 								<tr><td>First joined</td><td class="first_seen">yesterday</td></tr>
-								<tr><td>Time played</td><td class="play_time">a million years</td></tr>
+								<tr><td title="Total time spent on the server">Time played</td><td class="play_time">a million years</td></tr>
+								<tr><td title="Time spent on the server in the past 2 weeks">Last 2 weeks</td><td class="play_time_recent">1 millisecond</td></tr>
 								<tr><td>Maps played</td><td class="maps_played">1234</td></tr>
 								<tr><td title="Minimum desired days before a map liked by this player can be replayed.
 								

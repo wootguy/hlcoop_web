@@ -319,8 +319,10 @@ function update_table_state() {
 			let id = row.getAttribute("steamid");
 			if (id != 0 && id in g_player_states) {
 				row.cells[9].textContent = format_age(g_player_states[id].totalPlayTime);
+				row.cells[10].textContent = format_age(g_player_states[id].recentPlayTime);
 			} else {
 				row.cells[9].textContent = "none";
+				row.cells[10].textContent = "none";
 			}
 		}
 		
@@ -507,6 +509,7 @@ function open_player_profile(event) {
 	player_profile.getElementsByClassName("like_cooldown")[0].value = state.likeCooldown;
 	player_profile.getElementsByClassName("like_cooldown")[0].disabled = !is_own_profile;
 	player_profile.getElementsByClassName("play_time")[0].textContent = format_age(state.totalPlayTime, false, true);
+	player_profile.getElementsByClassName("play_time_recent")[0].textContent = format_age(state.recentPlayTime, false, true);
 	player_profile.getElementsByClassName("first_seen")[0].textContent = firstSeenText;
 	player_profile.getElementsByClassName("client_type")[0].textContent = clientStr;
 	player_profile.getElementsByClassName("client_type")[0].title = clientStr_tip;
@@ -621,7 +624,7 @@ function refresh_player_table() {
 		
 		if (i >= plist.rows.length) {
 			let row = plist.insertRow(plist.rows.length);
-			row.innerHTML = "<tr><td><div></div><img class=\"rank\"/></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>";
+			row.innerHTML = "<tr><td><div></div><img class=\"rank\"/></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>";
 		}
 		
 		let row = plist.rows[i];
@@ -1215,6 +1218,9 @@ function parse_player_state(view) {
 	offset += 4;
 	
 	g_player_states[steamid64].totalPlayTime = view.getUint32(offset, true);
+	offset += 4;
+	
+	g_player_states[steamid64].recentPlayTime = view.getUint32(offset, true);
 	offset += 4;
 	
 	g_player_states[steamid64].likeCooldown = view.getUint8(offset, true);
@@ -1995,6 +2001,11 @@ async function setup() {
 		let message = input_box.value.trim();
 		
 		if (event.key === 'Enter' && message.length) {
+			if (g_steamid <= 1) {
+				action_denied_popup(WEBDENY_NOT_LOGGED_IN_CHAT, 0);
+				return;
+			}
+			
 			if (input_box.classList.contains("cooldown")) {
 				cooldown_div.classList.remove("hidden");
 				setInterval(function() {
@@ -2061,6 +2072,7 @@ function action_denied_popup(reason, errorCode) {
 	document.getElementById('popup-text-banned').style.display = 'none';
 	document.getElementById('popup-text-too-new').style.display = 'none';
 	document.getElementById('popup-text-rate-limit').style.display = 'none';
+	document.getElementById('popup-text-bad-version').style.display = 'none';
 	document.getElementById('popup-text-no-chat').style.display = 'none';
 	document.getElementById('popup-text-steam-error').style.display = 'none';
 	
