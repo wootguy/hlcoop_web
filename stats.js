@@ -313,11 +313,14 @@ function update_stat_table() {
 		let lastSeenText = lastSeenDate.toLocaleString(undefined, {
 			year: 'numeric', 
 			month: 'short', 
-			day: 'numeric'
+			day: 'numeric',
+			hour: 'numeric',
+			minute: 'numeric'
 		});
 		let lastSeenAge = today - dat.lastSeen;
 		if (lastSeenAge < 60*60*24) {
 			row.cells[5].textContent = "Today";
+			row.cells[5].title = lastSeenText;
 		} else {
 			row.cells[5].textContent = format_age(lastSeenAge, true, true) + " ago";
 			row.cells[5].title = lastSeenText;

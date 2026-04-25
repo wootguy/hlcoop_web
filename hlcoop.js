@@ -435,8 +435,7 @@ function parse_player_list(view) {
 	refresh_player_table();
 	
 	if (old_pdata_len != g_player_data.length) {
-		update_map_ratings();
-		update_map_data();
+		update_map_metadata();
 	}
 }
 
@@ -688,9 +687,8 @@ function parse_rating(view) {
 	}
 	
 	map_stats.rating = rating;
-	update_map_ratings();
+	update_map_metadata();
 	refresh_player_table();
-	update_map_data();
 }
 
 function logout(ev) {
@@ -884,7 +882,7 @@ function parse_player_state(view) {
 		console.log("Player state: ", g_player_states[steamid64]);
 	
 	update_web_client_info();
-	update_map_data();
+	update_map_metadata();
 }
 
 function parse_upcoming_maps(view) {
@@ -1016,7 +1014,7 @@ function parse_map_info(view) {
 		series_counter.textContent = "";
 	}
 	
-	update_map_data();
+	update_current_next_maps();
 }
 
 function get_map_dat(mapname) {
@@ -1047,9 +1045,55 @@ function get_first_map_in_series(mapname) {
 	return mapname;
 }
 
-function update_map_data() {
+function update_current_next_maps() {
 	document.getElementById('current_map').setAttribute("map", g_current_map);
 	document.getElementById('next_map').setAttribute("map", g_next_map);
+}
+
+// update map count and toggle empty player list message
+function update_map_metadata() {
+	update_map_ratings();
+	
+	let upcoming = document.getElementById('upcoming_maps_grid');
+	let mapFilterType = document.getElementById("map-filter-type").value;
+	let showingAllMaps = mapFilterType != "opt-upcoming";
+	
+	if (g_player_data.length == 0) {
+		if (showingAllMaps) {
+			document.getElementById("empty_notice").classList.add("hidden");
+			document.getElementById("content").classList.remove("empty_server");
+		} else {
+			document.getElementById("empty_notice").classList.remove("hidden");
+			document.getElementById("content").classList.add("empty_server");
+		}
+	} else {
+		document.getElementById("content").classList.remove("empty_server");
+		document.getElementById("empty_notice").classList.add("hidden");
+	}
+	
+	if (mapFilterType == "opt-my-liked") {
+		document.getElementById('upcoming_maps_count').textContent = upcoming.querySelectorAll(".like_button.own_rating").length;
+	}
+	else if (mapFilterType == "opt-my-favorited") {
+		document.getElementById('upcoming_maps_count').textContent = upcoming.querySelectorAll(".fav_button.own_rating").length;
+	}
+	else if (mapFilterType == "opt-my-disliked") {
+		document.getElementById('upcoming_maps_count').textContent = upcoming.querySelectorAll(".dislike_button.own_rating").length;
+	}
+	else if (showingAllMaps) {
+		document.getElementById('upcoming_maps_count').textContent = upcoming.getElementsByClassName("map_container").length;
+	}
+	else {
+		if (g_player_data.length == 0) {
+			document.getElementById('upcoming_maps_count').textContent = "0";
+		} else {
+			document.getElementById('upcoming_maps_count').textContent = upcoming.getElementsByClassName("upcoming").length;
+		}
+	}
+}
+
+function update_map_data() {
+	update_current_next_maps();
 	
 	let upcoming = document.getElementById('upcoming_maps_grid');
 	upcoming.innerHTML = "";
@@ -1146,7 +1190,7 @@ function update_map_data() {
 		like.removeEventListener("click", rate_map);
 		like.addEventListener("click", rate_map);
 		like.title= "Rating this map positively will raise its chance of being picked while you're on the server."
-		+ "\n\nYou can configure the cooldown for your liked maps in your profile. By default, you can play a liked map no more than once per day.";
+		+ "\n\nYou can configure the cooldown for your liked maps in your profile. By default, you will play a liked map no more than once per day.";
 		
 		let fav = div.getElementsByClassName("fav_button")[0];
 		fav.setAttribute("rating", "3");
@@ -1165,41 +1209,7 @@ function update_map_data() {
 		+ "\n\nIf 67% of players on the server dislike a map, then it will never be picked.";
 	});
 	
-	if (g_player_data.length == 0) {
-		if (showingAllMaps) {
-			document.getElementById("empty_notice").classList.add("hidden");
-			document.getElementById("content").classList.remove("empty_server");
-		} else {
-			document.getElementById("empty_notice").classList.remove("hidden");
-			document.getElementById("content").classList.add("empty_server");
-		}
-	} else {
-		document.getElementById("content").classList.remove("empty_server");
-		document.getElementById("empty_notice").classList.add("hidden");
-	}
-	
-	update_map_ratings();
-	
-	if (mapFilterType == "opt-my-liked") {
-		document.getElementById('upcoming_maps_count').textContent = upcoming.querySelectorAll(".like_button.own_rating").length;
-	}
-	else if (mapFilterType == "opt-my-favorited") {
-		document.getElementById('upcoming_maps_count').textContent = upcoming.querySelectorAll(".fav_button.own_rating").length;
-	}
-	else if (mapFilterType == "opt-my-disliked") {
-		document.getElementById('upcoming_maps_count').textContent = upcoming.querySelectorAll(".dislike_button.own_rating").length;
-	}
-	else if (showingAllMaps) {
-		document.getElementById('upcoming_maps_count').textContent = upcoming.getElementsByClassName("map_container").length;
-	}
-	else {
-		if (g_player_data.length == 0) {
-			document.getElementById('upcoming_maps_count').textContent = "0";
-		} else {
-			document.getElementById('upcoming_maps_count').textContent = upcoming.getElementsByClassName("upcoming").length;
-		}
-	}
-
+	update_map_metadata();
 }
 
 function update_map_ratings() {
@@ -1486,8 +1496,29 @@ function lazy_image_loader_setup() {
 	mo.observe(container, { childList: true, subtree: true });
 }
 
+const imageCache = [];
+function preload_image(src) {
+	const preload = new Image();
+	preload.src = src;
+	imageCache.push(preload);
+}
+
 async function setup() {
 	load_shared_html();
+	
+	// prevent constantly reloading icons as the table refreshes, preventing them from finishing on slow connections
+	preload_image("icon/hot.png");
+	preload_image("icon/frosty.png");
+	preload_image("icon/rank_1.png");
+	preload_image("icon/rank_2.png");
+	preload_image("icon/rank_3.png");
+	preload_image("icon/rank_4.png");
+	preload_image("icon/rank_5.png");
+	preload_image("icon/client_ag.png");
+	preload_image("icon/client_bf.png");
+	preload_image("icon/client_gf.png");
+	preload_image("icon/client_hl.png");
+	preload_image("icon/client_sk.png");
 	
 	g_map_data = await downloadJson("mapdb.json");
 	update_map_data();
