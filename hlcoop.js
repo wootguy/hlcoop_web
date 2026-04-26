@@ -1781,8 +1781,9 @@ function handle_resize() {
 	content.classList.remove("hide_maps");
 	g_wide_mode = false;
 	
+	document.getElementById("player_list_content").prepend(document.getElementById("active_maps"));
+	
 	if (g_hide_maps) {
-		document.getElementById("player_list_content").prepend(document.getElementById("active_maps"));
 		g_wide_mode = true;
 		content.classList.add("wide");
 		content.classList.add("hide_maps");
@@ -1791,12 +1792,13 @@ function handle_resize() {
 			content.classList.remove("wide");
 		}
 	} else {
-		document.getElementById("map_list_container").prepend(document.getElementById("active_maps"));
 		if (window.innerWidth > 1500) {
 			content.classList.add("wide");
 			g_wide_mode = true;
 		} else if (window.innerWidth < 975) {
 			content.classList.add("compact");
+		} else {
+			document.getElementById("map_list_container").prepend(document.getElementById("active_maps"));
 		}
 	}
 }

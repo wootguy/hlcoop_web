@@ -141,6 +141,9 @@
 				width: 100%;
 				padding-bottom: 10px;
 			}
+			#content.compact #active_maps {
+				padding-bottom: 15px;
+			}
 			
 			#content.hide_maps #map_list_container {
 				width: 0px;
@@ -148,18 +151,28 @@
 				padding: 0;
 				display: none;
 			}
-			#content.hide_maps #active_maps {
+			#content.hide_maps #active_maps, #content.wide #active_maps {
 				position: absolute;
-				right: -10px;
+				left: -5px;
 				top: -205px;
 				min-width: 460px;
 			}
-			#content.hide_maps #next_map_container {
-				margin-left: 5px;
+			#content.hide_maps #next_map_container, #content.wide #next_map_container {
+				margin-left: 11px;
 			}
-			#content.hide_maps #player_list_content {
+			#content.hide_maps #player_list_content, #content.wide #player_list_content {
 				margin-top: 205px;
-				margin-left: 15px;
+				margin-left: 10px;
+			}
+			#content.hide_maps.compact #player_list_content {
+				margin: 205px auto 0 auto;
+			}
+			#content.wide #map_list_container {
+				margin-left: 10px;
+			}
+			#content.wide #upcoming_maps_header {
+				padding-top: 0px;
+				margin-top: 0px;
 			}
 			#show_maps_button {
 				display: none;
@@ -371,7 +384,6 @@
 				margin: 0 auto;
 				width: calc(100% - 470px);
 				float: right;
-				padding: 0 5px;
 				display: flex;
 				flex-direction: column;
 				height: 100%;
@@ -388,6 +400,10 @@
 				border: 1px solid #a80;
 				position: relative;
 				z-index: auto;
+			}
+			#content.wide .map_container, #content.hide_maps .map_container {
+				width: 215px;
+				height: 159px;
 			}
 			.map_container img {
 				border-top: 1px solid #a80;
@@ -448,6 +464,9 @@
 				max-height:100%;
 				width: 100%;
 				height: 140px;
+			}
+			#content.wide .map_image, #content.hide_maps .map_image {
+				height: 136px;
 			}
 			.map_tags {
 				font-size: 12px;
@@ -511,12 +530,12 @@
 			#content.empty_server .map_container.upcoming {
 				display: none;
 			}
-			#upcoming_maps .map_container {
+			#content #upcoming_maps .map_container {
 				width: 140px;
 				height: 108px;
 				margin: 6px;
 			}
-			#upcoming_maps .map_image {
+			#content #upcoming_maps .map_image {
 				height: 89px;
 			}
 			#upcoming_maps .map_container{
