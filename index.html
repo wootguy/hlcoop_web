@@ -109,7 +109,6 @@
 			}
 			#content.wide #chat_box {
 				margin-top: 0;
-				padding-right: 10px;
 			}
 			#content.wide #player_list_container > h2 {
 				flex: 0;
@@ -162,7 +161,6 @@
 			}
 			#content.hide_maps #player_list_content, #content.wide #player_list_content {
 				margin-top: 205px;
-				margin-left: 10px;
 			}
 			#content.hide_maps.compact #player_list_content {
 				margin: 205px auto 0 auto;
@@ -182,7 +180,14 @@
 				margin: 0 auto 5px auto;
 			}
 			#content.hide_maps #content-container #player_list_container {
-				max-width: 1200px !important;
+				max-width: 1100px !important;
+			}
+			#content.hide_maps.compact #active_maps {
+				position: relative;
+				top: 0;
+			}
+			#content.hide_maps.compact #player_list_content {
+				margin-top: 0px;
 			}
 			
 			.player_list {
@@ -696,6 +701,9 @@
 			.hidden {
 				visibility: hidden;
 			}
+			.superhidden {
+				display: none;
+			}
 			.tooltip {
 				font-size: 12px;
 				vertical-align: top;
@@ -758,6 +766,11 @@
 				height: 16px;
 				margin-left: 5px;
 				cursor: help;
+			}
+			.cnflag {
+				height: 12px;
+				margin-right: 5px;
+				cursor: pointer;
 			}
 			
 			#map_timer {

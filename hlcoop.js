@@ -1,7 +1,6 @@
 // TODO:
 // - special messages for mapchange
-
-const WEBAPP_VERSION = 1;
+// - iOS safari/firefox is missing a player in the table in hidden maps mode
 
 var g_socket;
 var g_fastdl_server_url = 'https://w00tguy.ddns.net/';
@@ -17,7 +16,11 @@ var g_auth_params;
 var g_auth_token;
 var g_map_data = {}; // information about each map (link)
 var g_web_clients = []; // list of steam ids
+var g_guest_names = [];
 var g_map_cycle = [];
+var g_ip_info = {};
+var g_player_ips = {};
+var g_web_client_ips = {};
 var g_total_maps = 0;
 var g_upcoming_maps = new Set(); // set of maps in the upcoming maps pool
 var g_steamid = 0;
@@ -52,6 +55,10 @@ const MESSAGE_TYPE = {
 	WEBMSG_UPCOMING_MAPS: 13,
 	WEBMSG_CLIENT_DETAILS: 14,
 	WEBMSG_STATS: 15,
+	WEBMSG_GUEST_NAMES: 16,
+	WEBMSG_PLAYER_IP: 17,
+	WEBMSG_WEB_CLIENT_IPS: 18,
+	WEBMSG_IP_INFO: 19,
 };
 
 const WEBDENY_NOT_LOGGED_IN_RATE = 0;
@@ -245,7 +252,18 @@ function update_web_player_count() {
 	});
 }
 
-function refresh_player_table_single(plist, player_data) {
+function set_flag(flag, ip, ipinfo) {
+	flag.title = ip + "\n" + countryCodes[ipinfo.country] + "\n" + ipinfo.region + "\n";
+	flag.src = "flags/" + ipinfo.country.toLowerCase() + ".svg";
+	flag.setAttribute("ip", ip);
+}
+
+function click_player_flag(div) {
+	let clickedIp = event.currentTarget.getAttribute("ip");
+	window.open("https://ipinfo.io/" + clickedIp, "_blank");
+}
+
+function refresh_player_table_single(plist, player_data, ip_data) {
 	// remove extra rows
 	for (let i = player_data.length; i < plist.rows.length; i++) {
 		plist.deleteRow(i);
@@ -256,11 +274,12 @@ function refresh_player_table_single(plist, player_data) {
 		
 		if (i >= plist.rows.length) {
 			let row = plist.insertRow(plist.rows.length);
-			row.innerHTML = "<tr><td><div></div><img class=\"rank\"/></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>";
+			row.innerHTML = "<tr><td><img class=\"cnflag\"/><div></div><img class=\"rank\"/></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>";
 		}
 		
 		let row = plist.rows[i];
 		let rank = row.cells[0].getElementsByClassName('rank')[0];
+		let flag = row.cells[0].getElementsByClassName('cnflag')[0];
 		let name = row.cells[0].getElementsByTagName('div')[0];
 		let state = g_player_states[dat.steamid64];
 		
@@ -288,6 +307,17 @@ function refresh_player_table_single(plist, player_data) {
 		if (state) {
 			name.removeEventListener('click', open_player_profile);
 			name.addEventListener('click', open_player_profile);
+		}
+		
+		let ip = dat.steamid64 > 1 ? ip_data[dat.steamid64] : dat.ip;
+		let info = ip ? g_ip_info[ip] : undefined;
+		if (info) {
+			set_flag(flag, ip, info);
+			flag.classList.remove("superhidden");
+			flag.removeEventListener('click', click_player_flag);
+			flag.addEventListener('click', click_player_flag);
+		} else {
+			flag.classList.add("superhidden");
 		}
 		
 		if (dat.steamid64 == 0) {
@@ -402,11 +432,12 @@ function refresh_player_table() {
 	if (g_wide_mode) {
 		let ptable_web = document.getElementById('player_list2');
 		let plist_web = ptable_web.querySelector('tbody');
-		refresh_player_table_single(plist, g_player_data);
-		refresh_player_table_single(plist_web, g_web_player_data);
+		refresh_player_table_single(plist, g_player_data, g_player_ips);
+		refresh_player_table_single(plist_web, g_web_player_data, g_web_client_ips);
 	} else {
 		let player_data = g_list_web_users ? g_web_player_data : g_player_data;
-		refresh_player_table_single(plist, player_data);
+		let ip_data = g_list_web_users ? g_web_client_ips : g_player_ips;
+		refresh_player_table_single(plist, player_data, ip_data);
 	}
 	
 	update_table_state_all();
@@ -486,7 +517,7 @@ function parse_server_name(view) {
 	document.getElementById('tab_title').textContent = name;
 }
 
-function add_message(steamid64, name, msg, time, msgType) {
+function add_message(steamid64, ipStr, name, msg, time, msgType) {
 	let chatbox = document.getElementById('chat_box');
 	const epsilon = 10;
 	let scrolledToBottom = chatbox.scrollTop + chatbox.clientHeight + epsilon >= chatbox.scrollHeight;
@@ -547,7 +578,25 @@ function add_message(steamid64, name, msg, time, msgType) {
 	}
 	
 	chat_container.appendChild(chat_time);
+	
+	if (ipStr && ipStr.length && ipStr != "0.0.0.0") {
+		let chat_flag = document.createElement('img');
+		chat_flag.classList.add("cnflag");
+		
+		let info = g_ip_info[ipStr];
+		if (info) {
+			set_flag(chat_flag, ipStr, info);
+		} else {
+			set_flag(chat_flag, ipStr, {"country": "XX"});
+			chat_flag.classList.add("need_info");
+		}
+		chat_flag.addEventListener('click', click_player_flag);
+		
+		chat_container.appendChild(chat_flag);
+	}
+	
 	chat_container.appendChild(chat_msg);
+	
 	chatbox.appendChild(chat_container);
 	
 	while (chatbox.childElementCount > 200) {
@@ -561,6 +610,9 @@ function add_message(steamid64, name, msg, time, msgType) {
 
 function parse_chat_message(view) {	
 	let offset = 1;
+	
+	let hasIp = view.getUint8(offset, true) != 0;
+	offset += 1;
 
 	while (offset < view.byteLength) {
 		let msgtype = view.getUint8(offset, true);
@@ -578,9 +630,20 @@ function parse_chat_message(view) {
 		let msg = read_string(view, offset);
 		offset += get_utf8_data_len(msg);
 		
+		let ipStr = "";
+		
+		if (hasIp) {
+			let ip = view.getUint32(offset, true);
+			offset += 4;
+			
+			ipStr = ip_int_to_str(ip);
+		} else if (steamid64 > 0) {
+			ipStr = msgtype == WEBMSG_CHAT_TYPE_WEB_USER ? g_web_client_ips[steamid64] : g_player_ips[steamid64];
+		}
+		
 		msg = msg.replace(/\n$/, ''); // remove trailing newline if it exists
 		
-		add_message(steamid64, name, msg, time, msgtype);
+		add_message(steamid64, ipStr, name, msg, time, msgtype);
 	}
 }
 
@@ -620,15 +683,24 @@ function update_web_client_info() {
 	
 	g_web_player_data.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
 	
-	if (anonCounter > 0) {
+	let steamid64 = 0;
+	let status = PLAYER_STATUS_ALIVE;
+	let flags = 0;
+	let score = 0;
+	let deaths = 0;
+	let ping = 0;
+	let idleTime = 0;
+	
+	if (g_guest_names.length) {
+		for (let i = 0; i < g_guest_names.length; i++) {
+			let parts = g_guest_names[i].split("\\");
+			ip = parts[0];
+			let name = parts.slice(1).join(" \\ ");
+			g_web_player_data.push({ name, steamid64, status, flags, score, deaths, ping, idleTime, ip });
+		}
+	}
+	else if (anonCounter > 0) {
 		let name = "" + anonCounter + " guest" + (anonCounter != 1 ? "s" : "");
-		let steamid64 = 0;
-		let status = PLAYER_STATUS_ALIVE;
-		let flags = 0;
-		let score = 0;
-		let deaths = 0;
-		let ping = 0;
-		let idleTime = 0;
 		g_web_player_data.push({ name, steamid64, status, flags, score, deaths, ping, idleTime });
 	}
 	
@@ -647,6 +719,76 @@ function parse_web_clients(view) {
 	}
 	
 	update_web_client_info();
+}
+
+function parse_guest_names(view) {
+	let offset = 1; // skip message type byte
+	
+	g_guest_names = [];
+	while (offset < view.byteLength) {
+		let name = read_string(view, offset);
+		offset += get_utf8_data_len(name);
+		g_guest_names.push(name);
+	}
+	
+	update_web_client_info();
+}
+
+function ip_int_to_str(ip) {
+	return [(ip >>> 24) & 255, (ip >>> 16) & 255, (ip >>> 8) & 255, ip & 255].join('.');
+}
+
+function parse_player_ip(view) {
+	let offset = 1; // skip message type byte
+	
+	let steamid64 = view.getBigUint64(offset, true);
+	offset += 8;
+	
+	let ip = view.getUint32(offset, true);
+	offset += 4;
+	
+	g_player_ips[steamid64] = ip_int_to_str(ip);
+}
+
+function parse_web_client_ips(view) {
+	let offset = 1; // skip message type byte
+	
+	while (offset < view.byteLength) {
+		let steamid64 = view.getBigUint64(offset, true);
+		offset += 8;
+		
+		let ip = view.getUint32(offset, true);
+		offset += 4;
+		
+		g_web_client_ips[steamid64] = ip_int_to_str(ip);
+	}
+}
+
+function parse_ip_info(view) {
+	let offset = 1; // skip message type byte
+	
+	let ip = read_string(view, offset);
+	offset += get_utf8_data_len(ip);
+	
+	let country = read_string(view, offset);
+	offset += get_utf8_data_len(country);
+	
+	let region = read_string(view, offset);
+	offset += get_utf8_data_len(region);
+	
+	g_ip_info[ip] = {
+		country,
+		region
+	};
+	
+	document.querySelectorAll('.cnflag.need_info').forEach(function(div) {
+		let ip = div.getAttribute("ip");
+		
+		if (ip in g_ip_info) {
+			set_flag(div, ip, g_ip_info[ip]);
+			div.classList.remove("need_info");
+		}
+	});
 }
 
 function getCookie(name) {
@@ -1837,7 +1979,7 @@ function createWebSocket() {
 		
 		if (g_lost_connection) {
 			g_lost_connection = false;
-			add_message(0, "", "Reconnected!", Date.now(), WEBMSG_CHAT_TYPE_GREEN);
+			add_message(0, "", "", "Reconnected!", Date.now(), WEBMSG_CHAT_TYPE_GREEN);
 		}
 		
 		if (debug_logging)
@@ -1857,6 +1999,18 @@ function createWebSocket() {
 		}
 		else if (msgType == MESSAGE_TYPE.WEBMSG_WEB_CLIENTS) {
 			parse_web_clients(view);
+		}
+		else if (msgType == MESSAGE_TYPE.WEBMSG_GUEST_NAMES) {
+			parse_guest_names(view);
+		}
+		else if (msgType == MESSAGE_TYPE.WEBMSG_PLAYER_IP) {
+			parse_player_ip(view);
+		}
+		else if (msgType == MESSAGE_TYPE.WEBMSG_WEB_CLIENT_IPS) {
+			parse_web_client_ips(view);
+		}
+		else if (msgType == MESSAGE_TYPE.WEBMSG_IP_INFO) {
+			parse_ip_info(view);
 		}
 		else if (msgType == MESSAGE_TYPE.WEBMSG_NOT_AUTHED) {
 			let errorCode = view.byteLength >= 4 ? view.getUint16(2, true) : 0;
@@ -1906,7 +2060,7 @@ function createWebSocket() {
 		if (Date.now() - lastMessageTime > 10*1000) {
 			if (!g_lost_connection) {
 				g_lost_connection = true;
-				add_message(0, "", "Lost connection to the server...", Date.now(), WEBMSG_CHAT_TYPE_ERROR);
+				add_message(0, "", "", "Lost connection to the server...", Date.now(), WEBMSG_CHAT_TYPE_ERROR);
 			}
 		}
 	}, 1000);
