@@ -52,6 +52,7 @@
 			#player_list_content, #chat_content {
 				display: flex;
 				flex-direction: column;
+				position: relative;
 			}
 			#player_list_content {
 				flex: 0 0 auto; /* no flex, always full height */
@@ -113,9 +114,6 @@
 			#content.wide #player_list_container > h2 {
 				flex: 0;
 			}
-			#content.wide #map_list_container {
-				
-			}
 			.ptable_header {
 				padding-left: 10px;
 				padding-bottom: 5px;
@@ -142,6 +140,36 @@
 			#content.compact #map_list_container {
 				width: 100%;
 				padding-bottom: 10px;
+			}
+			
+			#content.hide_maps #map_list_container {
+				width: 0px;
+				flex: 0 !important;
+				padding: 0;
+				display: none;
+			}
+			#content.hide_maps #active_maps {
+				position: absolute;
+				right: -10px;
+				top: -205px;
+				min-width: 460px;
+			}
+			#content.hide_maps #next_map_container {
+				margin-left: 5px;
+			}
+			#content.hide_maps #player_list_content {
+				margin-top: 205px;
+				margin-left: 15px;
+			}
+			#show_maps_button {
+				display: none;
+			}
+			#content.hide_maps #show_maps_button {
+				display: inline-block;
+				margin: 0 auto 5px auto;
+			}
+			#content.hide_maps #content-container #player_list_container {
+				max-width: 1200px !important;
 			}
 			
 			.player_list {
@@ -319,6 +347,7 @@
 			}
 			#current_map_container, #next_map_container, #next_map_arrow {
 				display: inline-block;
+				position: relative;
 			}
 			#current_map_container h2, #next_map_container h2 {
 				font-size: 16px;
@@ -346,6 +375,7 @@
 				display: flex;
 				flex-direction: column;
 				height: 100%;
+				position: relative;
 			}
 			.map_container {
 				display: inline-block;
@@ -786,6 +816,7 @@
 			<div id="content-container" class="hidden">
 				<div id="player_list_container">
 					<div id="player_list_content">
+						<button id="show_maps_button">Show upcoming maps</button>
 						<h2 class="list_header_container">
 							<div id="pcount_header" class="list_header selected">Players (<span class="pcount">?</span>)</div>
 							<div id="wcount_header" class="list_header">Web Clients (<span class="wcount">?</span>)</div>
@@ -838,7 +869,7 @@
 						<div id="next_map_container">
 							<h2>Next map <span class="tooltip" title="This is not guaranteed to be the next map. The next map changes every time a player joins the server. The next map is chosen randomly from the &quot;Upcoming maps&quot; pool.
 
-	Rejoining the server on the same map does not randomize the next map. This prevents players from constantly rejoining to try and get a &quot;better&quot; next map.">(?)</span></h2></h2>
+Rejoining the server on the same map does not randomize the next map. This prevents players from constantly rejoining to try and get a &quot;better&quot; next map.">(?)</span></h2></h2>
 							<a id="next_map" class="map_container" href="" target="_blank">
 								<span class="map_title"></span>
 								<img class="map_image" src="">
@@ -850,24 +881,24 @@
 					</div>
 					<h2 id="upcoming_maps_header"><span id="upcoming_title">Upcoming maps</span> (<span id="upcoming_maps_count">?</span>) <span class="tooltip" title="Maps displayed here depend on who is currently in the server. A new player joining may cause this map list to change completely.
 
-	The server tries to pick maps that haven't been played in the longest time. Every map should feel fresh and no one should have to replay the same map for another month or so. Map ratings determine selection order after the upcoming maps pool is filled.
+The server tries to pick maps that haven't been played in the longest time. Every map should feel fresh and no one should have to replay the same map for another month or so. Map ratings determine selection order after the upcoming maps pool is filled.
 
-	You must play at least 50% of a map or 3 minutes of it (whichever is lesser) for it to count as played. Play enough of the map if you don't want to see it for a longer time. A negative map rating will not reduce its chance of showing up in the upcoming map pool. However, disliked maps are removed from the pool if 67% of players dislike them (these players would probably RTV the map anyway).
+You must play at least 50% of a map or 3 minutes of it (whichever is lesser) for it to count as played. Play enough of the map if you don't want to see it for a longer time. A negative map rating will not reduce its chance of showing up in the upcoming map pool. However, disliked maps are removed from the pool if 67% of players dislike them (these players would probably RTV the map anyway).
 
-	The algorithm for picking upcoming maps is as follows:
-	1) All maps start as potential candidates.
-	2) Exclude maps that 67% of players in the server dislike.
-	3) Exclude maps played by anyone in the server within the last X days, starting with X=1.
-	4) Select the largest X that results in at least ~8 maps.
+The algorithm for picking upcoming maps is as follows:
+1) All maps start as potential candidates.
+2) Exclude maps that 67% of players in the server dislike.
+3) Exclude maps played by anyone in the server within the last X days, starting with X=1.
+4) Select the largest X that results in at least ~8 maps.
 
-	More than 8 maps will be shown in cases where the current players haven't played every map on the server, when combining their play stats. For example, if there are 500 maps on the server, and the current players have only played 100 of them, then 400 maps will be displayed here.
+More than 8 maps will be shown in cases where the current players haven't played every map on the server, when combining their play stats. For example, if there are 500 maps on the server, and the current players have only played 100 of them, then 400 maps will be displayed here.
 
-	Map highlights represent map ratings and priority for random selection:
-	Rainbow light = New or never played map. Top priority. Always played first.
-	Green light = Positive ratings. High priority. Played after new maps.
-	Orange light = Mixed ratings. Normal priority. Selected if no rainbow/green maps exist.
-	No light = No ratings. Normal priority.
-	Red light = Negative ratings. Low priority. Selected only if all other maps are red.">(?)</span></h2>
+Map highlights represent map ratings and priority for random selection:
+Rainbow light = New or never played map. Top priority. Always played first.
+Green light = Positive ratings. High priority. Played after new maps.
+Orange light = Mixed ratings. Normal priority. Selected if no rainbow/green maps exist.
+No light = No ratings. Normal priority.
+Red light = Negative ratings. Low priority. Selected only if all other maps are red.">(?)</span></h2>
 					<div id="upcoming_maps">
 						<div id="upcoming_maps_grid"></div>
 						<div id="empty_notice">
@@ -883,6 +914,8 @@
 							<option value="opt-my-liked">Your liked maps</option>
 							<option value="opt-my-disliked">Your disliked maps</option>
 						</select>
+						<button id="hide_maps_button">Hide maps</button>
+						<input type="checkbox" id="hide_maps_cb" class="hidden" checked/>
 					</div>
 				</div>
 			</div>

@@ -33,6 +33,7 @@ var g_map_total = 0;
 var g_is_stats_page = false;
 var g_most_active_id = 0;
 var g_wide_mode = false;
+var g_hide_maps = false;
 
 var debug_logging = false;
 
@@ -1134,7 +1135,7 @@ function update_map_data() {
 	let upcoming = document.getElementById('upcoming_maps_grid');
 	upcoming.innerHTML = "";
 	
-	for (let i = 0; i < g_map_cycle.length; i++) {
+	for (let i = 0; i < g_map_cycle.length && !g_hide_maps; i++) {
 		let map = document.createElement('a');
 		let mapname = g_map_cycle[i][0];
 		map.classList.add("map_container");
@@ -1722,6 +1723,16 @@ async function setup() {
 	handle_resize();
 	
 	document.getElementById("content-container").classList.remove("hidden");
+	
+	document.getElementById("hide_maps_button").addEventListener("click", () => {
+		document.getElementById("hide_maps_cb").checked = true;
+		handle_resize();
+	});
+	document.getElementById("show_maps_button").addEventListener("click", () => {
+		document.getElementById("hide_maps_cb").checked = false;
+		handle_resize();
+		update_map_data();
+	});
 }
 
 function action_denied_popup(reason, errorCode) {
@@ -1764,15 +1775,29 @@ function action_denied_popup(reason, errorCode) {
 function handle_resize() {
 	let content = document.getElementById("content");
 	
+	g_hide_maps = document.getElementById("hide_maps_cb").checked;
 	content.classList.remove("wide");
 	content.classList.remove("compact");
+	content.classList.remove("hide_maps");
 	g_wide_mode = false;
 	
-	if (window.innerWidth > 1500) {
-		content.classList.add("wide");
+	if (g_hide_maps) {
+		document.getElementById("player_list_content").prepend(document.getElementById("active_maps"));
 		g_wide_mode = true;
-	} else if (window.innerWidth < 975) {
-		content.classList.add("compact");
+		content.classList.add("wide");
+		content.classList.add("hide_maps");
+		if (window.innerWidth < 975) {
+			content.classList.add("compact");
+			content.classList.remove("wide");
+		}
+	} else {
+		document.getElementById("map_list_container").prepend(document.getElementById("active_maps"));
+		if (window.innerWidth > 1500) {
+			content.classList.add("wide");
+			g_wide_mode = true;
+		} else if (window.innerWidth < 975) {
+			content.classList.add("compact");
+		}
 	}
 }
 
