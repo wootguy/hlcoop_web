@@ -47,7 +47,18 @@
 				float: left;
 				display: flex;
 				flex-direction: column;
-				height: calc(100% - 100px);
+				height: 100%;
+			}
+			#player_list_content, #chat_content {
+				display: flex;
+				flex-direction: column;
+			}
+			#player_list_content {
+				flex: 0 0 auto; /* no flex, always full height */
+			}
+			#chat_content {
+				flex: 1 1 auto;
+				min-height: 0;
 			}
 			#player_list_container > h2 {
 				flex: 0;
@@ -57,68 +68,141 @@
 			}
 			#player_table_container {
 				overflow-y: auto;
-				background: black;
 				max-height: 400px;
 			}
-			#player_list {
-				background: black;
+			#content-container {
+				height: calc(100% - 100px);
+			}
+			
+			#content.wide #content-container {
+				display: flex;
+				flex-direction: row;
+			}
+			#content.wide #content-container #player_list_container {
+				flex: 2 2 900px;
+				max-width: 1000px;
+			}
+			#content.wide #content-container #map_list_container {
+				flex: 1 1 550px;
+			}
+			#content.wide #player_list_container {
+				flex: 1;
+				margin: 0 auto;
+				float: left;
+				display: flex;
+				flex-direction: row-reverse;
+			}
+			#content.wide .list_header_container {
+				display: none;
+			}
+			#content.wide #player_list_container > #player_list_content {
+				width: 450px;
+			}
+			#content.wide #player_table_container {
+				height: 100%;
+				max-height: none;
+				background: none;
+			}
+			#content.wide #player_list_container > #chat_content {
+				padding-right: 10px;
+			}
+			#content.wide #chat_box {
+				margin-top: 0;
+				padding-right: 10px;
+			}
+			#content.wide #player_list_container > h2 {
+				flex: 0;
+			}
+			#content.wide #map_list_container {
+				
+			}
+			.ptable_header {
+				padding-left: 10px;
+				padding-bottom: 5px;
+				display: none;
+			}
+			.webtable_header {
+				margin-top: 30px;
+			}
+			#player_list2 {
+				display: none;
+				margin-top: 0px;
+			}
+			#content.wide #player_list2, #content.wide .ptable_header {
+				display: block;
+			}
+			
+			#content.compact #player_list_container {
+				width: 100%;
+				padding-bottom: 50px;
+			}
+			#content.compact #player_list_content {
+				margin: 0 auto;
+			}
+			#content.compact #map_list_container {
+				width: 100%;
+				padding-bottom: 10px;
+			}
+			
+			.player_list {
 				width: 100%;
 				border-collapse: collapse;
 				font-family: "Trebuchet MS", Trebuchet, Tahoma, Arial, Helvetica, sans-serif;
 				font-size: 12px;
 				display: block;
+				position: relative;
 			}
-			#player_list th {
+			.player_list th {
 				background: #2e1f00;
 				height: 20px;
 			}
-			#player_list td:first-child, #player_list th:first-child {
+			.player_list td:first-child, .player_list th:first-child {
 				width: 215px;
 				padding-left: 10px;
 			}
-			#player_list td:nth-child(2), #player_list th:nth-child(2) {
+			.player_list td:nth-child(2), .player_list th:nth-child(2) {
 				width: 50px;
 			}
-			#player_list td:nth-child(3), #player_list th:nth-child(3) {
+			.player_list td:nth-child(3), .player_list th:nth-child(3) {
 				width: 50px;
 			}
-			#player_list td:nth-child(4), #player_list th:nth-child(4) {
+			.player_list td:nth-child(4), .player_list th:nth-child(4) {
 				width: 50px;
 			}
-			#player_list td:nth-child(5), #player_list th:nth-child(5) {
+			.player_list td:nth-child(5), .player_list th:nth-child(5) {
 				width: 40px;
 			}
-			#player_list td:nth-child(6), #player_list th:nth-child(6) {
+			.player_list td:nth-child(6), .player_list th:nth-child(6) {
 				width: 24px;
 			}
-			#player_list td:nth-child(7), #player_list th:nth-child(7) {
+			.player_list td:nth-child(7), .player_list th:nth-child(7) {
 				width: 60px;
 			}
-			#player_list td:nth-child(8), #player_list th:nth-child(8) {
+			.player_list td:nth-child(8), .player_list th:nth-child(8) {
 				width: 70px;
 			}
-			#player_list td:nth-child(9), #player_list th:nth-child(9) {
+			.player_list td:nth-child(9), .player_list th:nth-child(9) {
 				width: 88px;
 			}
-			#player_list td:nth-child(10), #player_list th:nth-child(10) {
+			.player_list td:nth-child(10), .player_list th:nth-child(10) {
 				width: 111px;
 			}
-			#player_list td:nth-child(11), #player_list th:nth-child(11) {
+			.player_list td:nth-child(11), .player_list th:nth-child(11) {
 				width: 111px;
 			}
-			#player_list th {
+			.player_list th {
 				text-align: left;
 			}
-			#player_list tr:nth-child(odd) {
+			.player_list tr:nth-child(odd) {
 				background: #111;
 			}
-			#player_list tr:nth-child(even) {
+			.player_list tr:nth-child(even) {
 				background: #222;
 			}
-			#player_list td {
+			.player_list td {
 				height: 20px;
 			}
-			#player_list div {
+			.player_list div {
 				text-decoration: none;
 				color: #99CCFF;
 				overflow: hidden;
@@ -132,85 +216,86 @@
 			.chat_message div:hover {
 				color: #D2E6FB;
 			}
-			#player_list div.bad_guy {
+			.player_list div.bad_guy {
 				color: #FF3F3F;
 			}
-			#player_list div:hover {
+			.player_list div:hover {
 				color: #D2E6FB;
 			}
-			#player_list div.bad_guy:hover {
+			.player_list div.bad_guy:hover {
 				color: #FF9090;
 			}
-			#player_list thead {
+			.player_list thead {
 				position: absolute;
+				top: 0;
 				z-index: 1;
 			}
-			#player_list tbody {
+			.player_list tbody {
 				overflow-y: auto;
 				overflow-x: hidden;
 				height: 100%;
 				position: relative;
 				top: 22px;
 			}
-			#player_list .alive {
+			.player_list .alive {
 				color: #0d0;
 			}
-			#player_list .dead {
+			.player_list .dead {
 				color: red;
 			}
-			#player_list .spec {
+			.player_list .spec {
 				color: #aaa;
 			}
-			#player_list .longidle {
+			.player_list .longidle {
 				color: #a0f;
 			}
-			#player_list .idle {
+			.player_list .idle {
 				color: #f80;
 			}
-			#player_list .shortidle {
+			.player_list .shortidle {
 				color: #ff0;
 			}
-			#player_list td:nth-child(7), #player_list th:nth-child(7),
-			#player_list td:nth-child(8), #player_list th:nth-child(8),
-			#player_list td:nth-child(9), #player_list th:nth-child(9),
-			#player_list td:nth-child(10), #player_list th:nth-child(10),
-			#player_list td:nth-child(11), #player_list th:nth-child(11) {
+			.player_list td:nth-child(7), .player_list th:nth-child(7),
+			.player_list td:nth-child(8), .player_list th:nth-child(8),
+			.player_list td:nth-child(9), .player_list th:nth-child(9),
+			.player_list td:nth-child(10), .player_list th:nth-child(10),
+			.player_list td:nth-child(11), .player_list th:nth-child(11) {
 				display: none;
 			}
-			#player_list.stat_view td:nth-child(2), #player_list.stat_view th:nth-child(2),
-			#player_list.stat_view td:nth-child(3), #player_list.stat_view th:nth-child(3),
-			#player_list.stat_view td:nth-child(4), #player_list.stat_view th:nth-child(4),
-			#player_list.stat_view td:nth-child(5), #player_list.stat_view th:nth-child(5),
-			#player_list.stat_view td:nth-child(6), #player_list.stat_view th:nth-child(6) {
+			.player_list.stat_view td:nth-child(2), .player_list.stat_view th:nth-child(2),
+			.player_list.stat_view td:nth-child(3), .player_list.stat_view th:nth-child(3),
+			.player_list.stat_view td:nth-child(4), .player_list.stat_view th:nth-child(4),
+			.player_list.stat_view td:nth-child(5), .player_list.stat_view th:nth-child(5),
+			.player_list.stat_view td:nth-child(6), .player_list.stat_view th:nth-child(6) {
 				display: none;
 			}
-			#player_list.stat_view td:nth-child(7), #player_list.stat_view th:nth-child(7),
-			#player_list.stat_view td:nth-child(8), #player_list.stat_view th:nth-child(8),
-			#player_list.stat_view td:nth-child(9), #player_list.stat_view th:nth-child(9) {
+			.player_list.stat_view td:nth-child(7), .player_list.stat_view th:nth-child(7),
+			.player_list.stat_view td:nth-child(8), .player_list.stat_view th:nth-child(8),
+			.player_list.stat_view td:nth-child(9), .player_list.stat_view th:nth-child(9) {
 				display: table-cell;
 			}
-			#player_list.web_users td:nth-child(2), #player_list.web_users th:nth-child(2),
-			#player_list.web_users td:nth-child(3), #player_list.web_users th:nth-child(3),
-			#player_list.web_users td:nth-child(4), #player_list.web_users th:nth-child(4),
-			#player_list.web_users td:nth-child(6), #player_list.web_users th:nth-child(6),
-			#player_list.web_users td:nth-child(5), #player_list.web_users th:nth-child(5) {
+			.player_list.web_users td:nth-child(2), .player_list.web_users th:nth-child(2),
+			.player_list.web_users td:nth-child(3), .player_list.web_users th:nth-child(3),
+			.player_list.web_users td:nth-child(4), .player_list.web_users th:nth-child(4),
+			.player_list.web_users td:nth-child(6), .player_list.web_users th:nth-child(6),
+			.player_list.web_users td:nth-child(5), .player_list.web_users th:nth-child(5) {
 				display: none;
 			}
-			#player_list.web_users td:nth-child(10), #player_list.web_users th:nth-child(10),
-			#player_list.web_users td:nth-child(11), #player_list.web_users th:nth-child(11) {
+			.player_list.web_users td:nth-child(10), .player_list.web_users th:nth-child(10),
+			.player_list.web_users td:nth-child(11), .player_list.web_users th:nth-child(11) {
 				display: table-cell;
 			}
-			#player_list.web_users div {
+			.player_list.web_users_names div {
 				color: #99FF99;
 			}
-			#player_list.web_users div:hover {
+			.player_list.web_users_names div:hover {
 				color: #BAEEBA;
 			}
-			#player_list.web_users div.anon {
+			.player_list.web_users_names div.anon {
 				color: #aaa;
 				cursor: initial;
 			}
-			#player_list .client_icon {
+			.player_list .client_icon {
 				height: 17px;
 			}
 			
@@ -260,7 +345,7 @@
 				padding: 0 5px;
 				display: flex;
 				flex-direction: column;
-				height: calc(100% - 100px);
+				height: 100%;
 			}
 			.map_container {
 				display: inline-block;
@@ -698,99 +783,107 @@
 			
 			<hr>
 		
-			<div id="player_list_container">
-				<h2 class="list_header_container">
-					<div id="pcount_header" class="list_header selected">Players (<span id="pcount">?</span>)</div>
-					<div id="wcount_header" class="list_header">Web Clients (<span id="wcount">?</span>)</div>
-				</h2>
-				<div id="player_table_container">
-					<table id="player_list">
-						<thead>
-							<th title="Player's in-game name">Player name</th>
-							<th title="Player's in-game status">Status</th>
-							<th title="Points awarded for damage dealt in the current map">Score</th>
-							<th title="The number of times the player has died in the current map">Deaths</th>
-							<th title="Player's latency to the server">Ping</th>
-							<th title="Player's game client">CL</th>
-							<th title="Player's opinion of the selected map">Opinion</th>
-							<th title="Last time this player played the selected map">Last play</th>
-							<th title="Total number of times the player played the selected map">Total plays</th>
-							<th title="Total time spent on the server">Total time</th>
-							<th title="Time spent on the server in the past 2 weeks">Recent time</th>
-						</thead>
-						<tbody></tbody>
-					</table>
-					<div id="player_list_spacer"></div>
-				</div>
-				<!--<div id="player_list">test stuff</div>-->
-				<div id="chat_box"></div>
-				<div id="send_message_container">
-					<input id="send_message" type="text" placeholder="Send message..." maxlength="123" title="Type here and press Enter to send a chat message to the server">
-					<div id="cooldown-text" class="hidden">Wait <span id="cooldown-timer">X</span> seconds</div>
-				</div>
-			</div>
-			
-			<div id="map_list_container">
-				<div id="active_maps">
-					<div id="current_map_container">
-						<h2>Current map<span id="series_counter"></span></h2>
-						<a id="current_map" class="map_container" href="" target="_blank">
-							<span class="map_title"></span>
-							<img class="map_image" src="">
-							<img class="like_button" src="icon/thumbs_up.png"/>
-							<img class="fav_button" src="icon/favorite.png"/>
-							<img class="dislike_button" src="icon/thumbs_down.png"/>
-							<div id="map_timer"></div>
-						</a>
+			<div id="content-container" class="hidden">
+				<div id="player_list_container">
+					<div id="player_list_content">
+						<h2 class="list_header_container">
+							<div id="pcount_header" class="list_header selected">Players (<span class="pcount">?</span>)</div>
+							<div id="wcount_header" class="list_header">Web Clients (<span class="wcount">?</span>)</div>
+						</h2>
+						<div id="player_table_container">
+							<div class="ptable_header">Players (<span class="pcount">?</span>)</div>
+							<table id="player_list1" class="player_list">
+								<thead>
+									<th title="Player's in-game name">Player name</th>
+									<th title="Player's in-game status">Status</th>
+									<th title="Points awarded for damage dealt in the current map">Score</th>
+									<th title="The number of times the player has died in the current map">Deaths</th>
+									<th title="Player's latency to the server">Ping</th>
+									<th title="Player's game client">CL</th>
+									<th title="Player's opinion of the selected map">Opinion</th>
+									<th title="Last time this player played the selected map">Last play</th>
+									<th title="Total number of times the player played the selected map">Total plays</th>
+									<th title="Total time spent on the server">Total time</th>
+									<th title="Time spent on the server in the past 2 weeks">Recent time</th>
+								</thead>
+								<tbody></tbody>
+							</table>
+							<div id="player_list_spacer"></div>
+							<div class="ptable_header webtable_header">Web Clients (<span class="wcount">?</span>)</div>
+						</div>
 					</div>
-					<div id="next_map_container">
-						<h2>Next map <span class="tooltip" title="This is not guaranteed to be the next map. The next map changes every time a player joins the server. The next map is chosen randomly from the &quot;Upcoming maps&quot; pool.
-
-Rejoining the server on the same map does not randomize the next map. This prevents players from constantly rejoining to try and get a &quot;better&quot; next map.">(?)</span></h2></h2>
-						<a id="next_map" class="map_container" href="" target="_blank">
-							<span class="map_title"></span>
-							<img class="map_image" src="">
-							<img class="like_button" src="icon/thumbs_up.png"/>
-							<img class="fav_button" src="icon/favorite.png"/>
-							<img class="dislike_button" src="icon/thumbs_down.png"/>
-						</a>
+					<!--<div id="player_list">test stuff</div>-->
+					<div id="chat_content">
+						<div id="chat_box"></div>
+						<div id="send_message_container">
+							<input id="send_message" type="text" placeholder="Send message..." maxlength="123" title="Type here and press Enter to send a chat message to the server">
+							<div id="cooldown-text" class="hidden">Wait <span id="cooldown-timer">X</span> seconds</div>
+						</div>
 					</div>
 				</div>
-				<h2 id="upcoming_maps_header"><span id="upcoming_title">Upcoming maps</span> (<span id="upcoming_maps_count">?</span>) <span class="tooltip" title="Maps displayed here depend on who is currently in the server. A new player joining may cause this map list to change completely.
+				
+				<div id="map_list_container">
+					<div id="active_maps">
+						<div id="current_map_container">
+							<h2>Current map<span id="series_counter"></span></h2>
+							<a id="current_map" class="map_container" href="" target="_blank">
+								<span class="map_title"></span>
+								<img class="map_image" src="">
+								<img class="like_button" src="icon/thumbs_up.png"/>
+								<img class="fav_button" src="icon/favorite.png"/>
+								<img class="dislike_button" src="icon/thumbs_down.png"/>
+								<div id="map_timer"></div>
+							</a>
+						</div>
+						<div id="next_map_container">
+							<h2>Next map <span class="tooltip" title="This is not guaranteed to be the next map. The next map changes every time a player joins the server. The next map is chosen randomly from the &quot;Upcoming maps&quot; pool.
 
-The server tries to pick maps that haven't been played in the longest time. Every map should feel fresh and no one should have to replay the same map for another month or so. Map ratings determine selection order after the upcoming maps pool is filled.
-
-You must play at least 50% of a map or 3 minutes of it (whichever is lesser) for it to count as played. Play enough of the map if you don't want to see it for a longer time. A negative map rating will not reduce its chance of showing up in the upcoming map pool. However, disliked maps are removed from the pool if 67% of players dislike them (these players would probably RTV the map anyway).
-
-The algorithm for picking upcoming maps is as follows:
-1) All maps start as potential candidates.
-2) Exclude maps that 67% of players in the server dislike.
-3) Exclude maps played by anyone in the server within the last X days, starting with X=1.
-4) Select the largest X that results in at least ~8 maps.
-
-More than 8 maps will be shown in cases where the current players haven't played every map on the server, when combining their play stats. For example, if there are 500 maps on the server, and the current players have only played 100 of them, then 400 maps will be displayed here.
-
-Map highlights represent map ratings and priority for random selection:
-Rainbow light = New or never played map. Top priority. Always played first.
-Green light = Positive ratings. High priority. Played after new maps.
-Orange light = Mixed ratings. Normal priority. Selected if no rainbow/green maps exist.
-No light = No ratings. Normal priority.
-Red light = Negative ratings. Low priority. Selected only if all other maps are red.">(?)</span></h2>
-				<div id="upcoming_maps">
-					<div id="upcoming_maps_grid"></div>
-					<div id="empty_notice">
-						Upcoming maps are not known until someone joins the server
+	Rejoining the server on the same map does not randomize the next map. This prevents players from constantly rejoining to try and get a &quot;better&quot; next map.">(?)</span></h2></h2>
+							<a id="next_map" class="map_container" href="" target="_blank">
+								<span class="map_title"></span>
+								<img class="map_image" src="">
+								<img class="like_button" src="icon/thumbs_up.png"/>
+								<img class="fav_button" src="icon/favorite.png"/>
+								<img class="dislike_button" src="icon/thumbs_down.png"/>
+							</a>
+						</div>
 					</div>
-				</div>
-				<div id="filter_maps_container">
-					<input id="maps_filter" type="text" placeholder="Search..." onchange = "filter_maps();" onkeypress="this.onchange();" onpaste="this.onchange();" oninput="this.onchange();" title="Filter maps by name">
-					<select id="map-filter-type">
-						<option value="opt-upcoming">Upcoming maps</option>
-						<option value="opt-all">All maps</option>
-						<option value="opt-my-favorited">Your favorited maps</option>
-						<option value="opt-my-liked">Your liked maps</option>
-						<option value="opt-my-disliked">Your disliked maps</option>
-					</select>
+					<h2 id="upcoming_maps_header"><span id="upcoming_title">Upcoming maps</span> (<span id="upcoming_maps_count">?</span>) <span class="tooltip" title="Maps displayed here depend on who is currently in the server. A new player joining may cause this map list to change completely.
+
+	The server tries to pick maps that haven't been played in the longest time. Every map should feel fresh and no one should have to replay the same map for another month or so. Map ratings determine selection order after the upcoming maps pool is filled.
+
+	You must play at least 50% of a map or 3 minutes of it (whichever is lesser) for it to count as played. Play enough of the map if you don't want to see it for a longer time. A negative map rating will not reduce its chance of showing up in the upcoming map pool. However, disliked maps are removed from the pool if 67% of players dislike them (these players would probably RTV the map anyway).
+
+	The algorithm for picking upcoming maps is as follows:
+	1) All maps start as potential candidates.
+	2) Exclude maps that 67% of players in the server dislike.
+	3) Exclude maps played by anyone in the server within the last X days, starting with X=1.
+	4) Select the largest X that results in at least ~8 maps.
+
+	More than 8 maps will be shown in cases where the current players haven't played every map on the server, when combining their play stats. For example, if there are 500 maps on the server, and the current players have only played 100 of them, then 400 maps will be displayed here.
+
+	Map highlights represent map ratings and priority for random selection:
+	Rainbow light = New or never played map. Top priority. Always played first.
+	Green light = Positive ratings. High priority. Played after new maps.
+	Orange light = Mixed ratings. Normal priority. Selected if no rainbow/green maps exist.
+	No light = No ratings. Normal priority.
+	Red light = Negative ratings. Low priority. Selected only if all other maps are red.">(?)</span></h2>
+					<div id="upcoming_maps">
+						<div id="upcoming_maps_grid"></div>
+						<div id="empty_notice">
+							Upcoming maps are not known until someone joins the server
+						</div>
+					</div>
+					<div id="filter_maps_container">
+						<input id="maps_filter" type="text" placeholder="Search..." onchange = "filter_maps();" onkeypress="this.onchange();" onpaste="this.onchange();" oninput="this.onchange();" title="Filter maps by name">
+						<select id="map-filter-type">
+							<option value="opt-upcoming">Upcoming maps</option>
+							<option value="opt-all">All maps</option>
+							<option value="opt-my-favorited">Your favorited maps</option>
+							<option value="opt-my-liked">Your liked maps</option>
+							<option value="opt-my-disliked">Your disliked maps</option>
+						</select>
+					</div>
 				</div>
 			</div>
 		</div>

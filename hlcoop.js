@@ -35,6 +35,7 @@ var g_lost_connection = false;
 var g_map_total = 0;
 var g_is_stats_page = false;
 var g_most_active_id = 0;
+var g_wide_mode = false;
 
 var debug_logging = false;
 
@@ -111,12 +112,21 @@ function read_string(view, offset) {
 	return new TextDecoder('utf-8').decode(new Uint8Array(bytes));
 }
 
-function update_table_state() {
-	let plist = document.getElementById('player_list').querySelector('tbody');
+function update_table_state(ptable) {
+	let plist = ptable.querySelector('tbody');
 	
-	if (g_list_web_users) {
-		for (let i = 0; i < plist.rows.length; i++) {
-			let row = plist.rows[i];
+	let ptable_web = ptable;
+	let plist_web = plist;
+	if (g_wide_mode) {
+		ptable_web = document.getElementById('player_list2');		
+		plist_web = ptable.querySelector('tbody');
+		ptable.classList.remove("web_users");
+		ptable_web.classList.add("web_users_names");
+	}
+	
+	if (g_list_web_users || g_wide_mode) {
+		for (let i = 0; i < plist_web.rows.length; i++) {
+			let row = plist_web.rows[i];
 			let id = row.getAttribute("steamid");
 			if (id != 0 && id in g_player_states) {
 				row.cells[9].textContent = format_age(g_player_states[id].totalPlayTime, true, true, 2);
@@ -127,9 +137,11 @@ function update_table_state() {
 			}
 		}
 		
-		document.getElementById('player_list').classList.add("web_users");
+		ptable_web.classList.add("web_users");
+		ptable_web.classList.add("web_users_names");
 	} else {
-		document.getElementById('player_list').classList.remove("web_users");
+		ptable.classList.remove("web_users");
+		ptable.classList.remove("web_users_names");
 	}
 	
 	if (g_selected_map) {		
@@ -191,10 +203,10 @@ function update_table_state() {
 			}
 		}
 		
-		document.getElementById('player_list').classList.remove("web_users");
-		document.getElementById('player_list').classList.add("stat_view");
+		ptable.classList.remove("web_users");
+		ptable.classList.add("stat_view");
 	} else {
-		document.getElementById('player_list').classList.remove("stat_view");
+		ptable.classList.remove("stat_view");
 	}
 }
 
@@ -230,16 +242,12 @@ function update_web_player_count() {
 		}
 	}
 	
-	document.getElementById('wcount').textContent = wcountStr;
+	document.querySelectorAll('.wcount').forEach(el => {
+		el.textContent = wcountStr;
+	});
 }
 
-function refresh_player_table() {
-	let plist = document.getElementById('player_list').querySelector('tbody');
-	
-	let oldRowCount = plist.rows.length;
-	
-	let player_data = g_list_web_users ? g_web_player_data : g_player_data;
-	
+function refresh_player_table_single(plist, player_data) {
 	// remove extra rows
 	for (let i = player_data.length; i < plist.rows.length; i++) {
 		plist.deleteRow(i);
@@ -374,14 +382,45 @@ function refresh_player_table() {
 		
 		row.setAttribute("steamid", dat.steamid64);
 	}
+}
+
+function update_table_state_all() {
+	let ptable = document.getElementById('player_list1');
 	
+	if (g_wide_mode) {
+		let ptable_web = document.getElementById('player_list2');
+		update_table_state(ptable);
+		update_table_state(ptable_web);
+	} else {
+		update_table_state(ptable);
+	}
+}
+
+function refresh_player_table() {
+	let ptable = document.getElementById('player_list1');
+	let plist = ptable.querySelector('tbody');
+	let oldRowCount = plist.rows.length;
+	
+	if (g_wide_mode) {
+		let ptable_web = document.getElementById('player_list2');
+		let plist_web = ptable_web.querySelector('tbody');
+		refresh_player_table_single(plist, g_player_data);
+		refresh_player_table_single(plist_web, g_web_player_data);
+	} else {
+		let player_data = g_list_web_users ? g_web_player_data : g_player_data;
+		refresh_player_table_single(plist, player_data);
+	}
+	
+	update_table_state_all();
 	update_web_player_count();
-	document.getElementById('pcount').textContent = g_player_data.length;
-	document.getElementById('tab_title').textContent = "(" + g_player_data.length + "/32) " + g_current_map + " - " + g_server_name;
 	
-	update_table_state();
+	document.querySelectorAll('.pcount').forEach(el => {
+		el.textContent = g_player_data.length;
+	});
 	
-	if (oldRowCount != plist.rows.length) {
+	document.getElementById('tab_title').textContent = "(" + g_player_data.length + "/32) " + g_current_map + " - " + g_server_name;	
+	
+	if (!g_wide_mode && oldRowCount != plist.rows.length) {
 		let chatbox = document.getElementById('chat_box');	
 		chatbox.scrollTop = chatbox.scrollHeight;
 	}
@@ -723,7 +762,7 @@ function finish_logout() {
 function map_mouse_over(ev) {
 	g_mouseover_state = true;
 	g_selected_map = ev.currentTarget.getAttribute("map");
-	update_table_state();
+	update_table_state_all();
 }
 
 function map_mouse_out(ev) {
@@ -734,7 +773,7 @@ function map_mouse_out(ev) {
 			return;
 		}
 		g_selected_map = "";
-		update_table_state();
+		update_table_state_all();
 	}, 500);
 }
 
@@ -1214,7 +1253,7 @@ function update_map_data() {
 
 function update_map_ratings() {
 	const divs = document.querySelectorAll('.map_container');
-	let plist = document.getElementById('player_list').querySelector('tbody');
+	let plist = document.getElementById('player_list1').querySelector('tbody');
 	
 	let steamids = [];
 	let connectedIds = {};
@@ -1504,7 +1543,7 @@ function preload_image(src) {
 }
 
 async function setup() {
-	load_shared_html();
+	await load_shared_html();
 	
 	// prevent constantly reloading icons as the table refreshes, preventing them from finishing on slow connections
 	preload_image("icon/hot.png");
@@ -1582,7 +1621,7 @@ async function setup() {
 		document.getElementById("pcount_header").classList.add("selected");
 		document.getElementById("wcount_header").classList.remove("selected");
 		g_list_web_users = false;
-		let plist = document.getElementById('player_list').querySelector('tbody');
+		let plist = document.getElementById('player_list1').querySelector('tbody');
 		plist.innerHTML = "";
 		refresh_player_table();
 	});
@@ -1590,7 +1629,7 @@ async function setup() {
 		document.getElementById("pcount_header").classList.remove("selected");
 		document.getElementById("wcount_header").classList.add("selected");
 		g_list_web_users = true;
-		let plist = document.getElementById('player_list').querySelector('tbody');
+		let plist = document.getElementById('player_list1').querySelector('tbody');
 		plist.innerHTML = "";
 		refresh_player_table();
 	});
@@ -1674,6 +1713,18 @@ async function setup() {
 	createWebSocket();
 	
 	lazy_image_loader_setup();
+	
+	const original = document.getElementById("player_list1");
+	const copy = original.cloneNode(true);
+	copy.id = "player_list2";
+	document.getElementById("player_table_container").appendChild(copy);
+	
+	window.addEventListener('resize', function () {
+		handle_resize();
+	});
+	handle_resize();
+	
+	document.getElementById("content-container").classList.remove("hidden");
 }
 
 function action_denied_popup(reason, errorCode) {
@@ -1710,6 +1761,21 @@ function action_denied_popup(reason, errorCode) {
 		document.getElementById('web-version-local').textContent = WEBAPP_VERSION;
 		document.getElementById('web-version-server').textContent = errorCode;
 		document.getElementById('closePopup').remove();
+	}
+}
+
+function handle_resize() {
+	let content = document.getElementById("content");
+	
+	content.classList.remove("wide");
+	content.classList.remove("compact");
+	g_wide_mode = false;
+	
+	if (window.innerWidth > 1500) {
+		content.classList.add("wide");
+		g_wide_mode = true;
+	} else if (window.innerWidth < 975) {
+		content.classList.add("compact");
 	}
 }
 
