@@ -1,5 +1,3 @@
-var g_fastdl_server_url = 'https://w00tguy.ddns.net/';
-//var g_fastdl_server_url = '/'; // for local testing
 var g_player_ids = [];
 var g_filtered_ids = [];
 var g_player_states = {};
@@ -380,7 +378,7 @@ async function setup() {
 	//console.log(g_player_data);
 	
 	let perPageInput = document.getElementById("results_per_page");
-	results_per_page = perPageInput.value = 50;
+	results_per_page = perPageInput.value = 30;
 	perPageInput.addEventListener("change", (e) => {
 		results_per_page = parseInt(perPageInput.value);
 		first_page();

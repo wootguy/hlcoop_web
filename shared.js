@@ -2,6 +2,13 @@ var g_game_id = "hl";
 var data_repo_count = 32;
 var data_repo_domain = "https://wootdata.github.io/";
 
+var g_server_url = 'wss://w00tguy.ddns.net:3000/';
+//var g_server_url = 'wss://w00tguy.ddns.net:3001/';
+//var g_server_url = 'ws://localhost:3000/'; // for Visual Studio debugging (also required for logging in locally)
+var g_fastdl_server_url = 'https://w00tguy.ddns.net/';
+//var g_fastdl_server_url = '/'; // for local testing
+
+
 function set_badge(id, recentTime, rankDiv, mapsPlayed, mapsMultiPlayed, totalMaps) {
 	rankDiv.classList.remove("hidden");
 	

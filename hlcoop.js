@@ -4,9 +4,6 @@
 const WEBAPP_VERSION = 1;
 
 var g_socket;
-var g_server_url = 'wss://w00tguy.ddns.net:3000/';
-//var g_server_url = 'wss://w00tguy.ddns.net:3001/';
-//var g_server_url = 'ws://localhost:3000/'; // for Visual Studio debugging (also required for logging in locally)
 var g_fastdl_server_url = 'https://w00tguy.ddns.net/';
 var g_player_data = []; // players currently in the server
 var g_web_player_data = []; // web client info

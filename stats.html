@@ -64,14 +64,17 @@
 			}
 			#stats_table {
 				margin: 0 auto;
+				border: none;
+				border-collapse: collapse;
 			}
 			#stats_table th {
 				text-align: left;
 				background: #2e1f00;
 			}
 			#stats_table td:first-child, #stats_table th:first-child {
-				width: 20px;
+				width: 35px;
 				padding: 0 15px 0 5px;
+				text-align: right;
 			}
 			#stats_table td:nth-child(2), #stats_table th:nth-child(2) {
 				width: 240px;
@@ -93,6 +96,15 @@
 			}
 			#stats_table tr:nth-child(even) {
 				background: #222;
+			}
+			#stats_table td {
+				height: 24px;
+			}
+			#stats_table tr:hover {
+				background: #333 !important;
+			}
+			#stats_table td div:hover {
+				color: #D2E6FB;
 			}
 			
 			#details_table tbody tr:nth-child(9) {
@@ -220,7 +232,7 @@
 					</div>
 					
 					<div class="results-per-page-container">
-						<input type="number" min="1" id="results_per_page" value="100">
+						<input type="number" min="1" id="results_per_page">
 						<span>Results per page</span>
 					</div>
 				</div>
