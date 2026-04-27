@@ -89,6 +89,10 @@ const PLAYER_STATUS_DROPPING = 5;
 const PLAYER_STATUS_CHAT = 6;
 const PLAYER_STATUS_CONSOLE = 7;
 
+const WEBERR_FULL = 9001;
+const WEBERR_IPERR = 9002;
+const WEBERR_CONN_LIMIT = 9003;
+
 function get_message_type_name(value) {
   for (const [key, val] of Object.entries(MESSAGE_TYPE)) {
     if (val === value) {
@@ -1886,6 +1890,9 @@ function action_denied_popup(reason, errorCode) {
 	document.getElementById('popup-text-bad-version').style.display = 'none';
 	document.getElementById('popup-text-no-chat').style.display = 'none';
 	document.getElementById('popup-text-steam-error').style.display = 'none';
+	document.getElementById('popup-text-server-full').style.display = 'none';
+	document.getElementById('popup-text-max-conn').style.display = 'none';
+	document.getElementById('popup-text-ip-err').style.display = 'none';
 	
 	if (reason == WEBDENY_NOT_LOGGED_IN_RATE) {
 		document.getElementById('popup-text-no-rate').style.display = 'block';
@@ -1911,6 +1918,15 @@ function action_denied_popup(reason, errorCode) {
 		document.getElementById('web-version-local').textContent = WEBAPP_VERSION;
 		document.getElementById('web-version-server').textContent = errorCode;
 		document.getElementById('closePopup').remove();
+	}
+	if (reason == WEBERR_FULL) {
+		document.getElementById('popup-text-server-full').style.display = 'block';
+	}
+	if (reason == WEBERR_IPERR) {
+		document.getElementById('popup-text-ip-err').style.display = 'block';
+	}
+	if (reason == WEBERR_CONN_LIMIT) {
+		document.getElementById('popup-text-max-conn').style.display = 'block';
 	}
 }
 
@@ -2047,8 +2063,17 @@ function createWebSocket() {
 
 	// Handle connection close
 	g_socket.addEventListener('close', function () {
-		console.log("WebSocket connection closed");
-		setTimeout(createWebSocket, 5000);
+		console.log("WebSocket connection closed. Code: " + event.code);
+		
+		if (event.code == WEBERR_FULL) {
+			action_denied_popup(WEBERR_FULL);
+		} else if (event.code == WEBERR_IPERR) {
+			action_denied_popup(WEBERR_IPERR);
+		} else if (event.code == WEBERR_CONN_LIMIT) {
+			action_denied_popup(WEBERR_CONN_LIMIT);
+		} else {
+			setTimeout(createWebSocket, 5000);
+		}
 	});
 
 	// Handle errors
