@@ -59,7 +59,7 @@ agpain_rb
 hq_rb
 cstraining_rb
 conundrum2_1
-eod_1
+eod_0_rb
 ispitatel
 ms2_starrancor
 optimumfear_rb-r
