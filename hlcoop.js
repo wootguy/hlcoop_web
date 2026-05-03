@@ -37,6 +37,8 @@ var g_is_stats_page = false;
 var g_most_active_id = 0;
 var g_wide_mode = false;
 var g_hide_maps = false;
+var g_max_player_list_rows = 128; // TODO: send web client limit from server
+var g_reload_map_images = true;
 
 var debug_logging = false;
 
@@ -267,23 +269,32 @@ function click_player_flag(div) {
 	window.open("https://ipinfo.io/" + clickedIp, "_blank");
 }
 
-function refresh_player_table_single(plist, player_data, ip_data) {
+function refresh_player_table_single(plist, player_data, ip_data) {	
+	// allocate all rows that will ever be needed (max of 128 web clients, so use that as the limit)
+	for (let i = plist.rows.length; i < g_max_player_list_rows; i++) {
+		let row = plist.insertRow(plist.rows.length);
+		row.innerHTML = "<tr><td><img class=\"cnflag\"/><div></div><img class=\"rank\"/></td><td></td><td></td><td></td><td></td><td><span class=\"client_text\"></span><img class=\"client_icon superhidden\"></img></td><td></td><td></td><td></td><td></td><td></td></tr>";
+	}
+	
 	// remove extra rows
-	for (let i = player_data.length; i < plist.rows.length; i++) {
-		plist.deleteRow(i);
+	for (let i = 0; i < g_max_player_list_rows; i++) {
+		let row = plist.rows[i];
+		
+		if (i < player_data.length) {
+			row.classList.remove("superhidden");
+		} else {
+			row.classList.add("superhidden");
+		}
 	}
 	
 	for (let i = 0; i < player_data.length; i++) {
 		let dat = player_data[i];
 		
-		if (i >= plist.rows.length) {
-			let row = plist.insertRow(plist.rows.length);
-			row.innerHTML = "<tr><td><img class=\"cnflag\"/><div></div><img class=\"rank\"/></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>";
-		}
-		
 		let row = plist.rows[i];
 		let rank = row.cells[0].getElementsByClassName('rank')[0];
 		let flag = row.cells[0].getElementsByClassName('cnflag')[0];
+		let cl_text = row.cells[5].getElementsByClassName('client_text')[0];
+		let cl_icon = row.cells[5].getElementsByClassName('client_icon')[0];
 		let name = row.cells[0].getElementsByTagName('div')[0];
 		let state = g_player_states[dat.steamid64];
 		
@@ -381,8 +392,6 @@ function refresh_player_table_single(plist, player_data, ip_data) {
 			status_col.title = "Player is either in menus, typing in console, or switched to another program.";
 		}
 		
-		
-		let clientLogo = "?";
 		if (dat.steamid64 in g_player_clients) {
 			let clientType = g_player_clients[dat.steamid64].mod;
 			let modStr = g_player_clients[dat.steamid64].modStr.toLowerCase();
@@ -399,13 +408,17 @@ function refresh_player_table_single(plist, player_data, ip_data) {
 				client_logo_suffix = "ag";
 			}
 			
-			clientLogo = '<img class="client_icon" src="icon/client_' + client_logo_suffix + '.png"></img>'
+			cl_text.textContent = "";
+			cl_icon.src = "icon/client_" + client_logo_suffix + ".png";
+			cl_icon.classList.remove("superhidden");
+		} else {
+			cl_text.textContent = "?";
+			cl_icon.classList.add("superhidden");
 		}
 		
 		row.cells[2].textContent = dat.score;
 		row.cells[3].textContent = dat.deaths;
 		row.cells[4].textContent = dat.ping;
-		row.cells[5].innerHTML = clientLogo;
 		row.cells[5].title = get_client_details_tip(dat.steamid64);
 		row.cells[6].textContent = "";
 		row.cells[7].textContent = "";
@@ -1158,6 +1171,8 @@ function parse_map_list(view) {
 	
 	g_map_total = g_map_cycle.length;
 	
+	g_reload_map_images = true;
+	
 	if (debug_logging)
 		console.log("Map cycle:", g_map_cycle);
 }
@@ -1279,42 +1294,77 @@ function update_map_data() {
 	update_current_next_maps();
 	
 	let upcoming = document.getElementById('upcoming_maps_grid');
-	upcoming.innerHTML = "";
 	
+	let upcomingMapBoxes = upcoming.querySelectorAll('.map_container');
+	
+	if (upcomingMapBoxes.length < g_map_cycle.length) {
+		upcomingMapBoxes = upcoming.querySelectorAll('.map_container');
+		
+		// add new map boxes
+		for (let i = upcomingMapBoxes.length; i < g_map_cycle.length; i++) {
+			let map = document.createElement('a');
+			map.classList.add("map_container");
+		
+			let title = document.createElement('span');
+			title.classList.add("map_title");
+			
+			let img = document.createElement('img');
+			img.classList.add("map_image");
+			
+			let like = document.createElement('img');
+			like.classList.add("like_button");
+			like.src = "icon/thumbs_up.png";
+			like.setAttribute("rating", "1");
+			like.addEventListener("click", rate_map);
+			like.title= "Rating this map positively will raise its chance of being picked while you're on the server."
+			+ "\n\nYou can configure the cooldown for your liked maps in your profile. By default, you will play a liked map no more than once per day.";
+			
+			let fav = document.createElement('img');
+			fav.classList.add("fav_button");
+			fav.src = "icon/favorite.png";
+			fav.setAttribute("rating", "3");
+			fav.addEventListener("click", rate_map);
+			fav.title= "Rating this map as your favorite will raise its chance of being picked while you're on the server."
+			+ "\n\nThe recent playtime filter doesn't apply to your favorite maps, meaning you can potentially play them on loop forever with no cooldown. However, that almost never happens unless you're alone. There's usually someone else in the server who played your favorite map(s) too recently.";
+			
+			let dislike = document.createElement('img');
+			dislike.classList.add("dislike_button");
+			dislike.src = "icon/thumbs_down.png";
+			dislike.setAttribute("rating", "2");
+			dislike.addEventListener("click", rate_map);
+			dislike.title = "Rating this map negatively will lower its chance of being picked while you're on the server."
+			+ "\n\nIf 67% of players on the server dislike a map, then it will never be picked.";		
+			
+			map.appendChild(title);
+			map.appendChild(img);
+			map.appendChild(like);
+			map.appendChild(fav);
+			map.appendChild(dislike);
+			upcoming.appendChild(map);
+		}
+		
+		upcomingMapBoxes = upcoming.querySelectorAll('.map_container');
+	}
+	
+	// hide removed maps
+	for (let i = g_map_cycle.length; i < upcomingMapBoxes.length; i++) {
+		map.classList.add("superhidden");
+	}
+	
+	// update upcoming boxes
 	for (let i = 0; i < g_map_cycle.length && !g_hide_maps; i++) {
-		let map = document.createElement('a');
+		let map = upcomingMapBoxes[i];
 		let mapname = g_map_cycle[i][0];
-		map.classList.add("map_container");
+		
 		map.setAttribute("map", mapname);
+		
+		map.classList.remove("superhidden");
 		
 		if (g_upcoming_maps.has(mapname)) {
 			map.classList.add("upcoming");
+		} else {
+			map.classList.remove("upcoming");
 		}
-	
-		let title = document.createElement('span');
-		title.classList.add("map_title");
-		
-		let img = document.createElement('img');
-		img.classList.add("map_image");
-		
-		let like = document.createElement('img');
-		like.classList.add("like_button");
-		like.src = "icon/thumbs_up.png";
-		
-		let fav = document.createElement('img');
-		fav.classList.add("fav_button");
-		fav.src = "icon/favorite.png";
-		
-		let dislike = document.createElement('img');
-		dislike.classList.add("dislike_button");
-		dislike.src = "icon/thumbs_down.png";
-		
-		map.appendChild(title);
-		map.appendChild(img);
-		map.appendChild(like);
-		map.appendChild(fav);
-		map.appendChild(dislike);
-		upcoming.appendChild(map);
 	}
 	
 	let mapFilterType = document.getElementById("map-filter-type").value;
@@ -1323,17 +1373,15 @@ function update_map_data() {
 	let mystats = g_steamid > 1 ? g_player_states[g_steamid].mapstats : {};
 	
 	document.querySelectorAll('.map_container').forEach(function(div) {
+		if (div.classList.contains("superhidden")) {
+			return;
+		}
+		
 		let map = div.getAttribute("map");
 		let dat = get_map_dat(map);
 		let first_map = get_first_map_in_series(map);
-		let url = "http://scmapdb.wikidot.com/map:" + dat.link;
 		
-		div.href = url;
-		div.target = "_blank";
-		div.removeEventListener('mouseover', map_mouse_over);
-		div.addEventListener('mouseover', map_mouse_over);
-		div.removeEventListener('mouseout', map_mouse_out);
-		div.addEventListener('mouseout', map_mouse_out);
+		div.href = "http://scmapdb.wikidot.com/map:" + dat.link;
 		
 		let title = div.getElementsByClassName("map_title")[0]; 
 		title.title = map;
@@ -1343,7 +1391,6 @@ function update_map_data() {
 		}
 		
 		let img = div.getElementsByClassName("map_image")[0];
-		img.setAttribute("loadUrl", "img/" + first_map + ".jpg");
 		img.onerror = handle_img_error;
 		
 		div.classList.remove("filter_wrong_opinion");
@@ -1362,35 +1409,56 @@ function update_map_data() {
 			div.classList.add("filter_wrong_opinion");
 		}
 		
-		// always load image for current/next
-		if (div.id == "current_map" || div.id == "next_map") {
-			img.setAttribute("src", img.getAttribute("loadUrl"));
-		}
-		
 		let like = div.getElementsByClassName("like_button")[0];
+		like.classList.add("like_button");
+		like.src = "icon/thumbs_up.png";
 		like.setAttribute("rating", "1");
-		like.setAttribute("map", first_map);
-		like.removeEventListener("click", rate_map);
 		like.addEventListener("click", rate_map);
 		like.title= "Rating this map positively will raise its chance of being picked while you're on the server."
 		+ "\n\nYou can configure the cooldown for your liked maps in your profile. By default, you will play a liked map no more than once per day.";
 		
 		let fav = div.getElementsByClassName("fav_button")[0];
+		fav.classList.add("fav_button");
+		fav.src = "icon/favorite.png";
 		fav.setAttribute("rating", "3");
-		fav.setAttribute("map", first_map);
-		fav.removeEventListener("click", rate_map);
 		fav.addEventListener("click", rate_map);
 		fav.title= "Rating this map as your favorite will raise its chance of being picked while you're on the server."
 		+ "\n\nThe recent playtime filter doesn't apply to your favorite maps, meaning you can potentially play them on loop forever with no cooldown. However, that almost never happens unless you're alone. There's usually someone else in the server who played your favorite map(s) too recently.";
-		
+
 		let dislike = div.getElementsByClassName("dislike_button")[0];
+		dislike.classList.add("dislike_button");
+		dislike.src = "icon/thumbs_down.png";
 		dislike.setAttribute("rating", "2");
-		dislike.setAttribute("map", first_map);
-		dislike.removeEventListener("click", rate_map);
 		dislike.addEventListener("click", rate_map);
 		dislike.title = "Rating this map negatively will lower its chance of being picked while you're on the server."
-		+ "\n\nIf 67% of players on the server dislike a map, then it will never be picked.";
+		+ "\n\nIf 67% of players on the server dislike a map, then it will never be picked.";	
+		
+		like.setAttribute("map", first_map);
+		fav.setAttribute("map", first_map);
+		dislike.setAttribute("map", first_map);
+		
+		div.target = "_blank";
+		div.removeEventListener('mouseover', map_mouse_over);
+		div.addEventListener('mouseover', map_mouse_over);
+		div.removeEventListener('mouseout', map_mouse_out);
+		div.addEventListener('mouseout', map_mouse_out);
+		
+		// always load image for current/next
+		let img_url = "img/" + first_map + ".jpg";
+		if (div.id == "current_map" || div.id == "next_map") {
+			img.setAttribute("src", img_url);
+		} else {
+			if (g_reload_map_images || !img.src) {
+				img.setAttribute("loadUrl", img_url);
+				observeImage(img, g_intersection_observer);
+			}
+		}
 	});
+	
+	if (g_reload_map_images) {
+		console.log("Reloaded map images");
+	}
+	g_reload_map_images = false;
 	
 	update_map_metadata();
 }
@@ -1614,12 +1682,14 @@ function remove_old_player_states() {
 }
 
 let g_chat_cooldown_end = 0;
+let g_intersection_observer = null;
 
 // GPT image observing code
 function observeImage(img, observer) {
 	if (!img.hasAttribute('loadurl')) return;
 	observer.observe(img);
 }
+
 function isActuallyVisible(el) {
 	let current = el;
 	while (current && current !== document) {
@@ -1631,11 +1701,12 @@ function isActuallyVisible(el) {
 	}
 	return true;
 }
+
 function lazy_image_loader_setup() {
 	const container = document.getElementById('upcoming_maps_grid');
 	
 	// IntersectionObserver for lazy loading
-	const io = new IntersectionObserver(
+	g_intersection_observer = new IntersectionObserver(
 	  (entries, obs) => {
 		for (const entry of entries) {
 		  if (entry.isIntersecting) {
@@ -1659,24 +1730,6 @@ function lazy_image_loader_setup() {
 		threshold: 0.1,
 	  }
 	);
-
-	// Observe existing images
-	container.querySelectorAll('img[loadurl]').forEach(img => observeImage(img, io));
-
-	// MutationObserver for dynamically added images
-	const mo = new MutationObserver(mutations => {
-	  for (const m of mutations) {
-		for (const node of m.addedNodes) {
-		  if (node.tagName === 'IMG' && node.hasAttribute('loadurl')) {
-			observeImage(node, io);
-		  } else if (node.querySelectorAll) {
-			node.querySelectorAll('img[loadurl]').forEach(img => observeImage(img, io));
-		  }
-		}
-	  }
-	});
-
-	mo.observe(container, { childList: true, subtree: true });
 }
 
 const imageCache = [];
@@ -1985,6 +2038,8 @@ function createWebSocket() {
 		g_socket.send(connect_msg);
 	});
 
+	let g_upcoming_interval = null;
+
 	// Handle incoming messages
 	g_socket.addEventListener('message', async function(event) {
 		let arrayBuffer = await event.data.arrayBuffer();
@@ -2048,7 +2103,22 @@ function createWebSocket() {
 			parse_player_state(view, true);
 		}
 		else if (msgType == MESSAGE_TYPE.WEBMSG_UPCOMING_MAPS) {
-			parse_upcoming_maps(view, true);
+			if (g_map_cycle.length) {
+				parse_upcoming_maps(view, true);
+			} else {
+				clearInterval(g_upcoming_interval);
+				console.log("Waiting for map list before parsing upcoming maps");
+				
+				g_upcoming_interval = setInterval(() => {
+					if (g_map_cycle.length) {
+						parse_upcoming_maps(view, true);
+						clearInterval(g_upcoming_interval);
+						g_upcoming_interval = null;
+					} else {
+						console.log("Still waiting for map list...");
+					}
+				}, 200);
+			}
 		}
 		else if (msgType == MESSAGE_TYPE.WEBMSG_CLIENT_DETAILS) {
 			parse_client_details(view, true);
