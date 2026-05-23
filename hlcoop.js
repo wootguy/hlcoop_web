@@ -683,6 +683,9 @@ function update_web_client_info() {
 		if (id > 1) {
 			if (id in g_player_states) {
 				name = g_player_states[id].name;
+				if (!name.length) {
+					name = "Player";
+				}
 			}		
 		} else {
 			anonCounter += 1;
