@@ -1320,7 +1320,7 @@ function update_map_data() {
 			like.setAttribute("rating", "1");
 			like.addEventListener("click", rate_map);
 			like.title= "Rating this map positively will raise its chance of being picked while you're on the server."
-			+ "\n\nYou can configure the cooldown for your liked maps in your profile. By default, you will play a liked map no more than once per day.";
+			+ "\n\nYou can configure the cooldown for your liked maps in your profile. By default, liked maps can't be replayed until 1 day has passed. This cooldown applies to each map individually.";
 			
 			let fav = document.createElement('img');
 			fav.classList.add("fav_button");
@@ -1418,7 +1418,7 @@ function update_map_data() {
 		like.setAttribute("rating", "1");
 		like.addEventListener("click", rate_map);
 		like.title= "Rating this map positively will raise its chance of being picked while you're on the server."
-		+ "\n\nYou can configure the cooldown for your liked maps in your profile. By default, you will play a liked map no more than once per day.";
+		+ "\n\nYou can configure the cooldown for your liked maps in your profile. By default, liked maps can't be replayed until 1 day has passed. This cooldown applies to each map individually.";
 		
 		let fav = div.getElementsByClassName("fav_button")[0];
 		fav.classList.add("fav_button");
@@ -1747,7 +1747,7 @@ async function setup() {
 	
 	// prevent constantly reloading icons as the table refreshes, preventing them from finishing on slow connections
 	preload_image("icon/hot.png");
-	preload_image("icon/frosty.png");
+	preload_image("icon/rusty.png");
 	preload_image("icon/rank_1.png");
 	preload_image("icon/rank_2.png");
 	preload_image("icon/rank_3.png");

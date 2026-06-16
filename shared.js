@@ -24,8 +24,8 @@ function set_badge(id, recentTime, rankDiv, mapsPlayed, mapsMultiPlayed, totalMa
 		rankDiv.src = "icon/newb.png";
 	}
 	else if (recentTime > 0 && recentTime < 60*60) {
-		rankDiv.title = "FROSTY - Less than 1 hour of playtime in the past 2 weeks.";
-		rankDiv.src = "icon/frosty.png";
+		rankDiv.title = "RUSTY - Less than 1 hour of playtime in the past 2 weeks.";
+		rankDiv.src = "icon/rusty.png";
 	}
 	else if (mapsMultiPlayed >= totalMaps) {
 		rankDiv.title = "AUTIST - Played every map 10+ times";
