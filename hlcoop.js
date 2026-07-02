@@ -78,6 +78,7 @@ const WEBMSG_CHAT_TYPE_BAD_GUY = 1;
 const WEBMSG_CHAT_TYPE_WEB_USER = 2;
 const WEBMSG_CHAT_TYPE_SERVER = 3;
 const WEBMSG_CHAT_TYPE_GAME = 4;
+const WEBMSG_CHAT_TYPE_WEB_CLIENTS = 5;
 const WEBMSG_CHAT_TYPE_ERROR = 255;
 const WEBMSG_CHAT_TYPE_GREEN = 256;
 
@@ -564,6 +565,9 @@ function add_message(steamid64, ipStr, name, msg, time, msgType) {
 		chat_name.textContent = "(WEB) " + chat_name.textContent;
 		chat_name.classList.add("web_chat");
 	}
+	if (msgType == WEBMSG_CHAT_TYPE_WEB_CLIENTS) {
+		chat_name.classList.add("web_chat");
+	}
 	if (msgType == WEBMSG_CHAT_TYPE_BAD_GUY) {
 		chat_name.classList.add("bad_guy");
 	}
@@ -577,6 +581,9 @@ function add_message(steamid64, ipStr, name, msg, time, msgType) {
 	}
 	if (msgType == WEBMSG_CHAT_TYPE_SERVER) {
 		chat_msg.title = "This message was sent by the server"
+	}
+	if (msgType == WEBMSG_CHAT_TYPE_WEB_CLIENTS) {
+		chat_msg.title = "This message is visible only to web clients."
 	}
 	if (msgType == WEBMSG_CHAT_TYPE_ERROR) {
 		chat_msg.classList.add("red");
@@ -860,6 +867,7 @@ function parse_auth(view) {
 		login_but.href = "";
 		
 		document.getElementById('login_but').addEventListener('click', logout);
+		document.getElementById('chat_login_notice').style.display = "none";
 		
 		g_steamid = steamid64;
 	}
@@ -916,6 +924,11 @@ function finish_logout() {
 	setup_openid_link();
 	
 	update_map_ratings();
+	
+	document.getElementById('chat_login_notice').style.display = "block";
+	document.querySelectorAll('.chat_message').forEach(element => {
+		element.remove();
+	});
 }
 
 
@@ -1389,7 +1402,7 @@ function update_map_data() {
 		let title = div.getElementsByClassName("map_title")[0]; 
 		title.title = map;
 		title.textContent = map;
-		if (map.length > 18) {
+		if (map && map.length > 18) {
 			title.classList.add("longtext");
 		}
 		

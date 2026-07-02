@@ -551,7 +551,7 @@
 			#upcoming_maps.all_maps .map_container {
 				display: inline-block;
 			}
-			#empty_notice {
+			#empty_notice, #chat_login_notice {
 				position: absolute;
 				top: 50%;
 				z-index: 1;
@@ -870,6 +870,9 @@
 					</div>
 					<!--<div id="player_list">test stuff</div>-->
 					<div id="chat_content">
+						<div id="chat_login_notice">
+							Sign in to see chat
+						</div>
 						<div id="chat_box"></div>
 						<div id="send_message_container">
 							<input id="send_message" type="text" placeholder="Send message..." maxlength="123" title="Type here and press Enter to send a chat message to the server">
