@@ -4,43 +4,9 @@
 		<link rel="shortcut icon" type="image/x-icon" href="icon/favicon.ico">
 		<script type="text/javascript" src="shared.js"></script>
 		<script type="text/javascript" src="hlcoop.js"></script>
+		<link rel="stylesheet" href="common.css">
 		<link rel="stylesheet" href="player_profile.css">
 		<style>
-			html, body {
-				min-height: 100%;
-				height: 100%;
-			}
-			body {
-				margin: 0;
-				background: #181818;
-				font-family: "Trebuchet MS", Trebuchet, Tahoma, Arial, Helvetica, sans-serif;
-				color: #ddd;
-			}
-			
-			#server_name {
-				margin: 0 0;
-				padding: 10px 0 0 0;
-				text-align: center;
-				height: 40px;
-			}
-			#server_link_container {
-				text-align: center;
-			}
-			.server_link {
-				display: inline-block;
-				margin: 0 10px;
-				color: #FFAA00;
-				font-family: monospace;
-				font-size: 14px;
-				text-decoration: none;
-			}
-			.server_link:hover {
-				text-decoration: underline;
-			}
-			.server_link:visited {
-				color: #FFAA00;
-			}
-			
 			#player_list_container {
 				width: 450px;
 				margin: 0 auto;
@@ -828,7 +794,14 @@
 			<div id="server_link_container">
 				<a class="server_link" href="/hlcoop_web/">Dashboard</a>
 				<a class="server_link" target="_blank" href="steam://connect/207.148.12.159:27016">connect 207.148.12.159:27016</a>
-				<a class="server_link" href="stats.html">Player stats</a>
+				<span class="server_link dropdown">
+					<span class="dropdown-title">Statistics</span>
+					<div id="stats_dropdown" class="hidden">
+						<hr>
+						<a class="server_link" href="stats.html">Players</a>
+						<a class="server_link" href="map_stats.html">Maps</a>
+					</div>
+				</span>
 			</div>
 			<a id="login_but" class="">
 				<img id="login_icon" src="icon/steam_icon_logo.svg"/>

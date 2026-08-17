@@ -402,6 +402,8 @@ async function setup() {
 	document.getElementsByClassName("sort-recent")[0].addEventListener("click", sort_recent);
 	document.getElementsByClassName("sort-first-seen")[0].addEventListener("click", sort_first_seen);
 	document.getElementsByClassName("sort-last-seen")[0].addEventListener("click", sort_last_seen);
+	
+	init_common();
 }
 
 function ready(fn) {

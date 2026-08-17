@@ -1629,26 +1629,6 @@ function update_map_timer() {
 	
 }
 
-async function downloadJson(url) {
-	try {
-		console.log("Downloading: " + url);
-		const response = await fetch(url);
-		
-		// Check if the response is OK
-		if (!response.ok) {
-			throw new Error(`HTTP error! Status: ${response.status}`);
-		}
-		
-		// Parse the response as JSON
-		const data = await response.json();
-		
-		// Log or return the JSON object
-		return data;
-	} catch (error) {
-		console.error('Error downloading or parsing JSON:', error);
-	}
-}
-
 function setup_openid_link() {
 	let return_to = window.location.origin + window.location.pathname;	
 	let openid_link = "https://steamcommunity.com/openid/login?openid.ns=http://specs.openid.net/auth/2.0&openid.mode=checkid_setup&openid.return_to=" + return_to + "&openid.realm=" + return_to +"&openid.identity=http://specs.openid.net/auth/2.0/identifier_select&openid.claimed_id=http://specs.openid.net/auth/2.0/identifier_select";
@@ -1948,6 +1928,8 @@ async function setup() {
 		handle_resize();
 		update_map_data();
 	});
+	
+	init_common();
 }
 
 function action_denied_popup(reason, errorCode) {

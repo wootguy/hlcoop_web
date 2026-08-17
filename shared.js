@@ -297,6 +297,39 @@ function open_player_profile(event) {
 	}
 }
 
+async function downloadJson(url) {
+	try {
+		console.log("Downloading: " + url);
+		const response = await fetch(url);
+		
+		// Check if the response is OK
+		if (!response.ok) {
+			throw new Error(`HTTP error! Status: ${response.status}`);
+		}
+		
+		// Parse the response as JSON
+		const data = await response.json();
+		
+		// Log or return the JSON object
+		return data;
+	} catch (error) {
+		console.error('Error downloading or parsing JSON:', error);
+	}
+}
+
+function init_common() {
+	let dropdown = document.getElementsByClassName("dropdown")[0];
+	let dropdown_menu = document.getElementById("stats_dropdown");
+	dropdown.addEventListener('click', () => {
+		dropdown_menu.classList.toggle('hidden');
+	});
+	
+	document.addEventListener('click', (event) => {
+		if (!dropdown.contains(event.target)) {
+			dropdown_menu.classList.add('hidden');
+		}
+	});
+}
 
 const g_languages = {
   "ab": "Abkhaz",

@@ -1,0 +1,122 @@
+.page-num-container {
+	text-align: center;
+	color: #eee;
+	margin-top: 10px;
+	margin-bottom: 10px;
+	user-select: none;
+	cursor: default;
+	position: relative;
+}
+.page-prev, .page-next, .page-first, .page-last {
+	border-top: 10px solid transparent;
+	border-bottom: 10px solid transparent;
+	width: 0; 
+	height: 0; 
+	vertical-align: middle;
+	display: inline-block;
+}
+.page-prev, .page-first {
+	border-right: 10px solid #eee;
+}
+.page-next, .page-last {
+	border-left: 10px solid #eee;
+}
+.page-close:hover > .page-prev , .page-far:hover > .page-first {
+	border-right: 10px solid #ccc;
+}
+.page-close:hover > .page-next, .page-far:hover > .page-last {
+	border-left: 10px solid #ccc;
+}
+.page-close:active > .page-prev, .page-far:active > .page-first {
+	border-right: 10px solid #fff;
+}
+.page-close:active > .page-next, .page-far:active > .page-last {
+	border-left: 10px solid #fff;
+}
+.page-far:hover  > .page-bar {
+	background: #ccc;
+}
+.page-far:active  > .page-bar {
+	background: #fff;
+}
+.page-far, .page-close {
+	cursor: pointer;
+	padding: 3px 10px;
+	cursor: pointer;
+}
+.page-bar {
+	background: #eee;
+	width: 3px;
+	height: 20px;
+	display: inline-block;
+	vertical-align: middle;
+	margin: 0 3px;
+}
+.page-num-text {
+	vertical-align: middle;
+	display: inline-block;
+	width: 150px;
+}
+
+#results_per_page {
+	width: 60px;
+}
+.results-per-page-container {
+	display: inline-block;
+	position:absolute;
+	right: 40px;
+}
+#results_per_page {
+	width: 60px;
+}
+.active-players-container {
+	display: inline-block;
+	position:absolute;
+	left: 40px;
+}
+
+.sort {
+	cursor: pointer;
+}
+.sort .dsc, .sort .asc {
+	display: none;
+}
+.sort.dsc .dsc, .sort.asc .asc {
+	display: inline;
+}
+
+.footer {
+	text-align: center;
+	padding: 10px;
+	font-size: 12px;
+}
+
+.stats_container {
+	max-width: 850px;
+	margin: 0 auto;
+}
+
+#stats_table {
+	width: 100%;
+	border: none;
+	border-collapse: collapse;
+}
+#stats_table th {
+	text-align: left;
+	background: #2e1f00;
+}
+#stats_table tr:nth-child(odd) {
+	background: #111;
+}
+#stats_table tr:nth-child(even) {
+	background: #222;
+}
+#stats_table td {
+	height: 24px;
+}
+#stats_table tr:hover {
+	background: #333 !important;
+}
+#stats_table td div:hover {
+	color: #D2E6FB;
+}
