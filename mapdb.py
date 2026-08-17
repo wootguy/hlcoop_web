@@ -138,8 +138,16 @@ for line in mapcycle:
 			
 	if bsp not in ignore_missing:
 		print("No link found for '%s'" % bsp)
+	
+	item = {
+		"maps": maps,
+		"link": ""
+	}
+	mapdb.append(item)
 
 for item in mapdb:
+	if not item["link"]:
+		continue
 	img_name = item["maps"][0] + ".jpg"
 	download_map_image(item["link"], os.path.join("img", img_name), os.path.join("img_new", img_name))
 
