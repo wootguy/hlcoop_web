@@ -3,7 +3,6 @@
 // - iOS safari/firefox is missing a player in the table in hidden maps mode
 
 var g_socket;
-var g_fastdl_server_url = 'https://w00tguy.ddns.net/';
 var g_player_data = []; // players currently in the server
 var g_web_player_data = []; // web client info
 var g_player_states = {}; // extra player info and map stats by steam id
@@ -18,6 +17,7 @@ var g_map_data = {}; // information about each map (link)
 var g_web_clients = []; // list of steam ids
 var g_guest_names = [];
 var g_map_cycle = [];
+var g_chatsounds = new Set();
 var g_ip_info = {};
 var g_player_ips = {};
 var g_web_client_ips = {};
@@ -468,7 +468,7 @@ function refresh_player_table() {
 	document.getElementById('tab_title').textContent = "(" + g_player_data.length + "/32) " + g_current_map + " - " + g_server_name;	
 	
 	if (!g_wide_mode && oldRowCount != plist.rows.length) {
-		let chatbox = document.getElementById('chat_box');	
+		let chatbox = document.getElementById('chat_box_messages');	
 		chatbox.scrollTop = chatbox.scrollHeight;
 	}
 }
@@ -536,7 +536,7 @@ function parse_server_name(view) {
 }
 
 function add_message(steamid64, ipStr, name, msg, time, msgType) {
-	let chatbox = document.getElementById('chat_box');
+	let chatbox = document.getElementById('chat_box_messages');
 	const epsilon = 10;
 	let scrolledToBottom = chatbox.scrollTop + chatbox.clientHeight + epsilon >= chatbox.scrollHeight;
 	
@@ -573,17 +573,27 @@ function add_message(steamid64, ipStr, name, msg, time, msgType) {
 	}
 	
 	let chat_msg = document.createElement('span');
+	chat_msg.classList.add("chat_msg_content");
 	chat_msg.textContent = msg;
+	
+	let isImportant = true;
+	console.log("Important? ", msg);
 	
 	if (msgType == WEBMSG_CHAT_TYPE_GAME) {
 		chat_msg.classList.add("hud_msg");
-		chat_msg.title = "This message was sent by the map"
+		chat_msg.title = "This message was sent by the map";
+		isImportant = false;
 	}
 	if (msgType == WEBMSG_CHAT_TYPE_SERVER) {
-		chat_msg.title = "This message was sent by the server"
+		chat_msg.title = "This message was sent by the server";
+		isImportant = false;
 	}
 	if (msgType == WEBMSG_CHAT_TYPE_WEB_CLIENTS) {
-		chat_msg.title = "This message is visible only to web clients."
+		chat_msg.title = "This message is visible only to web clients.";
+		isImportant = false;
+		if (!document.getElementById("show_web_joins_button").checked) {
+			return;
+		}
 	}
 	if (msgType == WEBMSG_CHAT_TYPE_ERROR) {
 		chat_msg.classList.add("red");
@@ -593,6 +603,21 @@ function add_message(steamid64, ipStr, name, msg, time, msgType) {
 		chat_msg.classList.add("green");
 		chat_msg.title = "This message was sent by your web browser, and only to you";
 	}
+	
+	if (msgType == WEBMSG_CHAT_TYPE_NORMAL || msgType == WEBMSG_CHAT_TYPE_BAD_GUY || msgType == WEBMSG_CHAT_TYPE_WEB_USER) {
+		if (msg.startsWith("- ;name;") || msg.startsWith("* ;name;")) {
+			isImportant = false; // leave/join message or rename
+		}
+		else if (msg.startsWith(";name;: ")) {
+			let words = msg.substring(";name;: ".length).trim().toLowerCase();
+			if (g_chatsounds.has(words)) {
+				isImportant = false; // chat sound
+			}
+		}
+	}
+	
+	if (isImportant)
+		chat_container.classList.add("important");
 	
 	chat_msg.innerHTML = chat_msg.innerHTML.replace(";name;", chat_name.outerHTML);
 	
@@ -870,6 +895,13 @@ function parse_auth(view) {
 		document.getElementById('chat_login_notice').style.display = "none";
 		
 		g_steamid = steamid64;
+		
+		if (g_steamid == 76561197970806204n) {
+			// We do it live.
+			document.querySelectorAll('.chat_settings_option').forEach(el => {
+				el.classList.remove('hidden');
+			});
+		}
 	}
 }
 
@@ -1677,6 +1709,26 @@ function remove_old_player_states() {
 	});
 }
 
+function load_chat_settings() {	
+	if (document.getElementById("flip_layout_button").checked) {
+		document.getElementById("content").classList.add("flip");
+	} else {
+		document.getElementById("content").classList.remove("flip");
+	}
+	
+	if (document.getElementById("dim_chat_button").checked) {
+		document.getElementById("chat_box").classList.add("dim");
+	} else {
+		document.getElementById("chat_box").classList.remove("dim");
+	}
+	
+	if (document.getElementById("show_country_flags").checked) {
+		document.getElementById("content").classList.remove("noflags");
+	} else {
+		document.getElementById("content").classList.add("noflags");
+	}
+}
+
 let g_chat_cooldown_end = 0;
 let g_intersection_observer = null;
 
@@ -1735,8 +1787,25 @@ function preload_image(src) {
 	imageCache.push(preload);
 }
 
+async function load_chatsounds() {
+	
+	const url = g_fastdl_server_url + "files/chatsounds.txt?t=" + Date.now();
+	const res = await fetch(url);
+	const text = await res.text();
+	const lines = text.split(/\r?\n/);
+	
+	for (const line of lines) {
+		g_chatsounds.add(line.toLowerCase());
+	}
+	
+	console.log("Loaded " + g_chatsounds.size + " chatsounds");
+}
+
 async function setup() {
 	await load_shared_html();
+	await load_chatsounds();
+	
+	setInterval(load_chatsounds, 1000*60*60, -1);
 	
 	// prevent constantly reloading icons as the table refreshes, preventing them from finishing on slow connections
 	preload_image("icon/hot.png");
@@ -1928,6 +1997,38 @@ async function setup() {
 		handle_resize();
 		update_map_data();
 	});
+	
+	
+	let dropdown = document.getElementById("chat_settings_button");
+	let dropdown_menu = document.getElementById("chat_settings_menu");
+	dropdown.addEventListener('click', () => {
+		if (!dropdown_menu.classList.contains("hidden") && !dropdown_menu.contains(event.target)) {
+			dropdown_menu.classList.add('hidden');
+		} else {
+			dropdown_menu.classList.remove('hidden');
+		}
+	});
+	
+	document.addEventListener('click', (event) => {
+		if (!dropdown.contains(event.target)) {
+			dropdown_menu.classList.add('hidden');
+		}
+	});
+	
+	document.getElementById("flip_layout_button").addEventListener("click", load_chat_settings);
+	document.getElementById("dim_chat_button").addEventListener("click", load_chat_settings);
+	document.getElementById("show_web_joins_button").addEventListener("click", load_chat_settings);
+	document.getElementById("show_country_flags").addEventListener("click", load_chat_settings);
+	load_chat_settings();
+	
+	let debug_chat = false;
+	if (debug_chat) {
+		await fetch("fake_chat.html")
+		  .then(res => res.text())
+		  .then(html => {
+			document.getElementById("chat_box_messages").innerHTML = html;
+		});
+	}
 	
 	init_common();
 }

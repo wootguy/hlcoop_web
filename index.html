@@ -156,6 +156,26 @@
 				margin-top: 0px;
 			}
 			
+			#content.flip #content-container {
+				display: flex;
+				flex-direction: row-reverse;
+			}
+			#content.wide.flip #player_list_container {
+				flex-direction: row;
+			}
+			#content.wide.flip #player_list_container > #chat_content {
+				padding-left: 10px;
+				padding-right: 0px;
+			}
+			#content.wide.flip #map_list_container {
+				margin-right: 10px;
+				margin-left: 0;
+			}
+			
+			#content.noflags .cnflag {
+				display: none;
+			}
+			
 			.player_list {
 				width: 100%;
 				border-collapse: collapse;
@@ -579,6 +599,7 @@
 				overflow: auto; 
 				margin-top: 20px;
 				padding-bottom: 5px;
+				position: relative;
 			}
 			.chat_message .player_name {
 				text-decoration: none;
@@ -616,6 +637,68 @@
 			}
 			.chat_time:hover {
 				color: #bbb;
+			}
+			
+			#chat_box {
+				overflow: hidden;
+			}
+			#chat_box_messages {
+				overflow-y: scroll;
+				height: 100%;
+			}
+			
+			#chat_box.dim .chat_message:not(.important) {
+				opacity: 0.3;
+			}
+			
+			#chat_settings_button {
+				position: absolute;
+				top: 0;
+				right: 20px;
+				width: 24px;
+				height: 24px;
+				border: 1px solid #888;
+				border-radius: 3px;
+				background: #000;
+				cursor: pointer;
+				z-index: 10;
+			}
+			#chat_settings_button:hover {
+				background: #333;
+			}
+			#chat_settings_button img {
+				width: 100%;
+			}
+			#chat_settings_menu {
+				border: 1px solid;
+				width: 200px;
+				position: absolute;
+				top: 26px;
+				right: 0;
+				z-index: 10;
+				padding: 5px;
+				background: black;
+				box-shadow: 0 10px 20px rgba(0, 0, 0, 1.0);
+			}
+			#chat_settings_menu div {
+				position: relative;
+			}
+			.chat_settings_option {
+				padding: 2px 0;
+			}
+			.chat_settings_option, .chat_settings_option label {
+				display: inline-block;
+				width: 100%;
+			}
+			.chat_settings_option, .chat_settings_option label, .chat_settings_option input {
+				cursor: pointer;
+			}
+			.chat_settings_option input {
+				position: absolute;
+				right: 0;
+			}
+			.chat_settings_option:hover {
+				background: #333;
 			}
 			
 			#login_but {
@@ -846,7 +929,28 @@
 						<div id="chat_login_notice">
 							Sign in to see chat
 						</div>
-						<div id="chat_box"></div>
+						<div id="chat_box">
+							<div id="chat_settings_button">
+								<img src="icon/cog.png"/>
+								<div id="chat_settings_menu" class="hidden">
+									<div class="chat_settings_option">
+										<label title="Move chat to the opposite side of the screen">Flip layout <input id="flip_layout_button" type="checkbox"></label>
+									</div>
+									<div class="chat_settings_option">
+										<label title="Dim server messages and chat sound commands">Dim unimportant messages<input id="dim_chat_button" type="checkbox"></label>
+									</div>
+									<div class="chat_settings_option">
+										<label title="Display messages for web client logins">Log web joins<input id="show_web_joins_button" type="checkbox"></label>
+									</div>
+									<div class="chat_settings_option hidden">
+										<label title="Display country flags by player names">Show country flags<input id="show_country_flags" type="checkbox"></label>
+									</div>
+								</div>
+							</div>
+							<div id="chat_box_messages">
+							
+							</div>
+						</div>
 						<div id="send_message_container">
 							<input id="send_message" type="text" placeholder="Send message..." maxlength="123" title="Type here and press Enter to send a chat message to the server">
 							<div id="cooldown-text" class="hidden">Wait <span id="cooldown-timer">X</span> seconds</div>
