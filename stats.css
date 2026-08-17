@@ -120,3 +120,7 @@
 #stats_table td div:hover {
 	color: #D2E6FB;
 }
+
+.search-bar-container {
+	text-align: center;
+}

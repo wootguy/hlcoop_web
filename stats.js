@@ -239,6 +239,7 @@ function sort_ids() {
 
 function filter_ids() {
 	let hide_inactive = document.getElementById('filter_active').checked;
+	let searchText = document.getElementById("search_bar").value.toLowerCase();
 	
 	g_filtered_ids = [];
 	for (let i = 0; i < g_player_ids.length; i++) {
@@ -248,10 +249,29 @@ function filter_ids() {
 			continue;
 		}
 		
+		let matchesAnyAlias = true;
+		if (searchText.length) {
+			matchesAnyAlias = dat.name.toLowerCase().includes(searchText);
+			for (let k = 0; k < dat.aliases.length; k++) {
+				if (dat.aliases[k].name && dat.aliases[k].name.toLowerCase().includes(searchText)) {
+					matchesAnyAlias = true;
+					break;
+				}
+			}
+		}
+		if (!matchesAnyAlias) {
+			continue;
+		}
+		
 		g_filtered_ids.push(g_player_ids[i]);
 	}
 	
 	sort_ids();
+}
+
+function search_ids() {
+	filter_ids();
+	first_page();
 }
 
 function update_stat_table() {
@@ -392,6 +412,8 @@ async function setup() {
 	
 	filter_ids();
 	first_page();
+	
+	document.getElementById("search_bar").addEventListener('input', search_ids);
 	
 	document.getElementsByClassName("page-next-container")[0].addEventListener("click", next_page);
 	document.getElementsByClassName("page-prev-container")[0].addEventListener("click", prev_page);

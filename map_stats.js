@@ -1,4 +1,5 @@
 var g_map_stats = [];
+var g_filtered_map_stats = [];
 var g_map_info = {};
 var g_server_name = "Half-Life Co-op";
 var g_update_time = 0;
@@ -157,14 +158,29 @@ function sort_ids() {
 	}
 }
 
+function search_filter() {
+	let searchText = document.getElementById("search_bar").value.toLowerCase();
+	
+	g_filtered_map_stats = [];
+	for (let i = 0; i < g_map_stats.length; i++) {
+		if (searchText.length && !g_map_stats[i].name.toLowerCase().includes(searchText)) {
+			continue;
+		}
+
+		g_filtered_map_stats.push(i);
+	}
+	
+	first_page();
+}
+
 function update_stat_table() {
 	let table = document.getElementById('stats_table').querySelector('tbody');	
 	
 	table.innerHTML = "";
 	let today = Math.floor(Date.now() / 1000);
 	
-	for (let i = result_offset; i < g_map_stats.length && i < result_offset + results_per_page; i++) {
-		let dat = g_map_stats[i];
+	for (let i = result_offset; i < g_filtered_map_stats.length && i < result_offset + results_per_page; i++) {
+		let dat = g_map_stats[g_filtered_map_stats[i]];
 		
 		let row = table.insertRow(table.rows.length);
 		row.innerHTML = "<tr><td></td><td><a target=\"_blank\" class=\"map-link\"></a></td><td><span class=\"rating\"></span><span class=\"rate-count\"></span></td><td><span class=\"winrate\"></span><span class=\"play-count\"></span></td><td></td><td></td></tr>";
@@ -272,8 +288,10 @@ async function setup() {
 		first_page();
 	});
 	
-	first_page();
+	search_filter();
 	sort_rating();
+	
+	document.getElementById("search_bar").addEventListener('input', search_filter);
 	
 	document.getElementsByClassName("page-next-container")[0].addEventListener("click", next_page);
 	document.getElementsByClassName("page-prev-container")[0].addEventListener("click", prev_page);
