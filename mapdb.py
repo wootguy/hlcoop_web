@@ -61,12 +61,18 @@ def download_map_image(mapname, checkpath, outpath):
 		c.close()
 
 json_dat = {}
+bsp_links = {}
 mapcycle = []
 manual_links = {}
 ignore_missing = set({})
 
+# copy latest from scmapdb script
 with open('pool.json') as f:
 	json_dat = json.loads(f.read())
+	
+# generate this with 'scmapdb.py dump_links'
+with open('bsp_links.json') as f:
+	bsp_links = json.loads(f.read())
 	
 with open("mapcycle.txt") as f:
 	mapcycle = f.read().splitlines()
@@ -89,6 +95,10 @@ mapdb = []
 for line in mapcycle:
 	maps = line.split()
 	bsp = maps[0] + ".bsp"
+	mapname = bsp.replace(".bsp", "")
+	
+	if bsp.startswith("//"):
+		continue # ignore comments
 	
 	if maps[0] in manual_links:
 		item = {
@@ -96,23 +106,38 @@ for line in mapcycle:
 			"link": manual_links[maps[0]] # skip first dash
 		}
 		mapdb.append(item)
-	elif bsp in maps_dir:
+		continue
+		
+	if mapname in bsp_links:
+		refs = bsp_links[mapname]
+		
+		if len(refs) > 1:
+			print("%s matches multiple maps in bsp_links.json! %s" % (mapname, refs))
+			continue
+		elif len(refs) == 1:
+			item = {
+				"maps": maps,
+				"link": refs[0]
+			}
+			mapdb.append(item)
+			continue
+	
+	if bsp in maps_dir:
 		refs = maps_dir[bsp]["refs"]
 		
 		if len(refs) > 1:
-			print("%s matches multiple maps! %s" % (bsp, refs))
+			print("%s matches multiple maps in pool.json! %s" % (bsp, refs))
+			continue
 		elif len(refs) == 1:
 			item = {
 				"maps": maps,
 				"link": refs[0][1:] # skip first dash
 			}
 			mapdb.append(item)
-		else:
-			if bsp not in ignore_missing:
-				print("No link found for '%s'" % bsp)
-	else:
-		if bsp not in ignore_missing:
-			print("No link found for %s" % bsp)
+			continue
+			
+	if bsp not in ignore_missing:
+		print("No link found for '%s'" % bsp)
 
 for item in mapdb:
 	img_name = item["maps"][0] + ".jpg"
