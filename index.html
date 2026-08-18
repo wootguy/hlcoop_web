@@ -172,7 +172,11 @@
 				margin-left: 0;
 			}
 			
+			
 			#content.noflags .cnflag {
+				display: none;
+			}
+			#content.noavatars .avatar_container {
 				display: none;
 			}
 			
@@ -815,6 +819,25 @@
 				margin-right: 5px;
 				cursor: pointer;
 			}
+			.avatar_container {
+				position: relative;
+				display: inline-block;
+				width: 16px;
+				height: 12px;
+				margin-right: 5px;
+			}
+			.avatar {
+				position: absolute;
+				height: 16px;
+				cursor: pointer;
+			}
+			#player_table_container .avatar_container {
+				width: 20px;
+			}
+			#player_table_container .avatar {
+				top: -5px;
+				height: 20px;
+			}
 			
 			#map_timer {
 				position: absolute;
@@ -941,6 +964,9 @@
 									</div>
 									<div class="chat_settings_option">
 										<label title="Display messages for web client logins">Log web joins<input id="show_web_joins_button" type="checkbox"></label>
+									</div>
+									<div class="chat_settings_option">
+										<label title="Display steam avatars by player names">Show steam avatars<input id="show_avatars" type="checkbox" checked></label>
 									</div>
 									<div class="chat_settings_option hidden">
 										<label title="Display country flags by player names">Show country flags<input id="show_country_flags" type="checkbox"></label>

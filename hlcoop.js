@@ -39,6 +39,7 @@ var g_wide_mode = false;
 var g_hide_maps = false;
 var g_max_player_list_rows = 128; // TODO: send web client limit from server
 var g_reload_map_images = true;
+var g_load_avatar_timeout = null;
 
 var debug_logging = false;
 
@@ -249,7 +250,7 @@ function update_web_player_count() {
 	for (let i = 0; i < g_web_player_data.length; i++) {
 		let dat = g_web_player_data[i];
 		if (dat.steamid64 == 0) {
-			wcountStr = "" + (g_web_player_data.length-1) + "+";
+			wcountStr = "" + i + "+";
 			break;
 		}
 	}
@@ -265,16 +266,29 @@ function set_flag(flag, ip, ipinfo) {
 	flag.setAttribute("ip", ip);
 }
 
+function set_avatar(avatar, state, steamid64) {
+	preload_image("https://avatars.steamstatic.com/" + state.steamAvatar);
+	avatar.src = "https://avatars.steamstatic.com/" + state.steamAvatar;
+	avatar.title = state.steamName + "\n" + steamid64_to_steamid(steamid64);
+	avatar.setAttribute("steamid64", steamid64);
+	
+	avatar.classList.remove("need_avatar");
+}
+
 function click_player_flag(div) {
 	let clickedIp = event.currentTarget.getAttribute("ip");
 	window.open("https://ipinfo.io/" + clickedIp, "_blank");
+}
+
+function click_steam_avatar(div) {
+	window.open("https://steamcommunity.com/profiles/" + div.target.getAttribute("steamid64"), "_blank");
 }
 
 function refresh_player_table_single(plist, player_data, ip_data) {	
 	// allocate all rows that will ever be needed (max of 128 web clients, so use that as the limit)
 	for (let i = plist.rows.length; i < g_max_player_list_rows; i++) {
 		let row = plist.insertRow(plist.rows.length);
-		row.innerHTML = "<tr><td><img class=\"cnflag\"/><div></div><img class=\"rank\"/></td><td></td><td></td><td></td><td></td><td><span class=\"client_text\"></span><img class=\"client_icon superhidden\"></img></td><td></td><td></td><td></td><td></td><td></td></tr>";
+		row.innerHTML = "<tr><td><img class=\"cnflag\"/><span class=\"avatar_container\"><img class=\"avatar\"/></span><div></div><img class=\"rank\"/></td><td></td><td></td><td></td><td></td><td><span class=\"client_text\"></span><img class=\"client_icon superhidden\"></img></td><td></td><td></td><td></td><td></td><td></td></tr>";
 	}
 	
 	// remove extra rows
@@ -294,6 +308,7 @@ function refresh_player_table_single(plist, player_data, ip_data) {
 		let row = plist.rows[i];
 		let rank = row.cells[0].getElementsByClassName('rank')[0];
 		let flag = row.cells[0].getElementsByClassName('cnflag')[0];
+		let avatar = row.cells[0].getElementsByClassName('avatar')[0];
 		let cl_text = row.cells[5].getElementsByClassName('client_text')[0];
 		let cl_icon = row.cells[5].getElementsByClassName('client_icon')[0];
 		let name = row.cells[0].getElementsByTagName('div')[0];
@@ -302,9 +317,16 @@ function refresh_player_table_single(plist, player_data, ip_data) {
 		let mapsPlayed = 0;
 		let mapMutliPlayed = 0;
 		
-		if (state) {
+		if (state && state.steamAvatar) {
 			mapsPlayed = state.mapsPlayed;
 			mapMutliPlayed = state.mapsMultiplayed;
+			set_avatar(avatar, state, dat.steamid64);
+			
+			avatar.removeEventListener('click', click_steam_avatar);
+			avatar.addEventListener('click', click_steam_avatar);
+			avatar.classList.remove("superhidden");
+		} else {
+			avatar.classList.add("superhidden");
 		}
 		
 		//console.log("map plays for " + dat.name + " is " + mapsPlayed + " / " + g_map_cycle.length);
@@ -577,7 +599,7 @@ function add_message(steamid64, ipStr, name, msg, time, msgType) {
 	chat_msg.textContent = msg;
 	
 	let isImportant = true;
-	console.log("Important? ", msg);
+	//console.log("Important? ", msg);
 	
 	if (msgType == WEBMSG_CHAT_TYPE_GAME) {
 		chat_msg.classList.add("hud_msg");
@@ -610,8 +632,8 @@ function add_message(steamid64, ipStr, name, msg, time, msgType) {
 		}
 		else if (msg.startsWith(";name;: ")) {
 			let words = msg.substring(";name;: ".length).trim().toLowerCase();
-			if (g_chatsounds.has(words)) {
-				isImportant = false; // chat sound
+			if (g_chatsounds.has(words) || words == '.') {
+				isImportant = false; // chat sound or stop sound command
 			}
 		}
 	}
@@ -642,6 +664,26 @@ function add_message(steamid64, ipStr, name, msg, time, msgType) {
 		chat_flag.addEventListener('click', click_player_flag);
 		
 		chat_container.appendChild(chat_flag);
+	}
+	
+	if (steamid64 > 1) {
+		let chat_avatar_container = document.createElement('span');
+		chat_avatar_container.classList.add("avatar_container");
+		
+		let chat_avatar = document.createElement('img');
+		chat_avatar.classList.add("avatar");
+		chat_avatar.setAttribute("steamid64", steamid64);
+		
+		let state = g_player_states[steamid64];
+		if (state && state.steamAvatar) {
+			set_avatar(chat_avatar, state, steamid64);
+		} else {
+			chat_avatar.classList.add("need_avatar");
+		}
+		chat_avatar.addEventListener('click', click_steam_avatar);
+		
+		chat_avatar_container.appendChild(chat_avatar);
+		chat_container.appendChild(chat_avatar_container);
 	}
 	
 	chat_container.appendChild(chat_msg);
@@ -1002,6 +1044,17 @@ function handle_img_error(event) {
     event.target.onerror = null; // Prevent infinite loop if the fallback also fails
 }
 
+function load_new_avatars() {
+	document.querySelectorAll('.need_avatar').forEach(el => {
+		let steamid64 = el.getAttribute("steamid64");
+		
+		let state = g_player_states[steamid64];
+		if (state && state.steamAvatar) {
+			set_avatar(el, state, steamid64);
+		}
+	});
+}
+
 function parse_player_state(view) {
 	let offset = 1; // skip message type byte
 
@@ -1127,6 +1180,15 @@ function parse_player_state(view) {
 	
 	update_web_client_info();
 	update_map_metadata();
+	
+	if (g_load_avatar_timeout !== null) {
+        clearTimeout(g_load_avatar_timeout);
+    }
+
+    g_load_avatar_timeout = setTimeout(() => {
+        load_new_avatars();
+        timeoutId = null;
+    }, 100);
 }
 
 function parse_upcoming_maps(view) {
@@ -1727,6 +1789,12 @@ function load_chat_settings() {
 	} else {
 		document.getElementById("content").classList.add("noflags");
 	}
+	
+	if (document.getElementById("show_avatars").checked) {
+		document.getElementById("content").classList.remove("noavatars");
+	} else {
+		document.getElementById("content").classList.add("noavatars");
+	}
 }
 
 let g_chat_cooldown_end = 0;
@@ -1780,14 +1848,25 @@ function lazy_image_loader_setup() {
 	);
 }
 
+const cachedImages = new Set();
 const imageCache = [];
 function preload_image(src) {
+	if (cachedImages.has(src)) {
+		return;
+	}
+	
+	cachedImages.add(src);
+	
 	const preload = new Image();
 	preload.src = src;
 	imageCache.push(preload);
 }
 
 async function load_chatsounds() {
+	if (window.location.href.includes('localhost')) {
+		console.log("not loading chatsounds on local test server");
+		return;
+	}
 	
 	const url = g_fastdl_server_url + "files/chatsounds.txt?t=" + Date.now();
 	const res = await fetch(url);
@@ -2019,6 +2098,7 @@ async function setup() {
 	document.getElementById("dim_chat_button").addEventListener("click", load_chat_settings);
 	document.getElementById("show_web_joins_button").addEventListener("click", load_chat_settings);
 	document.getElementById("show_country_flags").addEventListener("click", load_chat_settings);
+	document.getElementById("show_avatars").addEventListener("click", load_chat_settings);
 	load_chat_settings();
 	
 	let debug_chat = false;
