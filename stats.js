@@ -112,104 +112,47 @@ function last_page() {
 	load_page();
 }
 
-function sort_total() {
-	let sort_total = document.getElementsByClassName("sort-total")[0];
-	let sort_recent = document.getElementsByClassName("sort-recent")[0];
-	let sort_first_seen = document.getElementsByClassName("sort-first-seen")[0];
-	let sort_last_seen = document.getElementsByClassName("sort-last-seen")[0];
+function sort_generic(name) {
+	let all_sorts = [
+		document.getElementsByClassName("sort-total")[0],
+		document.getElementsByClassName("sort-recent")[0],
+		document.getElementsByClassName("sort-first-seen")[0],
+		document.getElementsByClassName("sort-last-seen")[0],
+	];
 	
-	sort_recent.classList.remove("asc");
-	sort_recent.classList.remove("dsc");
-	sort_first_seen.classList.remove("asc");
-	sort_first_seen.classList.remove("dsc");
-	sort_last_seen.classList.remove("asc");
-	sort_last_seen.classList.remove("dsc");
-	
-	if (sort_total.classList.contains("asc")) {
-		sort_total.classList.remove("asc");
-		sort_total.classList.add("dsc");
-	} else {
-		sort_total.classList.remove("dsc");
-		sort_total.classList.add("asc");
+	for (let i = 0; i < all_sorts.length; i++) {
+		if (all_sorts[i].classList.contains(name)) {
+			if (all_sorts[i].classList.contains("dsc")) {
+				all_sorts[i].classList.remove("dsc");
+				all_sorts[i].classList.add("asc");
+			} else {
+				all_sorts[i].classList.remove("asc");
+				all_sorts[i].classList.add("dsc");
+			}
+		} else {
+			all_sorts[i].classList.remove("dsc");
+			all_sorts[i].classList.remove("asc");
+		}
 	}
 	
 	sort_ids();
 	first_page();
+}
+
+function sort_total() {
+	sort_generic("sort-total");
 }
 
 function sort_recent() {
-	let sort_total = document.getElementsByClassName("sort-total")[0];
-	let sort_recent = document.getElementsByClassName("sort-recent")[0];
-	let sort_first_seen = document.getElementsByClassName("sort-first-seen")[0];
-	let sort_last_seen = document.getElementsByClassName("sort-last-seen")[0];
-	
-	sort_total.classList.remove("asc");
-	sort_total.classList.remove("dsc");
-	sort_first_seen.classList.remove("asc");
-	sort_first_seen.classList.remove("dsc");
-	sort_last_seen.classList.remove("asc");
-	sort_last_seen.classList.remove("dsc");
-	
-	if (sort_recent.classList.contains("asc")) {
-		sort_recent.classList.remove("asc");
-		sort_recent.classList.add("dsc");
-	} else {
-		sort_recent.classList.remove("dsc");
-		sort_recent.classList.add("asc");
-	}
-	
-	sort_ids();
-	first_page();
+	sort_generic("sort-recent");
 }
 
 function sort_first_seen() {
-	let sort_total = document.getElementsByClassName("sort-total")[0];
-	let sort_recent = document.getElementsByClassName("sort-recent")[0];
-	let sort_first_seen = document.getElementsByClassName("sort-first-seen")[0];
-	let sort_last_seen = document.getElementsByClassName("sort-last-seen")[0];
-	
-	sort_total.classList.remove("asc");
-	sort_total.classList.remove("dsc");
-	sort_recent.classList.remove("asc");
-	sort_recent.classList.remove("dsc");
-	sort_last_seen.classList.remove("asc");
-	sort_last_seen.classList.remove("dsc");
-	
-	if (sort_first_seen.classList.contains("asc")) {
-		sort_first_seen.classList.remove("asc");
-		sort_first_seen.classList.add("dsc");
-	} else {
-		sort_first_seen.classList.remove("dsc");
-		sort_first_seen.classList.add("asc");
-	}
-	
-	sort_ids();
-	first_page();
+	sort_generic("sort-first-seen");
 }
 
 function sort_last_seen() {
-	let sort_total = document.getElementsByClassName("sort-total")[0];
-	let sort_recent = document.getElementsByClassName("sort-recent")[0];
-	let sort_first_seen = document.getElementsByClassName("sort-first-seen")[0];
-	let sort_last_seen = document.getElementsByClassName("sort-last-seen")[0];
-	
-	sort_total.classList.remove("asc");
-	sort_total.classList.remove("dsc");
-	sort_recent.classList.remove("asc");
-	sort_recent.classList.remove("dsc");
-	sort_first_seen.classList.remove("asc");
-	sort_first_seen.classList.remove("dsc");
-	
-	if (sort_last_seen.classList.contains("asc")) {
-		sort_last_seen.classList.remove("asc");
-		sort_last_seen.classList.add("dsc");
-	} else {
-		sort_last_seen.classList.remove("dsc");
-		sort_last_seen.classList.add("asc");
-	}
-	
-	sort_ids();
-	first_page();
+	sort_generic("sort-last-seen");
 }
 
 function sort_ids() {

@@ -92,16 +92,16 @@ function sort_generic(name) {
 	
 	for (let i = 0; i < all_sorts.length; i++) {
 		if (all_sorts[i].classList.contains(name)) {
-			if (all_sorts[i].classList.contains("asc")) {
-				all_sorts[i].classList.remove("asc");
-				all_sorts[i].classList.add("dsc");
-			} else {
+			if (all_sorts[i].classList.contains("dsc")) {
 				all_sorts[i].classList.remove("dsc");
 				all_sorts[i].classList.add("asc");
+			} else {
+				all_sorts[i].classList.remove("asc");
+				all_sorts[i].classList.add("dsc");
 			}
 		} else {
-			all_sorts[i].classList.remove("asc");
 			all_sorts[i].classList.remove("dsc");
+			all_sorts[i].classList.remove("asc");
 		}
 	}
 	
