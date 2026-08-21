@@ -41,7 +41,7 @@ async function load_misc_data() {
 }
 
 function load_page() {	
-	document.getElementsByClassName("result-total")[0].textContent = "" + g_map_stats.length;
+	document.getElementsByClassName("result-total")[0].textContent = "" + g_filtered_map_stats.length;
 	document.getElementsByClassName("page-start")[0].textContent = "" + (result_offset+1);
 	document.getElementsByClassName("page-end")[0].textContent = "" + Math.min(result_offset+results_per_page, g_map_stats.length);
 	
@@ -106,7 +106,7 @@ function sort_generic(name) {
 	}
 	
 	sort_ids();
-	first_page();
+	search_filter();
 }
 
 function sort_rating() {
@@ -288,9 +288,6 @@ async function setup() {
 		first_page();
 	});
 	
-	search_filter();
-	sort_rating();
-	
 	document.getElementById("search_bar").addEventListener('input', search_filter);
 	
 	document.getElementsByClassName("page-next-container")[0].addEventListener("click", next_page);
@@ -304,6 +301,9 @@ async function setup() {
 	document.getElementsByClassName("sort-uploaded")[0].addEventListener("click", sort_uploaded);
 	
 	init_common();
+	
+	sort_rating();
+	search_filter();
 }
 
 function ready(fn) {

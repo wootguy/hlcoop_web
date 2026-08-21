@@ -3,17 +3,35 @@
 	<head>
 		<link rel="shortcut icon" type="image/x-icon" href="icon/favicon.ico">
 		<script type="text/javascript" src="shared.js"></script>
-		<script type="text/javascript" src="map_stats.js"></script>
+		<script type="text/javascript" src="cs_stats.js"></script>
 		<link rel="stylesheet" href="common.css">
 		<link rel="stylesheet" href="stats.css">
-		<style>			
+		<link rel="stylesheet" href="player_profile.css">
+		<style>	
+			#stats_table div {
+				text-decoration: none;
+				color: #99CCFF;
+				overflow: hidden;
+				text-overflow: ellipsis;
+				max-width: 210px;
+				display: inline-block;
+				cursor: pointer;
+				min-width: 5px;
+				text-wrap: nowrap;
+			}
+		
 			#stats_table td:first-child, #stats_table th:first-child {
 				width: 35px;
 				padding: 0 15px 0 5px;
 				text-align: right;
 			}
 			#stats_table td:nth-child(2), #stats_table th:nth-child(2) {
-				width: 240px;
+				width: 150px;
+				min-width: 150px;
+				max-width: 150px;
+				text-overflow: ellipsis;
+				overflow: hidden;
+				padding-right: 10px;
 			}
 			#stats_table a {
 				text-decoration: none;
@@ -30,16 +48,23 @@
 				color: #FFDD77;
 			}
 			#stats_table td:nth-child(3), #stats_table th:nth-child(3) {
-				width: 80px;
+				width: 140px;
 			}
 			#stats_table td:nth-child(4), #stats_table th:nth-child(4) {
-				width: 90px;
+				width: 150px;
 			}
 			#stats_table td:nth-child(5), #stats_table th:nth-child(5) {
-				width: 90px;
+				width: 130px;
 			}
 			#stats_table td:nth-child(6), #stats_table th:nth-child(6) {
-				width: 120px;
+				width: 200px;
+				min-width: 200px;
+				max-width: 200px;
+				overflow: hidden;
+				text-overflow: ellipsis;
+			}
+			#stats_table td:nth-child(7), #stats_table th:nth-child(7) {
+				width: 140px;
 			}
 			
 			#stats_table .rate-count, #stats_table .play-count {
@@ -93,13 +118,12 @@
 				<table id="stats_table">
 					<thead>
 						<th>#</th>
-						<th>Map</th>
-						<th title="Overall rating for this map, calulated from individual player ratings.
-
-Ratings don't fully correlate to map quality and player opinions. The rating system exists for controlling how often a map gets replayed. Players sometimes rate maps down simply because they're overplaying it. I'll often favorite new maps just because they're new, or dislike one of my favorites to keep it fresh. pizza san, however, is indeed the best map." class="sort sort-rating asc">Rating<span class="asc"> ^</span><span class="dsc"> v</span></th>
-						<th title="How often 2+ players complete this map without using RTV." class="sort sort-plays">Win rate<span class="asc"> ^</span><span class="dsc"> v</span></th>
-						<th title="Median time taken to complete the map." class="sort sort-time">Duration<span class="asc"> ^</span><span class="dsc"> v</span></th>
-						<th title="When this map was first uploaded to the server" class="sort sort-uploaded">Installed<span class="asc"> ^</span><span class="dsc"> v</span></th>
+						<th class="sort sort-name">Sound<span class="asc"> ^</span><span class="dsc"> v</span></th>
+						<th title="Number of times this sound has been used" class="sort sort-uses">Total uses<span class="asc"> ^</span><span class="dsc"> v</span></th>
+						<th title="Number of players that have used this sound" class="sort sort-users">Total users<span class="asc"> ^</span><span class="dsc"> v</span></th>
+						<th title="How many times the top user triggered this sound" class="sort sort-topuses">Top uses<span class="asc"> ^</span><span class="dsc"> v</span></th>
+						<th title="Player who uses this sound the most" class="sort sort-user">Top user<span class="asc"> ^</span><span class="dsc"> v</span></th>
+						<th title="When this sound was installed or last updated" class="sort sort-uploaded">Installed<span class="asc"> ^</span><span class="dsc"> v</span></th>
 					</thead>
 					<tbody></tbody>
 				</table>
