@@ -104,7 +104,7 @@
 	text-align: left;
 }
 .alias_details_container {
-	max-height: 165px;
+	max-height: 140px;
 	overflow-y: scroll;
 }
 #player_profile th {

@@ -180,7 +180,7 @@ function get_client_details_tip(steamid) {
 	return clientStr_tip;
 }
 
-function open_player_profile(event) {	
+function open_player_profile(event) {
 	let clickedId = event.currentTarget.getAttribute("id");
 	if (!clickedId)
 		clickedId = event.currentTarget.parentElement.parentElement.getAttribute("steamid");
@@ -192,6 +192,8 @@ function open_player_profile(event) {
 	const avatar = "https://avatars.steamstatic.com/" + state.steamAvatar;
 	let spray = g_fastdl_server_url + "sprays/" + clickedId + ".png";
 	let firstSeenDate = new Date(state.firstSeen*1000);
+	let lastSeenDate = new Date(state.lastSeen*1000);
+	let today = Math.floor(Date.now() / 1000);
 	
 	if (state.sprayBanReason) {
 		spray = "icon/spray_banned.png";
@@ -200,12 +202,29 @@ function open_player_profile(event) {
 	if (state.firstSeen == 0) {
 		firstSeenDate = new Date(); // new state just joined today
 	}
+	if (state.lastSeen == 0) {
+		lastSeenDate = new Date(); // new state just joined today
+	}
 	
 	let firstSeenText = firstSeenDate.toLocaleString(undefined, {
 		year: 'numeric', 
 		month: 'short', 
 		day: 'numeric'
 	});
+	
+	let lastSeenText = lastSeenDate.toLocaleString(undefined, {
+		year: 'numeric', 
+		month: 'short', 
+		day: 'numeric',
+		hour: 'numeric',
+		minute: 'numeric'
+	});
+	let lastSeenAge = today - state.lastSeen;
+	if (lastSeenAge < 60*60*24) {
+		lastSeenAge = "Today";
+	} else {
+		lastSeenAge = format_age(lastSeenAge, true, true) + " ago";
+	}
 	
 	const lang = (state.language in g_languages) ? g_languages[state.language] : state.language;
 	let percentPlayed = Math.floor((state.mapsPlayed / g_map_total) * 100);
@@ -236,6 +255,8 @@ function open_player_profile(event) {
 	player_profile.getElementsByClassName("play_time_recent")[0].textContent = format_age(state.recentPlayTime, true, true, 2);
 	player_profile.getElementsByClassName("play_time_recent")[0].title = format_age(state.recentPlayTime, false, true, 2);
 	player_profile.getElementsByClassName("first_seen")[0].textContent = firstSeenText;
+	player_profile.getElementsByClassName("last_seen")[0].textContent = lastSeenAge;
+	player_profile.getElementsByClassName("last_seen")[0].title = lastSeenText;
 	player_profile.getElementsByClassName("client_type")[0].textContent = clientStr;
 	player_profile.getElementsByClassName("client_type")[0].title = clientStr_tip;
 	
