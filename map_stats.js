@@ -43,14 +43,14 @@ async function load_misc_data() {
 function load_page() {	
 	document.getElementsByClassName("result-total")[0].textContent = "" + g_filtered_map_stats.length;
 	document.getElementsByClassName("page-start")[0].textContent = "" + (result_offset+1);
-	document.getElementsByClassName("page-end")[0].textContent = "" + Math.min(result_offset+results_per_page, g_map_stats.length);
+	document.getElementsByClassName("page-end")[0].textContent = "" + Math.min(result_offset+results_per_page, g_filtered_map_stats.length);
 	
 	update_stat_table();
 }
 
 function next_page() {
 	result_offset += results_per_page;
-	if (result_offset >= g_map_stats.length) {
+	if (result_offset >= g_filtered_map_stats.length) {
 		result_offset -= results_per_page;
 		return;
 	}

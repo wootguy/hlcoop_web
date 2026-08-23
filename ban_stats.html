@@ -3,7 +3,7 @@
 	<head>
 		<link rel="shortcut icon" type="image/x-icon" href="icon/favicon.ico">
 		<script type="text/javascript" src="shared.js"></script>
-		<script type="text/javascript" src="cs_stats.js"></script>
+		<script type="text/javascript" src="ban_stats.js"></script>
 		<link rel="stylesheet" href="common.css">
 		<link rel="stylesheet" href="stats.css">
 		<link rel="stylesheet" href="player_profile.css">
@@ -48,23 +48,21 @@
 				color: #FFDD77;
 			}
 			#stats_table td:nth-child(3), #stats_table th:nth-child(3) {
-				width: 140px;
+				width: 60px;
+				cursor: help;
 			}
 			#stats_table td:nth-child(4), #stats_table th:nth-child(4) {
-				width: 150px;
+				width: 100px;
 			}
 			#stats_table td:nth-child(5), #stats_table th:nth-child(5) {
-				width: 130px;
+				width: 120px;
 			}
 			#stats_table td:nth-child(6), #stats_table th:nth-child(6) {
-				width: 200px;
-				min-width: 200px;
-				max-width: 200px;
+				width: 240px;
+				max-width: 240px;
 				overflow: hidden;
 				text-overflow: ellipsis;
-			}
-			#stats_table td:nth-child(7), #stats_table th:nth-child(7) {
-				width: 140px;
+				text-wrap: nowrap;
 			}
 			
 			#stats_table .rate-count, #stats_table .play-count {
@@ -119,12 +117,11 @@
 				<table id="stats_table">
 					<thead>
 						<th>#</th>
-						<th class="sort sort-name">Sound<span class="asc"> ^</span><span class="dsc"> v</span></th>
-						<th title="Number of times this sound has been used" class="sort sort-uses">Total uses<span class="asc"> ^</span><span class="dsc"> v</span></th>
-						<th title="Number of players that have used this sound" class="sort sort-users">Total users<span class="asc"> ^</span><span class="dsc"> v</span></th>
-						<th title="How many times the top user triggered this sound" class="sort sort-topuses">Top uses<span class="asc"> ^</span><span class="dsc"> v</span></th>
-						<th title="Player who uses this sound the most" class="sort sort-user">Top user<span class="asc"> ^</span><span class="dsc"> v</span></th>
-						<th title="When this sound was installed or last updated" class="sort sort-uploaded">Installed<span class="asc"> ^</span><span class="dsc"> v</span></th>
+						<th class="sort sort-name">Player<span class="asc"> ^</span><span class="dsc"> v</span></th>
+						<th title="Number of times this player has been punished. Hover your mouse over a number to see the history of how and why the player was punished." class="sort sort-count">Count<span class="asc"> ^</span><span class="dsc"> v</span></th>
+						<th title="Total amount of time this player has been punished for. This includes friendly-fire and ban time." class="sort sort-time">Total time<span class="asc"> ^</span><span class="dsc"> v</span></th>
+						<th title="Last time this player was punished (friendly-fire, kick, or ban)" class="sort sort-lastp">Last punish<span class="asc"> ^</span><span class="dsc"> v</span></th>
+						<th title="Reason for the last punishment" class="sort sort-lastp">Last punish reason</th>
 					</thead>
 					<tbody></tbody>
 				</table>

@@ -67,7 +67,7 @@ body {
 	border-radius: 3px;
 	border-top: 0;
 	box-shadow: 0 10px 20px rgba(0, 0, 0, 1.0);
-	width: 100%;
+	width: 90px;
 	padding: 23px 5px 4px 5px;
 }
 .dropdown hr {
