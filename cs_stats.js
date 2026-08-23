@@ -199,8 +199,10 @@ function search_filter() {
 	
 	g_filtered_sound_stats = [];
 	for (let i = 0; i < g_sound_stats.length; i++) {
-		if (searchText.length && !g_sound_stats[i].name.toLowerCase().includes(searchText) && !g_sound_stats[i].topUserName.toLowerCase().includes(searchText)) {
-			continue;
+		if (searchText.length && !g_sound_stats[i].name.toLowerCase().includes(searchText)) {
+			if (!g_sound_stats[i].topUserName || !g_sound_stats[i].topUserName.toLowerCase().includes(searchText)) {
+				continue;
+			}
 		}
 
 		g_filtered_sound_stats.push(i);
@@ -228,14 +230,23 @@ function update_stat_table() {
 		
 		row.cells[3].textContent = dat.totalUsers;
 		
-		row.cells[4].textContent = dat.topUserUses;
-		row.cells[4].title = dat.topTitle;
+		if (dat.topUserName) {
+			row.cells[4].textContent = dat.topUserUses;
+			row.cells[4].title = dat.topTitle;
+			
+			row.cells[5].title = dat.topTitle;
+			let name = row.cells[5].getElementsByTagName('div')[0];		
+			name.textContent = dat.topUserName;
+			name.setAttribute("id", dat.topUserId);
+			name.addEventListener('click', open_player_profile);
+		} else {
+			row.cells[4].textContent = "--";
+			row.cells[4].title = "No one has used this sound yet";
+			
+			row.cells[5].textContent = "--";
+			row.cells[5].title = "No one has used this sound yet";
+		}
 		
-		row.cells[5].title = dat.topTitle;
-		let name = row.cells[5].getElementsByTagName('div')[0];		
-		name.textContent = dat.topUserName;
-		name.setAttribute("id", dat.topUserId);
-		name.addEventListener('click', open_player_profile);
 		
 		let firstSeenDate = new Date(dat.modified*1000);		
 		if (dat.modified == 0) {
@@ -314,25 +325,27 @@ async function setup() {
 				value["name"] = key;
 				
 				let ustats = value["userstats"];
-				let topUser = Object.keys(ustats).reduce((a, b) =>
-					ustats[a] > ustats[b] ? a : b
-				);
-				
-				const keys = Object.keys(ustats).sort((a, b) => ustats[b] - ustats[a]);
-				
-				if (keys.length > 0) {
-					value["topUserId"] = topUser;
-					value["topUserUses"] = ustats[topUser];
-					value["topUserName"] = g_player_states[topUser] ? g_player_states[topUser].name : topUser;
+				if (Object.keys(ustats).length) {
+					let topUser = Object.keys(ustats).reduce((a, b) =>
+						ustats[a] > ustats[b] ? a : b
+					);
 					
-					value["topTitle"] = "1) used " + ustats[keys[0]] + " times by     " + value["topUserName"];
-					if (keys.length > 1) {
-						let name = g_player_states[keys[1]] ? g_player_states[keys[1]].name : keys[1];
-						value["topTitle"] += "\n2) used " + ustats[keys[1]] + " times by     " + name;
-					}
-					if (keys.length > 2) {
-						let name = g_player_states[keys[2]] ? g_player_states[keys[2]].name : keys[2];
-						value["topTitle"] += "\n3) used " + ustats[keys[2]] + " times by     " + name;
+					const keys = Object.keys(ustats).sort((a, b) => ustats[b] - ustats[a]);
+					
+					if (keys.length > 0) {
+						value["topUserId"] = topUser;
+						value["topUserUses"] = ustats[topUser];
+						value["topUserName"] = g_player_states[topUser] ? g_player_states[topUser].name : topUser;
+						
+						value["topTitle"] = "1) used " + ustats[keys[0]] + " times by     " + value["topUserName"];
+						if (keys.length > 1) {
+							let name = g_player_states[keys[1]] ? g_player_states[keys[1]].name : keys[1];
+							value["topTitle"] += "\n2) used " + ustats[keys[1]] + " times by     " + name;
+						}
+						if (keys.length > 2) {
+							let name = g_player_states[keys[2]] ? g_player_states[keys[2]].name : keys[2];
+							value["topTitle"] += "\n3) used " + ustats[keys[2]] + " times by     " + name;
+						}
 					}
 				}
 				
