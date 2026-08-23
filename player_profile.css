@@ -107,6 +107,16 @@
 	max-height: 140px;
 	overflow-y: scroll;
 }
+#player_profile .punish-row {
+	display: none;
+}
+#player_profile.punished .punish-row {
+	display: table-row;
+}
+#player_profile.punished .alias_details_container {
+	max-height: 118px;
+	overflow-y: scroll;
+}
 #player_profile th {
 	color: #FFAA00;
 }
@@ -155,6 +165,15 @@
 }
 #player_profile .pmodel_name {
 	color: #ddd;
+}
+#player_profile .punish-row td {
+	color: #B00000 !important;
+}
+#player_profile .punish-count {
+	cursor: help;
+}
+#player_profile .punish-age {
+	padding-left: 10px;
 }
 .like_cooldown {
 	width: 45px;

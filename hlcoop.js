@@ -1883,6 +1883,7 @@ async function load_chatsounds() {
 async function setup() {
 	await load_shared_html();
 	await load_chatsounds();
+	await load_bans();
 	
 	setInterval(load_chatsounds, 1000*60*60, -1);
 	

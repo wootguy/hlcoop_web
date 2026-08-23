@@ -226,7 +226,7 @@ function update_stat_table() {
 			name.addEventListener('click', () => {
 				window.open("https://steamcommunity.com/profiles/" + dat.id, "_blank");
 			});
-			row.cells[1].title += "\n\nThis player's profile is missing because they have less than 1 hour of playtime on the server.";
+			row.cells[1].title += "\n\nThis player's name and profile is missing because they have less than 1 hour of playtime on the server.";
 		}
 		
 		row.cells[2].textContent = dat.punish_count;
@@ -352,28 +352,7 @@ async function setup() {
 						dat.last_reason = ban.reason;
 					}
 					
-					let punishDate = new Date(dat.last_punish*1000);		
-					if (dat.last_punish == 0) {
-						punishDate = new Date(); // new state just joined today
-					}
-					let punishDateText = punishDate.toLocaleString(undefined, {
-						year: 'numeric', 
-						month: 'short', 
-						day: 'numeric'
-					});
-					
-					let dur = format_age(ban.minutes * 60, true, true);
-					if (dur.endsWith("s")) {
-						dur = dur.slice(0, -1);
-					}
-					
-					if (ban.punishment == "kick") {
-						dat.punish_desc += "\n" + "kicked on " + punishDateText + " for '" + ban.reason + "'";
-					} else if (ban.punishment == "ban") {
-						dat.punish_desc += "\n" + dur + " ban on " + punishDateText + " for '" + ban.reason + "'";
-					} else {
-						dat.punish_desc += "\n" + dur + " " + ban.punishment + " on " + punishDateText + " for '" + ban.reason + "'";
-					}
+					dat.punish_desc += "\n" + get_punish_desc(ban);
 				}
 				
 				if (data["ban_notes"][key]) {

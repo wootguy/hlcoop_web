@@ -1,5 +1,7 @@
 const WEBAPP_VERSION = 2;
 
+var g_bans = {};
+
 var g_game_id = "hl";
 var data_repo_count = 32;
 var data_repo_domain = "https://wootdata.github.io/";
@@ -16,10 +18,14 @@ var g_fastdl_server_url = 'https://w00tguy.ddns.net/';
 //var g_fastdl_server_url = '/'; // for local testing
 
 
-function set_badge(id, recentTime, rankDiv, mapsPlayed, mapsMultiPlayed, totalMaps) {
+function set_badge(id, recentTime, rankDiv, mapsPlayed, mapsMultiPlayed, totalMaps, banReason) {
 	rankDiv.classList.remove("hidden");
 	
-	if (id == g_most_active_id) {
+	if (banReason) {
+		rankDiv.title = "PUNISHED - " + banReason;
+		rankDiv.src = "icon/skull.png";
+	}
+	else if (id == g_most_active_id) {
 		rankDiv.title = "ADDICT - The most active player in the past 2 weeks.";
 		rankDiv.src = "icon/hot.png";
 	}
@@ -260,6 +266,35 @@ function open_player_profile(event) {
 	player_profile.getElementsByClassName("client_type")[0].textContent = clientStr;
 	player_profile.getElementsByClassName("client_type")[0].title = clientStr_tip;
 	
+	let bans = g_bans[clickedId]
+	if (bans) {
+		player_profile.classList.add("punished");
+		player_profile.getElementsByClassName("punish-count")[0].textContent = bans.punish_count;
+		player_profile.getElementsByClassName("punish-count")[0].title = bans.punish_desc;
+		let age = player_profile.getElementsByClassName("punish-age")[0];
+		
+		let firstSeenDate = new Date(bans.last_punish*1000);		
+		if (bans.last_punish == 0) {
+			firstSeenDate = new Date(); // new state just joined today
+		}
+		let firstSeenText = firstSeenDate.toLocaleString(undefined, {
+			year: 'numeric', 
+			month: 'short', 
+			day: 'numeric'
+		});
+		let firstSeenAge = today - bans.last_punish;
+		if (firstSeenAge < 60*60*24) {
+			age.textContent = "Today";
+		} else {
+			age.textContent = "(" + format_age(firstSeenAge, true, true) + " ago)";
+			age.title = firstSeenText;
+		}
+	}  else {
+		player_profile.classList.remove("punished");
+		player_profile.getElementsByClassName("punish-count")[0].textContent = "0";
+		player_profile.getElementsByClassName("punish-age")[0].textContent = "";
+	}
+	
 	if (state.sprayBanReason) {
 		player_profile.getElementsByClassName("spray_img")[0].title = 'This player lost their spray prviledge.\n\nBan reason: "' + state.sprayBanReason + '"';
 	} else {
@@ -350,6 +385,74 @@ function init_common() {
 			dropdown_menu.classList.add('hidden');
 		}
 	});
+}
+
+function get_punish_desc(ban) {
+	let punishDate = new Date(ban.start*1000);		
+	if (ban.start == 0) {
+		punishDate = new Date(); // new state just joined today
+	}
+	let punishDateText = punishDate.toLocaleString(undefined, {
+		year: 'numeric', 
+		month: 'short', 
+		day: 'numeric'
+	});
+	
+	let dur = format_age(ban.minutes * 60, true, true);
+	if (dur.endsWith("s")) {
+		dur = dur.slice(0, -1);
+	}
+	
+	if (ban.punishment == "kick") {
+		return "kicked on " + punishDateText + " for '" + ban.reason + "'";
+	} else if (ban.punishment == "ban") {
+		return dur + " ban on " + punishDateText + " for '" + ban.reason + "'";
+	} else {
+		return dur + " " + ban.punishment + " on " + punishDateText + " for '" + ban.reason + "'";
+	}
+}
+
+async function load_bans() {
+	const url = g_fastdl_server_url + "files/bans.json?t=" + Date.now();
+	const now = Math.floor(Date.now() / 1000);
+	
+	await fetch(url)
+		.then(response => response.json())
+		.then(data => {
+			for (const [key, value] of Object.entries(data["bans"])) {									
+				let ban = value[value.length-1];
+				
+				g_bans[key] = {};
+				
+				if (ban.start + ban.minutes*60 > now && g_player_states[key]) {
+					// for stats page
+					g_player_states[key]["banned"] = get_punish_desc(ban);
+				}
+				
+				g_bans[key]["punish_count"] = value.length;
+				g_bans[key]["last_punish"] = 0;
+				g_bans[key]["last_punish_reason"] = "";
+				g_bans[key]["punish_desc"] = "Punishments:";
+			
+				for (let i = 0; i < value.length; i++) {
+					let ban = value[i];
+					
+					if (ban.start > g_bans[key]["last_punish"]) {
+						g_bans[key]["last_punish"] = ban.start;
+						g_bans[key]["last_punish_reason"] = ban.reason;
+					}
+					
+					g_bans[key]["punish_desc"] += "\n" + get_punish_desc(ban);
+				}
+				
+				if (data["ban_notes"][key]) {
+					g_bans[key]["punish_desc"] += "\n\nw00tguy notes:\n" + data["ban_notes"][key]["notes"];
+				}
+			}
+		})
+		.catch(error => {
+			console.error('Failed to load JSON:', error);
+		});
 }
 
 const g_languages = {

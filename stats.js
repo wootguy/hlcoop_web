@@ -233,7 +233,7 @@ function update_stat_table() {
 		let rank = row.cells[1].getElementsByClassName('rank')[0];
 		let name = row.cells[1].getElementsByTagName('div')[0];
 		
-		set_badge(g_filtered_ids[i], dat.recentPlayTime, rank, dat.mapsPlayed, dat.mapsMultiPlayed, g_map_total);
+		set_badge(g_filtered_ids[i], dat.recentPlayTime, rank, dat.mapsPlayed, dat.mapsMultiPlayed, g_map_total, dat.banned);
 		
 		name.textContent = dat.name;
 		name.title = dat.name;
@@ -336,6 +336,8 @@ async function setup() {
 		
 		g_player_ids.push(id);
 	}
+	
+	await load_bans();
 	
 	//console.log(lines);
 	//console.log(g_player_data);
