@@ -701,6 +701,12 @@ function add_message(steamid64, ipStr, name, msg, time, msgType) {
 		chat_msg.innerHTML = chat_msg.innerHTML.replace(";name;", chat_name.outerHTML);
 	}
 	
+	// replace links with <a> tags
+	chat_msg.innerHTML = chat_msg.innerHTML.replace(
+		/https?:\/\/[^\s<]+/g,
+		url => `<a href="${url}" target="_blank">${url}</a>`
+	);
+	
 	chat_right_side.appendChild(chat_msg);
 	
 	chat_container.appendChild(chat_left_side);
