@@ -566,12 +566,17 @@ function add_message(steamid64, ipStr, name, msg, time, msgType) {
 	let chat_container = document.createElement('div');
 	chat_container.classList.add("chat_message");
 	
+	let chat_left_side = document.createElement('div');
+	chat_left_side.classList.add("chat_left_side");
+	let chat_right_side = document.createElement('div');
+	chat_right_side.classList.add("chat_right_side");
+	
 	let chat_time = document.createElement('span');
 	chat_time.classList.add("chat_time");
 	const date = new Date(Number(time));
 	const hours = date.getHours().toString().padStart(2, '0');
 	const minutes = date.getMinutes().toString().padStart(2, '0');
-	chat_time.textContent = `${hours}:${minutes} `;
+	chat_time.textContent = `${hours}:${minutes}`;
 	
 	chat_time.addEventListener("mouseover", function(ev) {
 		const deltaTime = Number(new Date()) - Number(date);
@@ -642,14 +647,7 @@ function add_message(steamid64, ipStr, name, msg, time, msgType) {
 	if (isImportant)
 		chat_container.classList.add("important");
 	
-	chat_msg.innerHTML = chat_msg.innerHTML.replace(";name;", chat_name.outerHTML);
-	
-	let nametags = chat_msg.getElementsByClassName("player_name");
-	for (let i = 0; i < nametags.length; i++) {
-		nametags[i].addEventListener('click', open_player_profile);
-	}
-	
-	chat_container.appendChild(chat_time);
+	chat_left_side.appendChild(chat_time);
 	
 	if (ipStr && ipStr.length && ipStr != "0.0.0.0") {
 		let chat_flag = document.createElement('img');
@@ -664,7 +662,7 @@ function add_message(steamid64, ipStr, name, msg, time, msgType) {
 		}
 		chat_flag.addEventListener('click', click_player_flag);
 		
-		chat_container.appendChild(chat_flag);
+		chat_left_side.appendChild(chat_flag);
 	}
 	
 	if (steamid64 > 1) {
@@ -684,12 +682,35 @@ function add_message(steamid64, ipStr, name, msg, time, msgType) {
 		chat_avatar.addEventListener('click', click_steam_avatar);
 		
 		chat_avatar_container.appendChild(chat_avatar);
-		chat_container.appendChild(chat_avatar_container);
+		chat_left_side.appendChild(chat_avatar_container);
 	}
 	
-	chat_container.appendChild(chat_msg);
+	if (msg.startsWith(";name;: ") || msg.startsWith("- ;name;") || msg.startsWith("* ;name;")) {
+		chat_left_side.appendChild(chat_name);
+		
+		if (msg.startsWith(";name;: ")) {
+			chat_left_side.innerHTML += ":&nbsp";
+		} else {
+			chat_left_side.innerHTML += "&nbsp";
+		}
+		
+		chat_msg.innerHTML = chat_msg.innerHTML.replace("- ;name;", "");
+		chat_msg.innerHTML = chat_msg.innerHTML.replace("* ;name;", "");
+		chat_msg.innerHTML = chat_msg.innerHTML.replace(";name;: ", "");
+	} else {
+		chat_msg.innerHTML = chat_msg.innerHTML.replace(";name;", chat_name.outerHTML);
+	}
 	
+	chat_right_side.appendChild(chat_msg);
+	
+	chat_container.appendChild(chat_left_side);
+	chat_container.appendChild(chat_right_side);
 	chatbox.appendChild(chat_container);
+	
+	let nametags = chat_container.getElementsByClassName("player_name");
+	for (let i = 0; i < nametags.length; i++) {
+		nametags[i].addEventListener('click', open_player_profile);
+	}
 	
 	while (chatbox.childElementCount > 200) {
 		chatbox.removeChild(chatbox.firstChild);

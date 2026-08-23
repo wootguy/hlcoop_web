@@ -249,9 +249,6 @@
 				min-width: 5px;
 				text-wrap: nowrap;
 			}
-			.chat_message div:hover {
-				color: #D2E6FB;
-			}
 			.player_list div.bad_guy {
 				color: #FF3F3F;
 			}
@@ -632,15 +629,23 @@
 				overflow-wrap: anywhere;
 				word-break: break-word;
 				padding: 1px 5px;
-				display:block;
+				display: flex;
 			}
 			.chat_time {
 				font-family: monospace;
 				color: #888;
 				cursor: default;
+				padding-right: 7px;
 			}
 			.chat_time:hover {
 				color: #bbb;
+			}
+			.chat_message .chat_left_side {
+				flex: 0 0 auto;
+			}
+			.chat_message .chat_right_side {
+				flex: 1;
+				min-width: 0;
 			}
 			
 			#chat_box {
