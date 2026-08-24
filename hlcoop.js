@@ -1,6 +1,8 @@
 // TODO:
 // - special messages for mapchange
 // - iOS safari/firefox is missing a player in the table in hidden maps mode
+// - "move the chat settings button to where the log out is, see the site from anything that isn't Windows to see why"
+// - option to disable new wrapping in chat
 
 var g_socket;
 var g_player_data = []; // players currently in the server
@@ -685,19 +687,22 @@ function add_message(steamid64, ipStr, name, msg, time, msgType) {
 		chat_left_side.appendChild(chat_avatar_container);
 	}
 	
-	if (msg.startsWith(";name;: ") || msg.startsWith("- ;name;") || msg.startsWith("* ;name;")) {
+	if (msg.startsWith(";name;: ")) {
 		chat_left_side.appendChild(chat_name);
-		
-		if (msg.startsWith(";name;: ")) {
-			chat_left_side.innerHTML += ":&nbsp";
-		} else {
-			chat_left_side.innerHTML += "&nbsp";
-		}
-		
-		chat_msg.innerHTML = chat_msg.innerHTML.replace("- ;name;", "");
-		chat_msg.innerHTML = chat_msg.innerHTML.replace("* ;name;", "");
+		chat_left_side.innerHTML += ":&nbsp";
 		chat_msg.innerHTML = chat_msg.innerHTML.replace(";name;: ", "");
-	} else {
+	}
+	else if (msg.startsWith("- ;name;")) {
+		chat_left_side.appendChild(chat_name);
+		chat_left_side.innerHTML += "&nbsp";
+		chat_msg.innerHTML = chat_msg.innerHTML.replace("- ;name;", "");
+	}
+	else if (msg.startsWith("* ;name;")) {
+		chat_left_side.appendChild(chat_name);
+		chat_left_side.innerHTML += "&nbsp";
+		chat_msg.innerHTML = chat_msg.innerHTML.replace("* ;name;", "");
+	}
+	else {
 		chat_msg.innerHTML = chat_msg.innerHTML.replace(";name;", chat_name.outerHTML);
 	}
 	
@@ -723,8 +728,14 @@ function add_message(steamid64, ipStr, name, msg, time, msgType) {
 	}
 	
 	// auto-scroll if at bottom
-	if (scrolledToBottom)
+	if (scrolledToBottom) {
 		chatbox.scrollTop = chatbox.scrollHeight;
+		
+		// multi-line messages are stopping the auto scrolling? Maybe need to wait until the flex box stuff is calculated
+		setTimeout(function() {
+			chatbox.scrollTop = chatbox.scrollHeight;
+		}, 100);
+	}
 }
 
 function parse_chat_message(view) {	
