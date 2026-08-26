@@ -325,14 +325,11 @@ async function setup() {
 				value["name"] = key;
 				
 				let ustats = value["userstats"];
-				if (Object.keys(ustats).length) {
-					let topUser = Object.keys(ustats).reduce((a, b) =>
-						ustats[a] > ustats[b] ? a : b
-					);
-					
+				if (Object.keys(ustats).length) {					
 					const keys = Object.keys(ustats).sort((a, b) => ustats[b] - ustats[a]);
 					
 					if (keys.length > 0) {
+						let topUser = keys[0];
 						value["topUserId"] = topUser;
 						value["topUserUses"] = ustats[topUser];
 						value["topUserName"] = g_player_states[topUser] ? g_player_states[topUser].name : topUser;
