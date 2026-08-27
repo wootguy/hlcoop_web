@@ -3,6 +3,9 @@
 // - iOS safari/firefox is missing a player in the table in hidden maps mode
 // - "move the chat settings button to where the log out is, see the site from anything that isn't Windows to see why"
 // - option to disable new wrapping in chat
+// - bad scaling for phone layout, upcoming maps off the screen
+// - can't click steam icon for profile in chat
+// - mutes dont work in chat. option to mute from the web.
 
 var g_socket;
 var g_player_data = []; // players currently in the server

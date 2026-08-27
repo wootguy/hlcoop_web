@@ -33,6 +33,24 @@
 				overflow: hidden;
 				padding-right: 10px;
 			}
+			#stats_table td:nth-child(3), #stats_table th:nth-child(3) {
+				width: 60px;
+				cursor: help;
+			}
+			#stats_table td:nth-child(4), #stats_table th:nth-child(4) {
+				width: 130px;
+			}
+			#stats_table td:nth-child(5), #stats_table th:nth-child(5) {
+				width: 180px;
+			}
+			#stats_table td:nth-child(6), #stats_table th:nth-child(6) {
+				width: 240px;
+				max-width: 240px;
+				overflow: hidden;
+				text-overflow: ellipsis;
+				text-wrap: nowrap;
+			}
+			
 			#stats_table a {
 				text-decoration: none;
 				color: #FFAA00;
@@ -46,23 +64,6 @@
 			}
 			#stats_table td a:hover {
 				color: #FFDD77;
-			}
-			#stats_table td:nth-child(3), #stats_table th:nth-child(3) {
-				width: 60px;
-				cursor: help;
-			}
-			#stats_table td:nth-child(4), #stats_table th:nth-child(4) {
-				width: 100px;
-			}
-			#stats_table td:nth-child(5), #stats_table th:nth-child(5) {
-				width: 120px;
-			}
-			#stats_table td:nth-child(6), #stats_table th:nth-child(6) {
-				width: 240px;
-				max-width: 240px;
-				overflow: hidden;
-				text-overflow: ellipsis;
-				text-wrap: nowrap;
 			}
 			
 			#stats_table .rate-count, #stats_table .play-count {
@@ -119,9 +120,9 @@
 						<th>#</th>
 						<th class="sort sort-name">Player<span class="asc"> ^</span><span class="dsc"> v</span></th>
 						<th title="Number of times this player has been punished. Hover your mouse over a number to see the history of how and why the player was punished." class="sort sort-count">Count<span class="asc"> ^</span><span class="dsc"> v</span></th>
-						<th title="Total amount of time this player has been punished for. This includes friendly-fire and ban time." class="sort sort-time">Total time<span class="asc"> ^</span><span class="dsc"> v</span></th>
-						<th title="Last time this player was punished (friendly-fire, kick, or ban)" class="sort sort-lastp">Last punish<span class="asc"> ^</span><span class="dsc"> v</span></th>
-						<th title="Reason for the last punishment" class="sort sort-lastp">Last punish reason</th>
+						<th title="Last time this player was punished (friendly-fire, kick, or ban)" class="sort sort-lastp">Last punished<span class="asc"> ^</span><span class="dsc"> v</span></th>
+						<th title="What the last punishment was" class="sort sort-time">Last punishment<span class="asc"> ^</span><span class="dsc"> v</span></th>
+						<th title="What the reason for the last punishment was">Last punishment reason</th>
 					</thead>
 					<tbody></tbody>
 				</table>

@@ -387,7 +387,7 @@ function init_common() {
 	});
 }
 
-function get_punish_desc(ban) {
+function get_punish_desc(ban, omitDate, omitReason) {
 	let punishDate = new Date(ban.start*1000);		
 	if (ban.start == 0) {
 		punishDate = new Date(); // new state just joined today
@@ -403,52 +403,60 @@ function get_punish_desc(ban) {
 		dur = dur.slice(0, -1);
 	}
 	
+	banTime = !omitDate ? ("on " + punishDateText) : "";
+	banReason = !omitReason ? (" for '" + ban.reason + "'") : "";
+	
 	if (ban.punishment == "kick") {
-		return "kicked on " + punishDateText + " for '" + ban.reason + "'";
+		return "kicked " + banTime + banReason;
 	} else if (ban.punishment == "ban") {
-		return dur + " ban on " + punishDateText + " for '" + ban.reason + "'";
+		return dur + " ban " + banTime + banReason;
 	} else {
-		return dur + " " + ban.punishment + " on " + punishDateText + " for '" + ban.reason + "'";
+		return dur + " " + ban.punishment + " " + banTime + banReason;
+	}
+}
+
+function apply_bans(data) {
+	const now = Math.floor(Date.now() / 1000);
+	
+	for (const [key, value] of Object.entries(data["bans"])) {									
+		let ban = value[value.length-1];
+		
+		g_bans[key] = {};
+		
+		if (ban.start + ban.minutes*60 > now && g_player_states[key]) {
+			// for stats page
+			g_player_states[key]["banned"] = get_punish_desc(ban);
+		}
+		
+		g_bans[key]["punish_count"] = value.length;
+		g_bans[key]["last_punish"] = 0;
+		g_bans[key]["last_punish_reason"] = "";
+		g_bans[key]["punish_desc"] = "Punishments:";
+	
+		for (let i = 0; i < value.length; i++) {
+			let ban = value[i];
+			
+			if (ban.start > g_bans[key]["last_punish"]) {
+				g_bans[key]["last_punish"] = ban.start;
+				g_bans[key]["last_punish_reason"] = ban.reason;
+			}
+			
+			g_bans[key]["punish_desc"] += "\n" + get_punish_desc(ban);
+		}
+		
+		if (data["ban_notes"][key]) {
+			g_bans[key]["punish_desc"] += "\n\nw00tguy notes:\n" + data["ban_notes"][key]["notes"];
+		}
 	}
 }
 
 async function load_bans() {
 	const url = g_fastdl_server_url + "files/bans.json?t=" + Date.now();
-	const now = Math.floor(Date.now() / 1000);
 	
 	await fetch(url)
 		.then(response => response.json())
 		.then(data => {
-			for (const [key, value] of Object.entries(data["bans"])) {									
-				let ban = value[value.length-1];
-				
-				g_bans[key] = {};
-				
-				if (ban.start + ban.minutes*60 > now && g_player_states[key]) {
-					// for stats page
-					g_player_states[key]["banned"] = get_punish_desc(ban);
-				}
-				
-				g_bans[key]["punish_count"] = value.length;
-				g_bans[key]["last_punish"] = 0;
-				g_bans[key]["last_punish_reason"] = "";
-				g_bans[key]["punish_desc"] = "Punishments:";
-			
-				for (let i = 0; i < value.length; i++) {
-					let ban = value[i];
-					
-					if (ban.start > g_bans[key]["last_punish"]) {
-						g_bans[key]["last_punish"] = ban.start;
-						g_bans[key]["last_punish_reason"] = ban.reason;
-					}
-					
-					g_bans[key]["punish_desc"] += "\n" + get_punish_desc(ban);
-				}
-				
-				if (data["ban_notes"][key]) {
-					g_bans[key]["punish_desc"] += "\n\nw00tguy notes:\n" + data["ban_notes"][key]["notes"];
-				}
-			}
+			apply_bans(data);
 		})
 		.catch(error => {
 			console.error('Failed to load JSON:', error);

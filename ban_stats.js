@@ -232,15 +232,7 @@ function update_stat_table() {
 		row.cells[2].textContent = dat.punish_count;
 		row.cells[2].title = dat.punish_desc;
 		
-		if (dat.total_time >= 60 * 60 * 24 * 365 * 10) {
-			row.cells[3].textContent = "Permanent";
-			row.cells[3].title = format_age(dat.total_time, false, true);
-		} else {
-			row.cells[3].textContent = format_age(dat.total_time, true, true);
-			row.cells[3].title = format_age(dat.total_time, false, true);
-		}
-		
-		row.cells[4].textContent = dat.last_punish;
+		row.cells[3].textContent = dat.last_punish;
 		
 		let firstSeenDate = new Date(dat.last_punish*1000);		
 		if (dat.last_punish == 0) {
@@ -253,11 +245,15 @@ function update_stat_table() {
 		});
 		let firstSeenAge = today - dat.last_punish;
 		if (firstSeenAge < 60*60*24) {
-			row.cells[4].textContent = "Today";
+			row.cells[3].textContent = "Today";
 		} else {
-			row.cells[4].textContent = format_age(firstSeenAge, true, true) + " ago";
-			row.cells[4].title = firstSeenText;
+			row.cells[3].textContent = format_age(firstSeenAge, true, true) + " ago";
+			row.cells[3].title = firstSeenText;
 		}
+		
+		let punish_desc = dat.last_punish_desc.replace("10 year", "Permanent");
+		row.cells[4].textContent = punish_desc;
+		row.cells[4].title = punish_desc;
 		
 		row.cells[5].textContent = dat.last_reason;
 		
@@ -339,6 +335,8 @@ async function setup() {
 					"punish_desc": "Punishments:",
 					"total_time": 0,
 					"last_punish": 0,
+					"last_punish_time": 0,
+					"last_punish_desc": "",
 					"last_reason" : "",
 				}
 				
@@ -350,6 +348,8 @@ async function setup() {
 					if (ban.start > dat.last_punish) {
 						dat.last_punish = ban.start;
 						dat.last_reason = ban.reason;
+						dat.last_punish_time = ban.minutes;
+						dat.last_punish_desc = get_punish_desc(ban, true, true);
 					}
 					
 					dat.punish_desc += "\n" + get_punish_desc(ban);
@@ -363,6 +363,8 @@ async function setup() {
 			}
 			
 			g_update_time = data["time"];
+			
+			apply_bans(data);
 		})
 		.catch(error => {
 			console.error('Failed to load JSON:', error);
