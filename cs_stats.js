@@ -381,7 +381,7 @@ async function setup() {
 	
 	init_common();
 	
-	sort_uses();
+	sort_uploaded();
 	search_filter();
 }
 
