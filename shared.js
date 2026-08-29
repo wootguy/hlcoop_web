@@ -226,7 +226,14 @@ function open_player_profile(event) {
 		minute: 'numeric'
 	});
 	let lastSeenAge = today - state.lastSeen;
-	if (lastSeenAge < 60*60*24) {
+	let firstSeenDesc = "";
+	
+	if (state.lastSeen == 0) {
+		firstSeenText = "Never";
+		lastSeenAge = "Never";
+		lastSeenText = firstSeenDesc = "This player has never joined the server."
+	}
+	else if (lastSeenAge < 60*60*24) {
 		lastSeenAge = "Today";
 	} else {
 		lastSeenAge = format_age(lastSeenAge, true, true) + " ago";
@@ -261,6 +268,7 @@ function open_player_profile(event) {
 	player_profile.getElementsByClassName("play_time_recent")[0].textContent = format_age(state.recentPlayTime, true, true, 2);
 	player_profile.getElementsByClassName("play_time_recent")[0].title = format_age(state.recentPlayTime, false, true, 2);
 	player_profile.getElementsByClassName("first_seen")[0].textContent = firstSeenText;
+	player_profile.getElementsByClassName("first_seen")[0].title = firstSeenDesc;
 	player_profile.getElementsByClassName("last_seen")[0].textContent = lastSeenAge;
 	player_profile.getElementsByClassName("last_seen")[0].title = lastSeenText;
 	player_profile.getElementsByClassName("client_type")[0].textContent = clientStr;

@@ -665,7 +665,6 @@ function add_message(steamid64, ipStr, name, msg, time, msgType) {
 			set_flag(chat_flag, ipStr, {"country": "XX"});
 			chat_flag.classList.add("need_info");
 		}
-		chat_flag.addEventListener('click', click_player_flag);
 		
 		chat_left_side.appendChild(chat_flag);
 	}
@@ -684,7 +683,6 @@ function add_message(steamid64, ipStr, name, msg, time, msgType) {
 		} else {
 			chat_avatar.classList.add("need_avatar");
 		}
-		chat_avatar.addEventListener('click', click_steam_avatar);
 		
 		chat_avatar_container.appendChild(chat_avatar);
 		chat_left_side.appendChild(chat_avatar_container);
@@ -725,6 +723,14 @@ function add_message(steamid64, ipStr, name, msg, time, msgType) {
 	for (let i = 0; i < nametags.length; i++) {
 		nametags[i].addEventListener('click', open_player_profile);
 	}
+	
+	let avatar = chat_container.getElementsByClassName("avatar")[0];
+	if (avatar)
+		avatar.addEventListener('click', click_steam_avatar);
+	
+	let flag = chat_container.getElementsByClassName("cnflag")[0];
+	if (flag)
+		flag.addEventListener('click', click_player_flag);
 	
 	while (chatbox.childElementCount > 200) {
 		chatbox.removeChild(chatbox.firstChild);
@@ -798,8 +804,13 @@ function update_web_client_info() {
 		
 		if (id > 1) {
 			if (id in g_player_states) {
-				name = g_player_states[id].name;
-				if (!name.length) {
+				if (g_player_states[id].name.length) {
+					name = g_player_states[id].name;
+				}
+				else if (g_player_states[id].steamName.length) {
+					name = g_player_states[id].steamName;
+				}
+				else {
 					name = "Player";
 				}
 			}		
