@@ -304,7 +304,7 @@ function open_player_profile(event) {
 	}
 	
 	if (state.sprayBanReason) {
-		player_profile.getElementsByClassName("spray_img")[0].title = 'This player lost their spray prviledge.\n\nBan reason: "' + state.sprayBanReason + '"';
+		player_profile.getElementsByClassName("spray_img")[0].title = 'This player lost their spray privilege.\n\nBan reason: "' + state.sprayBanReason + '"';
 	} else {
 		player_profile.getElementsByClassName("spray_img")[0].title = "";
 	}
@@ -434,6 +434,9 @@ function apply_bans(data) {
 		if (ban.start + ban.minutes*60 > now && g_player_states[key]) {
 			// for stats page
 			g_player_states[key]["banned"] = get_punish_desc(ban);
+			if (ban.punishment == "spray ban") {
+				g_player_states[key].sprayBanReason = ban.reason;
+			}
 		}
 		
 		g_bans[key]["punish_count"] = value.length;
