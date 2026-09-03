@@ -294,7 +294,7 @@ function refresh_player_table_single(plist, player_data, ip_data) {
 	// allocate all rows that will ever be needed (max of 128 web clients, so use that as the limit)
 	for (let i = plist.rows.length; i < g_max_player_list_rows; i++) {
 		let row = plist.insertRow(plist.rows.length);
-		row.innerHTML = "<tr><td><img class=\"cnflag\"/><span class=\"avatar_container\"><img class=\"avatar\"/></span><div></div><img class=\"rank\"/></td><td></td><td></td><td></td><td></td><td><span class=\"client_text\"></span><img class=\"client_icon superhidden\"></img></td><td></td><td></td><td></td><td></td><td></td></tr>";
+		row.innerHTML = "<tr><td><img class=\"cnflag\"/><span class=\"avatar_container\"><img class=\"avatar\"/></span><div></div><img class=\"rank\"/></td><td></td><td></td><td></td><td></td><td><span class=\"client_text\"></span><span class=\"client_icon_container\"><img class=\"client_icon superhidden\"></img><img class=\"client_os superhidden\"></img><img class=\"client_engine superhidden\"></img><img class=\"client_renderer superhidden\"></img></span></td><td></td><td></td><td></td><td></td><td></td></tr>";
 	}
 	
 	// remove extra rows
@@ -317,6 +317,9 @@ function refresh_player_table_single(plist, player_data, ip_data) {
 		let avatar = row.cells[0].getElementsByClassName('avatar')[0];
 		let cl_text = row.cells[5].getElementsByClassName('client_text')[0];
 		let cl_icon = row.cells[5].getElementsByClassName('client_icon')[0];
+		let cl_os_icon = row.cells[5].getElementsByClassName('client_os')[0];
+		let cl_engine_icon = row.cells[5].getElementsByClassName('client_engine')[0];
+		let cl_renderer_icon = row.cells[5].getElementsByClassName('client_renderer')[0];
 		let name = row.cells[0].getElementsByTagName('div')[0];
 		let state = g_player_states[dat.steamid64];
 		
@@ -440,6 +443,39 @@ function refresh_player_table_single(plist, player_data, ip_data) {
 			cl_text.textContent = "";
 			cl_icon.src = "icon/client_" + client_logo_suffix + ".png";
 			cl_icon.classList.remove("superhidden");
+			
+			let osType = g_player_clients[dat.steamid64].os;
+			if (osType != 1) {
+				cl_os_icon.src = osType == 1 ? "icon/windows.png" : "icon/linux.png";
+				cl_os_icon.classList.remove("superhidden");
+			}
+			
+			let renderer = g_player_clients[dat.steamid64].renderer;
+			if (renderer != 1) {
+				cl_renderer_icon.src = renderer == 1 ? "icon/opengl.png" : "icon/software.png";
+				cl_renderer_icon.classList.remove("superhidden");
+			}
+			
+			let engineType = g_player_clients[dat.steamid64].engine;
+			if (engineType != 1) {
+				if (engineType == 1) {
+					cl_engine_icon.src = "icon/steam_icon_logo.svg";
+				} else if (engineType == 2) {
+					cl_engine_icon.src = "icon/steam_legacy.png";
+				} else if (engineType == 3) {
+					cl_engine_icon.src = "icon/xash3d.png";
+				}
+				cl_engine_icon.classList.remove("superhidden");
+			}
+			
+			//cl_os_icon.src = "icon/linux.png";
+			//cl_renderer_icon.src = "icon/software.png";
+			//cl_engine_icon.src = "icon/xash3d.png";
+			//cl_engine_icon.src = "icon/steam_legacy.png";
+			
+			//cl_engine_icon.classList.remove("superhidden");
+			//cl_os_icon.classList.remove("superhidden");
+			//cl_renderer_icon.classList.remove("superhidden");
 		} else {
 			cl_text.textContent = "?";
 			cl_icon.classList.add("superhidden");
@@ -1985,6 +2021,12 @@ async function setup() {
 	preload_image("icon/client_gf.png");
 	preload_image("icon/client_hl.png");
 	preload_image("icon/client_sk.png");
+	//preload_image("icon/windows.png");
+	preload_image("icon/linux.png");
+	//preload_image("icon/opengl.png");
+	preload_image("icon/software.png");
+	preload_image("icon/steam_legacy.png");
+	preload_image("icon/xash3d.png");
 	
 	g_map_data = await downloadJson("mapdb.json");
 	update_map_data();
