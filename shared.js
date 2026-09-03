@@ -1,4 +1,4 @@
-const WEBAPP_VERSION = 2;
+const WEBAPP_VERSION = 3;
 
 var g_bans = {};
 
@@ -168,12 +168,7 @@ function get_client_details_tip(steamid) {
 			clientStr_tip += "Linux";
 		}
 		
-		clientStr_tip += "\nEngine: ";
-		if (deetz.engine == 1) {
-			clientStr_tip += "Steam";
-		} else if (deetz.engine == 2) {
-			clientStr_tip += "steam_legacy";
-		}
+		clientStr_tip += "\nEngine: " + deetz.engStr;
 		
 		clientStr_tip += "\nRenderer: ";
 		if (deetz.renderer == 1) {

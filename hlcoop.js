@@ -1295,8 +1295,12 @@ function parse_client_details(view) {
 	offset += 1;
 	
 	let modStr = read_string(view, offset);
-	offset += get_utf8_data_len(name);
+	offset += get_utf8_data_len(modStr);
 	g_player_clients[steamid64].modStr = modStr;
+	
+	let engStr = read_string(view, offset);
+	offset += get_utf8_data_len(engStr);
+	g_player_clients[steamid64].engStr = engStr;
 	
 	if (debug_logging)
 		console.log("Player client " + steamid64 + ": ", g_player_clients[steamid64]);
