@@ -490,6 +490,17 @@ function refresh_player_table_single(plist, player_data, ip_data) {
 		row.cells[8].textContent = "";
 		row.cells[9].textContent = "";
 		
+		row.cells[4].classList.remove("ping-very-low");
+		row.cells[4].classList.remove("ping-low");
+		row.cells[4].classList.remove("ping-high");
+		row.cells[4].classList.remove("ping-very-high");
+		row.cells[4].classList.remove("ping-horrible");
+		if (dat.ping >= 350) { row.cells[4].classList.add("ping-horrible"); }
+		else if (dat.ping >= 250) { row.cells[4].classList.add("ping-very-high"); }
+		else if (dat.ping >= 150) { row.cells[4].classList.add("ping-high"); }
+		else if (dat.ping >= 70) { row.cells[4].classList.add("ping-low"); }
+		else if (dat.ping > 0) { row.cells[4].classList.add("ping-very-low"); }
+		
 		row.setAttribute("steamid", dat.steamid64);
 	}
 }
