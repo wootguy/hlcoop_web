@@ -448,12 +448,16 @@ function refresh_player_table_single(plist, player_data, ip_data) {
 			if (osType != 1) {
 				cl_os_icon.src = osType == 1 ? "icon/windows.png" : "icon/linux.png";
 				cl_os_icon.classList.remove("superhidden");
+			} else {
+				cl_os_icon.classList.add("superhidden");
 			}
 			
 			let renderer = g_player_clients[dat.steamid64].renderer;
 			if (renderer != 1) {
 				cl_renderer_icon.src = renderer == 1 ? "icon/opengl.png" : "icon/software.png";
 				cl_renderer_icon.classList.remove("superhidden");
+			} else {
+				cl_renderer_icon.classList.add("superhidden");
 			}
 			
 			let engineType = g_player_clients[dat.steamid64].engine;
@@ -466,6 +470,8 @@ function refresh_player_table_single(plist, player_data, ip_data) {
 					cl_engine_icon.src = "icon/xash3d.png";
 				}
 				cl_engine_icon.classList.remove("superhidden");
+			} else {
+				cl_engine_icon.classList.add("superhidden");
 			}
 			
 			//cl_os_icon.src = "icon/linux.png";
@@ -479,6 +485,9 @@ function refresh_player_table_single(plist, player_data, ip_data) {
 		} else {
 			cl_text.textContent = "?";
 			cl_icon.classList.add("superhidden");
+			cl_engine_icon.classList.add("superhidden");
+			cl_renderer_icon.classList.add("superhidden");
+			cl_os_icon.classList.add("superhidden");
 		}
 		
 		row.cells[2].textContent = dat.score;
