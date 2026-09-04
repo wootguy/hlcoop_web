@@ -704,6 +704,14 @@
 			#chat_box.dim .chat_message:not(.important) {
 				opacity: 0.3;
 			}
+			#chat_box.dim .chat_message:not(.important):hover,
+			#chat_box.dim .chat_message:not(.important):hover + *,
+			#chat_box.dim .chat_message:not(.important):has(+ .chat_message:hover),
+			#chat_box.dim .chat_message:not(.important):last-child,
+			#chat_box.dim .chat_message:not(.important):nth-last-child(2),
+			#chat_box.dim .chat_message:not(.important):nth-last-child(3) {
+				opacity: 1.0;
+			}
 			
 			#chat_settings_button {
 				position: absolute;
