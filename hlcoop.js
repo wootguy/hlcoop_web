@@ -43,6 +43,9 @@ var g_max_player_list_rows = 128; // TODO: send web client limit from server
 var g_reload_map_images = true;
 var g_load_avatar_timeout = null;
 var g_settings = {};
+var g_message_send_timeout = null;
+var g_last_sent_message = "";
+var g_first_connection = true;
 
 var debug_logging = false;
 
@@ -799,10 +802,13 @@ function add_message(steamid64, ipStr, name, msg, time, msgType) {
 		chatbox.scrollTop = chatbox.scrollHeight;
 		
 		// multi-line messages are stopping the auto scrolling? Maybe need to wait until the flex box stuff is calculated
-		setTimeout(function() {
-			chatbox.scrollTop = chatbox.scrollHeight;
-		}, 100);
+		setTimeout(scroll_chat_to_bottom, 100);
 	}
+}
+
+function scroll_chat_to_bottom() {
+	let chatbox = document.getElementById('chat_box_messages');
+	chatbox.scrollTop = chatbox.scrollHeight;
 }
 
 function parse_chat_message(view) {	
@@ -2082,6 +2088,108 @@ function load_settings() {
 	document.getElementById("alt_wrap_button").checked = g_settings.alt_wrap_button;
 }
 
+function finish_send_message() {
+	let input_box = document.getElementById("send_message");
+	let input_box_but = document.getElementById("send_message_but");
+	let input_box_but_text = document.getElementById("send_message_but_text");
+	g_message_sent = true;
+	input_box.disabled = false;
+	input_box_but.classList.remove("sending");
+	input_box_but.classList.remove("failed");
+	if (g_message_send_timeout)
+		clearTimeout(g_message_send_timeout);
+	g_message_send_timeout = null;
+}
+
+function check_message_send_status() {
+	if (g_socket.bufferedAmount == 0) {
+		finish_send_message();
+		let input_box = document.getElementById("send_message");
+		input_box.value = "";
+		return;
+	}
+	
+	//console.log("Buffered is " + g_socket.bufferedAmount);
+	g_message_send_timeout = setTimeout(check_message_send_status, 50);
+}
+
+function fail_send_message() {
+	finish_send_message();
+	
+	let input_box_but = document.getElementById("send_message_but");
+	let input_box_but_text = document.getElementById("send_message_but_text");
+	input_box_but.classList.add("failed");
+	
+	add_message(0, "", "", "Failed to send chat message. Not connected.", Date.now(), WEBMSG_CHAT_TYPE_ERROR);
+}
+
+function cancel_send_message() {
+	if (g_message_send_timeout) {
+		fail_send_message();
+	}
+}
+
+function send_message() {
+	let input_box = document.getElementById("send_message");
+	let input_box_but = document.getElementById("send_message_but");
+	let input_box_but_text = document.getElementById("send_message_but_text");
+	let cooldown_div = document.getElementById("cooldown-text");
+	let cooldown_timer = document.getElementById("cooldown-timer");
+	let message = input_box.value.trim();
+	
+	if (g_message_send_timeout) {
+		return;
+	}
+	
+	if (message.length == 0)
+		return;
+		
+	if (g_steamid <= 1) {
+		action_denied_popup(WEBDENY_NOT_LOGGED_IN_CHAT, 0);
+		return;
+	}
+	
+	if (input_box.classList.contains("cooldown")) {
+		cooldown_div.classList.remove("hidden");
+		setInterval(function() {
+			let timeleft = g_chat_cooldown_end - Number(new Date());
+			let secondsLeft = Math.floor(timeleft / 1000);
+			let tenthsLeft = Math.floor((timeleft % 1000) / 100);
+			cooldown_timer.textContent = secondsLeft + "." + tenthsLeft;
+		}, 20, 100);
+		return;
+	}
+	
+	if (g_socket.readyState != WebSocket.OPEN) {
+		fail_send_message();
+		return;
+	}
+	
+	try {
+		g_socket.send("say;" + message);
+	} catch (e) {
+		fail_send_message();
+		add_message(0, "", "", "Failed to send. " + e, Date.now(), WEBMSG_CHAT_TYPE_ERROR);
+		return;
+	}
+	
+	g_last_sent_message = message;
+	input_box.classList.add("cooldown");
+	
+	let cooldown = 3100;
+	g_chat_cooldown_end = Number(new Date()) + cooldown;
+	setTimeout(function() {
+		console.log("timeout done!");
+		input_box.classList.remove("cooldown");
+		cooldown_div.classList.add("hidden");
+	}, cooldown);
+	
+	input_box_but.classList.add("sending");
+	input_box.disabled = true;
+	g_message_sent = false;
+	check_message_send_status();
+}
+
 async function setup() {
 	await load_shared_html();
 	await load_chatsounds();
@@ -2193,40 +2301,44 @@ async function setup() {
 	});
 	
 
-	document.getElementById('send_message').addEventListener('keydown', (event) => {
-		let input_box = document.getElementById("send_message");
-		let cooldown_div = document.getElementById("cooldown-text");
-		let cooldown_timer = document.getElementById("cooldown-timer");
+	let input_box = document.getElementById("send_message");
+	let send_message_but = document.getElementById("send_message_but");
+	input_box.addEventListener('keydown', (event) => {
 		let message = input_box.value.trim();
 		
-		if (event.key === 'Enter' && message.length) {
-			if (g_steamid <= 1) {
-				action_denied_popup(WEBDENY_NOT_LOGGED_IN_CHAT, 0);
-				return;
-			}
-			
-			if (input_box.classList.contains("cooldown")) {
-				cooldown_div.classList.remove("hidden");
-				setInterval(function() {
-					let timeleft = g_chat_cooldown_end - Number(new Date());
-					let secondsLeft = Math.floor(timeleft / 1000);
-					let tenthsLeft = Math.floor((timeleft % 1000) / 100);
-					cooldown_timer.textContent = secondsLeft + "." + tenthsLeft;
-				}, 20, 100);
-				return;
-			}
-			
-			g_socket.send("say;" + message);
-			input_box.value = "";
-			input_box.classList.add("cooldown");
-			
-			g_chat_cooldown_end = Number(new Date()) + 3100;
-			setTimeout(function() {
-				console.log("timeout done!");
-				input_box.classList.remove("cooldown");
-				cooldown_div.classList.add("hidden");
-			}, 3100);
+		if (event.key === 'Enter' && message.length) {			
+			send_message();
 		}
+		if (event.key === "ArrowUp" && message.length == 0) {
+			input_box.value = g_last_sent_message;
+			event.preventDefault();
+			event.stopImmediatePropagation();
+			input_box.setSelectionRange(input_box.value.length, input_box.value.length);
+		}
+	});
+	
+	send_message_but.addEventListener("click", function() {
+		send_message();
+	});
+	
+	input_box.addEventListener("input", function() {
+		// remove newlines
+		input_box.value = input_box.value.replace(/[\r\n]/g, "");
+		
+		input_box.style.height = "auto";
+		input_box.style.height = input_box.scrollHeight + "px";
+		
+		if (input_box.scrollHeight < 40) {
+			input_box.style.height = "24px";
+		}
+		
+		if (input_box.value.length) {
+			send_message_but.classList.remove("empty");
+		} else {
+			send_message_but.classList.add("empty");
+		}
+		
+		scroll_chat_to_bottom();
 	});
 	
 	setup_openid_link();
@@ -2359,6 +2471,10 @@ function action_denied_popup(reason, errorCode) {
 	}
 	if (reason == WEBDENY_RATE_LIMITED) {
 		document.getElementById('popup-text-rate-limit').style.display = 'block';
+		
+		// reload the last message so they can try again
+		let input_box = document.getElementById("send_message");
+		input_box.value = g_last_sent_message;
 	}
 	if (reason == WEBDENY_STEAM_ERROR) {
 		document.getElementById('popup-error-code').textContent = errorCode;
@@ -2404,10 +2520,18 @@ function handle_resize() {
 
 	if (active_maps.parentElement !== target)
 		target.prepend(active_maps);
+	
+	scroll_chat_to_bottom();
 }
 
 function createWebSocket() {
 	console.log("Connecting to " + g_server_url);
+	
+	if (!g_first_connection)
+		add_message(0, "", "", "Reconnecting to the server...", Date.now(), WEBMSG_CHAT_TYPE_ERROR);
+	
+	g_first_connection = false;
+	
 	g_socket = new WebSocket(g_server_url);
 	lastMessageTime = Date.now();
 	
@@ -2525,7 +2649,10 @@ function createWebSocket() {
 
 	// Handle connection close
 	g_socket.addEventListener('close', function () {
+		cancel_send_message();
 		console.log("WebSocket connection closed. Code: " + event.code);
+		
+		add_message(0, "", "", "WebSocket connection closed. Code: " + event.code, Date.now(), WEBMSG_CHAT_TYPE_ERROR);
 		
 		if (event.code == WEBERR_FULL) {
 			action_denied_popup(WEBERR_FULL);
