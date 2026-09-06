@@ -2327,8 +2327,8 @@ async function setup() {
 		
 		input_box.style.height = input_box.scrollHeight + "px";
 		
-		if (input_box.scrollHeight < 40 || input_box.value.length == 0) {
-			input_box.style.height = "26px";
+		if (input_box.scrollHeight < 40 || input_box.value.length <= 1) {
+			input_box.style.height = "28px";
 		}
 		
 		if (input_box.value.length) {

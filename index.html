@@ -29,8 +29,8 @@
 				min-height: 0;
 			}
 			#content.compact #chat_content {
-				height: 100vh;
-				min-height: 100vh;
+				height: calc(100vh + 10px);
+				min-height: calc(100vh + 10px);
 			}
 			#player_list_container > h2 {
 				flex: 0;
@@ -41,6 +41,10 @@
 			#player_table_container {
 				overflow-y: auto;
 				max-height: 400px;
+			}
+			#content.compact #player_table_container {
+				overflow-y: initial;
+				max-height: initial;
 			}
 			#content-container {
 				height: calc(100% - 100px);
@@ -647,7 +651,7 @@
 				font-size: 16px;
 				color: #ddd;
 				resize: none;
-				height: 26px;
+				height: 28px;
 				overflow: hidden;
 			}
 			#send_message_but {
@@ -656,7 +660,7 @@
 				justify-content: center;
 				flex-shrink: 0;
 				width: 70px;
-				margin-left: 10px;
+				margin-left: 5px;
 				border: 1px solid #888;
 				border-radius: 3px;
 				cursor: pointer;
@@ -706,6 +710,60 @@
 				right: 85px;
 				padding: 0 10px;
 				pointer-events: none;
+			}
+			
+			#chat_settings_button {
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				flex-shrink: 0;
+				width: 28px;
+				height: 26px;
+				border: 1px solid #888;
+				border-radius: 3px;
+				background: #000;
+				cursor: pointer;
+				margin-right: 5px;
+			}
+			#chat_settings_button:hover {
+				background: #333;
+			}
+			#chat_settings_button img {
+				max-width: 100%;
+				max-height: 100%;
+				object-fit: contain;
+			}
+			#chat_settings_menu {
+				border: 1px solid;
+				width: 230px;
+				position: absolute;
+				bottom: 32px;
+				left: 0;
+				z-index: 10;
+				padding: 5px;
+				background: black;
+				box-shadow: 0 0px 20px rgba(0, 0, 0, 1.0);
+				color: #fa0;
+			}
+			#chat_settings_menu div {
+				position: relative;
+			}
+			.chat_settings_option {
+				padding: 2px 0;
+			}
+			.chat_settings_option, .chat_settings_option label {
+				display: inline-block;
+				width: 100%;
+			}
+			.chat_settings_option, .chat_settings_option label, .chat_settings_option input {
+				cursor: pointer;
+			}
+			.chat_settings_option input {
+				position: absolute;
+				right: 0;
+			}
+			.chat_settings_option:hover {
+				background: #333;
 			}
 			
 			#filter_maps_container {
@@ -825,56 +883,6 @@
 			#chat_box .chat_message:nth-last-child(2),
 			#chat_box .chat_message:nth-last-child(3) {
 				opacity: 1.0 !important;
-			}
-			
-			#chat_settings_button {
-				position: absolute;
-				top: 0;
-				right: 20px;
-				width: 24px;
-				height: 24px;
-				border: 1px solid #888;
-				border-radius: 3px;
-				background: #000;
-				cursor: pointer;
-				z-index: 10;
-			}
-			#chat_settings_button:hover {
-				background: #333;
-			}
-			#chat_settings_button img {
-				width: 100%;
-			}
-			#chat_settings_menu {
-				border: 1px solid;
-				width: 200px;
-				position: absolute;
-				top: 26px;
-				right: 0;
-				z-index: 10;
-				padding: 5px;
-				background: black;
-				box-shadow: 0 10px 20px rgba(0, 0, 0, 1.0);
-			}
-			#chat_settings_menu div {
-				position: relative;
-			}
-			.chat_settings_option {
-				padding: 2px 0;
-			}
-			.chat_settings_option, .chat_settings_option label {
-				display: inline-block;
-				width: 100%;
-			}
-			.chat_settings_option, .chat_settings_option label, .chat_settings_option input {
-				cursor: pointer;
-			}
-			.chat_settings_option input {
-				position: absolute;
-				right: 0;
-			}
-			.chat_settings_option:hover {
-				background: #333;
 			}
 			
 			#login_but {
@@ -1127,6 +1135,11 @@
 							Sign in to see chat
 						</div>
 						<div id="chat_box">
+							<div id="chat_box_messages">
+							
+							</div>
+						</div>
+						<div id="send_message_container">
 							<div id="chat_settings_button">
 								<img src="icon/cog.png"/>
 								<div id="chat_settings_menu" class="hidden">
@@ -1166,11 +1179,6 @@
 									</div>
 								</div>
 							</div>
-							<div id="chat_box_messages">
-							
-							</div>
-						</div>
-						<div id="send_message_container">
 							<textarea id="send_message" type="text" placeholder="Send message..." maxlength="123"></textarea>
 							<div id="cooldown-text" class="hidden">Wait <span id="cooldown-timer">X</span> seconds</div>
 							<div id="send_message_but" class="empty"><span id="send_message_but_text">Send</span><span id="send_load"></span></div>
