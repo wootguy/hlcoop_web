@@ -2,7 +2,6 @@
 // - special messages for mapchange
 // - iOS safari/firefox is missing a player in the table in hidden maps mode
 // - "move the chat settings button to where the log out is, see the site from anything that isn't Windows to see why"
-// - bad scaling for phone layout, upcoming maps off the screen
 // - mutes dont work in chat. option to mute from the web.
 
 var g_socket;
@@ -2384,33 +2383,27 @@ function action_denied_popup(reason, errorCode) {
 
 function handle_resize() {
 	let content = document.getElementById("content");
-	
+	let active_maps = document.getElementById("active_maps");
 	g_hide_maps = document.getElementById("hide_maps_cb").checked;
-	content.classList.remove("wide");
-	content.classList.remove("compact");
-	content.classList.remove("hide_maps");
-	g_wide_mode = false;
-	
-	document.getElementById("player_list_content").prepend(document.getElementById("active_maps"));
-	
-	if (g_hide_maps) {
-		g_wide_mode = true;
-		content.classList.add("wide");
-		content.classList.add("hide_maps");
-		if (window.innerWidth < 975) {
-			content.classList.add("compact");
-			content.classList.remove("wide");
-		}
-	} else {
-		if (window.innerWidth > 1500) {
-			content.classList.add("wide");
-			g_wide_mode = true;
-		} else if (window.innerWidth < 975) {
-			content.classList.add("compact");
-		} else {
-			document.getElementById("map_list_container").prepend(document.getElementById("active_maps"));
-		}
-	}
+
+	let wide = g_hide_maps || window.innerWidth > 1500;
+	let compact = window.innerWidth < 975;
+
+	if (compact)
+		wide = false;
+
+	g_wide_mode = wide;
+
+	content.classList.toggle("wide", wide);
+	content.classList.toggle("compact", compact);
+	content.classList.toggle("hide_maps", g_hide_maps);
+
+	let target = (g_hide_maps || wide || compact)
+		? document.getElementById("player_list_content")
+		: document.getElementById("map_list_container");
+
+	if (active_maps.parentElement !== target)
+		target.prepend(active_maps);
 }
 
 function createWebSocket() {

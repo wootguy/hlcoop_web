@@ -15,6 +15,10 @@ body {
 	padding: 10px 0 0 0;
 	text-align: center;
 	height: 40px;
+	text-wrap: nowrap;
+}
+#content.compact #server_name {
+	font-size: 26px;
 }
 #server_link_container {
 	text-align: center;
@@ -26,6 +30,10 @@ body {
 	font-family: monospace;
 	font-size: 14px;
 	text-decoration: none;
+}
+#content.compact .server_link {
+	display: block;
+	margin: 10px 0;
 }
 .server_link:hover {
 	text-decoration: underline;

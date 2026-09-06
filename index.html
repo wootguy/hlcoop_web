@@ -6,6 +6,7 @@
 		<script type="text/javascript" src="hlcoop.js"></script>
 		<link rel="stylesheet" href="common.css">
 		<link rel="stylesheet" href="player_profile.css">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
 		<style>
 			#player_list_container {
 				width: 450px;
@@ -26,6 +27,10 @@
 			#chat_content {
 				flex: 1 1 auto;
 				min-height: 0;
+			}
+			#content.compact #chat_content {
+				height: 100vh;
+				min-height: 100vh;
 			}
 			#player_list_container > h2 {
 				flex: 0;
@@ -97,7 +102,8 @@
 			
 			#content.compact #player_list_container {
 				width: 100%;
-				padding-bottom: 50px;
+				padding-bottom: 10px;
+				height: initial;
 			}
 			#content.compact #player_list_content {
 				margin: 0 auto;
@@ -108,6 +114,16 @@
 			}
 			#content.compact #active_maps {
 				padding-bottom: 15px;
+			}
+			#content.compact #active_maps {
+				padding-bottom: 15px;
+			}
+			
+			#content.compact #login_but {
+				position: relative;
+				margin: 0 auto 20px auto;
+				left: 0;
+				display: block;
 			}
 			
 			#content.hide_maps #map_list_container {
@@ -145,6 +161,9 @@
 				display: inline-block;
 				margin: 0 auto 5px auto;
 			}
+			#content.compact #show_maps_button {
+				margin-bottom: 20px;
+			}
 			#content.hide_maps #content-container #player_list_container {
 				max-width: 1100px !important;
 			}
@@ -156,7 +175,7 @@
 				margin-top: 0px;
 			}
 			
-			#content.flip #content-container {
+			#content.flip:not(.compact) #content-container {
 				display: flex;
 				flex-direction: row-reverse;
 			}
@@ -394,6 +413,9 @@
 				text-align: center;
 				flex: 0;
 			}
+			#content.compact #active_maps {
+				min-width: 230px;
+			}
 			#current_map_container, #next_map_container, #next_map_arrow {
 				display: inline-block;
 				position: relative;
@@ -440,6 +462,10 @@
 			#content.wide .map_container, #content.hide_maps .map_container {
 				width: 215px;
 				height: 159px;
+			}
+			#content.compact .map_container, #content.hide_maps.compact .map_container {
+				width: 150px;
+				height: 111px;
 			}
 			.map_container img {
 				border-top: 1px solid #a80;
@@ -503,6 +529,9 @@
 			}
 			#content.wide .map_image, #content.hide_maps .map_image {
 				height: 136px;
+			}
+			#content.compact .map_image {
+				height: 84px;
 			}
 			.map_tags {
 				font-size: 12px;
