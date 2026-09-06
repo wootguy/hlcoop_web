@@ -354,6 +354,10 @@ function open_player_profile(event) {
 		row.appendChild(nameCell);
 		row.appendChild(timeUsedCell);
 	}
+	
+	// for phone layout
+	let scrollContent = document.getElementById("player_profile").getElementsByClassName("info_container")[0];
+	scrollContent.scrollTop = 0;
 }
 
 async function downloadJson(url) {

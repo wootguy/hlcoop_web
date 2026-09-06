@@ -38,6 +38,7 @@ var g_map_total = 0;
 var g_is_stats_page = false;
 var g_most_active_id = 0;
 var g_wide_mode = false;
+var g_compact_mode = false;
 var g_hide_maps = false;
 var g_max_player_list_rows = 128; // TODO: send web client limit from server
 var g_reload_map_images = true;
@@ -531,6 +532,8 @@ function refresh_player_table() {
 	let plist = ptable.querySelector('tbody');
 	let oldRowCount = plist.rows.length;
 	
+	let shouldScrollPage = is_page_scrolled_to_bottom();
+	
 	if (g_wide_mode) {
 		let ptable_web = document.getElementById('player_list2');
 		let plist_web = ptable_web.querySelector('tbody');
@@ -554,6 +557,10 @@ function refresh_player_table() {
 	if (!g_wide_mode && oldRowCount != plist.rows.length) {
 		let chatbox = document.getElementById('chat_box_messages');	
 		chatbox.scrollTop = chatbox.scrollHeight;
+	}
+	
+	if (shouldScrollPage && g_compact_mode) {
+		setTimeout(scroll_page_to_bottom, 100);
 	}
 }
 
@@ -809,6 +816,14 @@ function add_message(steamid64, ipStr, name, msg, time, msgType) {
 function scroll_chat_to_bottom() {
 	let chatbox = document.getElementById('chat_box_messages');
 	chatbox.scrollTop = chatbox.scrollHeight;
+}
+
+function is_page_scrolled_to_bottom() {
+	return window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 1;
+}
+
+function scroll_page_to_bottom() {
+	window.scrollTo(0, document.body.scrollHeight); 
 }
 
 function parse_chat_message(view) {	
@@ -2078,7 +2093,7 @@ function load_settings() {
 	document.getElementById("dim_sound_button").checked = g_settings.dim_sound;
 	document.getElementById("dim_join_button").checked = g_settings.dim_join;
 	document.getElementById("dim_map_button").checked = g_settings.dim_map;
-	document.getElementById("dim_server_button").checked = g_settings.dim_server_button;
+	document.getElementById("dim_server_button").checked = g_settings.dim_server;
 	document.getElementById("hover_dim_button").checked = g_settings.dim_hover;
 	document.getElementById("show_country_flags").checked = g_settings.show_flags;
 	document.getElementById("show_avatars").checked = g_settings.show_avatars;
@@ -2509,6 +2524,7 @@ function handle_resize() {
 		wide = false;
 
 	g_wide_mode = wide;
+	g_compact_mode = compact;
 
 	content.classList.toggle("wide", wide);
 	content.classList.toggle("compact", compact);
