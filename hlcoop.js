@@ -2,9 +2,7 @@
 // - special messages for mapchange
 // - iOS safari/firefox is missing a player in the table in hidden maps mode
 // - "move the chat settings button to where the log out is, see the site from anything that isn't Windows to see why"
-// - option to disable new wrapping in chat
 // - bad scaling for phone layout, upcoming maps off the screen
-// - can't click steam icon for profile in chat
 // - mutes dont work in chat. option to mute from the web.
 
 var g_socket;
@@ -627,6 +625,10 @@ function add_message(steamid64, ipStr, name, msg, time, msgType) {
 	let chat_container = document.createElement('div');
 	chat_container.classList.add("chat_message");
 	
+	let chat_timestamp = document.createElement('div');
+	chat_timestamp.classList.add("chat_timestamp");
+	let chat_content_side = document.createElement('div');
+	chat_content_side.classList.add("chat_content_side");
 	let chat_left_side = document.createElement('div');
 	chat_left_side.classList.add("chat_left_side");
 	let chat_right_side = document.createElement('div');
@@ -665,24 +667,26 @@ function add_message(steamid64, ipStr, name, msg, time, msgType) {
 	chat_msg.classList.add("chat_msg_content");
 	chat_msg.textContent = msg;
 	
-	let isImportant = true;
 	//console.log("Important? ", msg);
 	
 	if (msgType == WEBMSG_CHAT_TYPE_GAME) {
 		chat_msg.classList.add("hud_msg");
 		chat_msg.title = "This message was sent by the map";
-		isImportant = false;
+		chat_container.classList.add("map_msg");
 	}
 	if (msgType == WEBMSG_CHAT_TYPE_SERVER) {
 		chat_msg.title = "This message was sent by the server";
-		isImportant = false;
+		
+		if (msg.startsWith("- ;name;") || msg.startsWith("* ;name;") ) {
+			chat_container.classList.add("join_msg");
+		} else {
+			chat_container.classList.add("server_msg");
+		}
 	}
 	if (msgType == WEBMSG_CHAT_TYPE_WEB_CLIENTS) {
 		chat_msg.title = "This message is visible only to web clients.";
-		isImportant = false;
-		if (!document.getElementById("show_web_joins_button").checked) {
-			return;
-		}
+		chat_container.classList.add("join_msg");
+		chat_container.classList.add("web_join_msg");
 	}
 	if (msgType == WEBMSG_CHAT_TYPE_ERROR) {
 		chat_msg.classList.add("red");
@@ -694,21 +698,18 @@ function add_message(steamid64, ipStr, name, msg, time, msgType) {
 	}
 	
 	if (msgType == WEBMSG_CHAT_TYPE_NORMAL || msgType == WEBMSG_CHAT_TYPE_BAD_GUY || msgType == WEBMSG_CHAT_TYPE_WEB_USER) {
-		if (msg.startsWith("- ;name;") || msg.startsWith("* ;name;")) {
-			isImportant = false; // leave/join message or rename
+		if (msg.startsWith("- ;name;") || msg.startsWith("* ;name;") ) {
+			chat_container.classList.add("join_msg");
 		}
 		else if (msg.startsWith(";name;: ")) {
 			let words = msg.substring(";name;: ".length).trim().toLowerCase();
 			if (g_chatsounds.has(words) || words == '.') {
-				isImportant = false; // chat sound or stop sound command
+				chat_container.classList.add("sound_msg"); // chat sound or stop sound command
 			}
 		}
 	}
 	
-	if (isImportant)
-		chat_container.classList.add("important");
-	
-	chat_left_side.appendChild(chat_time);
+	chat_timestamp.appendChild(chat_time);
 	
 	if (ipStr && ipStr.length && ipStr != "0.0.0.0") {
 		let chat_flag = document.createElement('img');
@@ -771,8 +772,10 @@ function add_message(steamid64, ipStr, name, msg, time, msgType) {
 	
 	chat_right_side.appendChild(chat_msg);
 	
-	chat_container.appendChild(chat_left_side);
-	chat_container.appendChild(chat_right_side);
+	chat_container.appendChild(chat_timestamp);
+	chat_content_side.appendChild(chat_left_side);
+	chat_content_side.appendChild(chat_right_side);
+	chat_container.appendChild(chat_content_side);
 	chatbox.appendChild(chat_container);
 	
 	let nametags = chat_container.getElementsByClassName("player_name");
@@ -1886,10 +1889,16 @@ function remove_old_player_states() {
 
 function apply_chat_settings() {
 	g_settings.flip_layout = document.getElementById("flip_layout_button").checked;
-	g_settings.dim_unimportant = document.getElementById("dim_chat_button").checked;
+	g_settings.dim_sound = document.getElementById("dim_sound_button").checked;
+	g_settings.dim_join = document.getElementById("dim_join_button").checked;
+	g_settings.dim_map = document.getElementById("dim_map_button").checked;
+	g_settings.dim_server = document.getElementById("dim_server_button").checked;
+	g_settings.dim_hover = document.getElementById("hover_dim_button").checked;
 	g_settings.show_flags = document.getElementById("show_country_flags").checked;
 	g_settings.show_avatars = document.getElementById("show_avatars").checked;
-	g_settings.log_web_joins = document.getElementById("show_web_joins_button").checked;
+	g_settings.show_web_joins = document.getElementById("show_web_joins_button").checked;
+	g_settings.compound_icons = document.getElementById("compound_icons").checked;
+	g_settings.alt_wrap = document.getElementById("alt_wrap_button").checked;
 	
 	if (g_settings.flip_layout) {
 		document.getElementById("content").classList.add("flip");
@@ -1897,10 +1906,49 @@ function apply_chat_settings() {
 		document.getElementById("content").classList.remove("flip");
 	}
 	
-	if (g_settings.dim_unimportant) {
-		document.getElementById("chat_box").classList.add("dim");
+	if (!g_settings.compound_icons) {
+		document.getElementById("content").classList.add("no_compound_icons");
 	} else {
-		document.getElementById("chat_box").classList.remove("dim");
+		document.getElementById("content").classList.remove("no_compound_icons");
+	}
+	
+	if (g_settings.alt_wrap) {
+		document.getElementById("content").classList.add("alt_wrap");
+	} else {
+		document.getElementById("content").classList.remove("alt_wrap");
+	}
+	
+	if (!g_settings.show_web_joins) {
+		document.getElementById("content").classList.add("hide_web_joins");
+	} else {
+		document.getElementById("content").classList.remove("hide_web_joins");
+	}
+	
+	if (g_settings.dim_hover) {
+		document.getElementById("content").classList.add("dim_hover");
+	} else {
+		document.getElementById("content").classList.remove("dim_hover");
+	}
+	
+	if (g_settings.dim_sound) {
+		document.getElementById("chat_box").classList.add("dim_sound");
+	} else {
+		document.getElementById("chat_box").classList.remove("dim_sound");
+	}
+	if (g_settings.dim_join) {
+		document.getElementById("chat_box").classList.add("dim_join");
+	} else {
+		document.getElementById("chat_box").classList.remove("dim_join");
+	}
+	if (g_settings.dim_map) {
+		document.getElementById("chat_box").classList.add("dim_map");
+	} else {
+		document.getElementById("chat_box").classList.remove("dim_map");
+	}
+	if (g_settings.dim_server) {
+		document.getElementById("chat_box").classList.add("dim_server");
+	} else {
+		document.getElementById("chat_box").classList.remove("dim_server");
 	}
 	
 	if (g_settings.show_flags) {
@@ -2008,17 +2056,31 @@ function save_settings() {
 function load_settings() {
 	g_settings = JSON.parse(localStorage.getItem("settings")) || {
 		flip_layout: false,
-		dim_unimportant: false,
-		log_web_joins: false,
+		dim_sound: false,
+		dim_join: false,
+		dim_map: false,
+		dim_server: false,
+		dim_hover: true,
+		show_web_joins: false,
 		show_avatars: true,
 		show_flags: false,
-	};
+		hide_maps: true,
+		compound_icons: false,
+		alt_wrap: false,
+	};	
 	
 	document.getElementById("flip_layout_button").checked = g_settings.flip_layout;
-	document.getElementById("dim_chat_button").checked = g_settings.dim_unimportant;
+	document.getElementById("dim_sound_button").checked = g_settings.dim_sound;
+	document.getElementById("dim_join_button").checked = g_settings.dim_join;
+	document.getElementById("dim_map_button").checked = g_settings.dim_map;
+	document.getElementById("dim_server_button").checked = g_settings.dim_server_button;
+	document.getElementById("hover_dim_button").checked = g_settings.dim_hover;
 	document.getElementById("show_country_flags").checked = g_settings.show_flags;
 	document.getElementById("show_avatars").checked = g_settings.show_avatars;
-	document.getElementById("show_web_joins_button").checked = g_settings.log_web_joins;
+	document.getElementById("show_web_joins_button").checked = g_settings.show_web_joins;
+	document.getElementById("hide_maps_cb").checked = g_settings.hide_maps;
+	document.getElementById("compound_icons").checked = g_settings.compound_icons;
+	document.getElementById("alt_wrap_button").checked = g_settings.alt_wrap_button;
 }
 
 async function setup() {
@@ -2211,18 +2273,19 @@ async function setup() {
 	window.addEventListener('resize', function () {
 		handle_resize();
 	});
-	handle_resize();
 	
 	document.getElementById("content-container").classList.remove("hidden");
 	
 	document.getElementById("hide_maps_button").addEventListener("click", () => {
-		document.getElementById("hide_maps_cb").checked = true;
+		document.getElementById("hide_maps_cb").checked = g_settings.hide_maps = true;
 		handle_resize();
+		save_settings();
 	});
 	document.getElementById("show_maps_button").addEventListener("click", () => {
-		document.getElementById("hide_maps_cb").checked = false;
+		document.getElementById("hide_maps_cb").checked = g_settings.hide_maps = false;
 		handle_resize();
 		update_map_data();
+		save_settings();
 	});
 	
 	
@@ -2244,11 +2307,16 @@ async function setup() {
 	
 	load_settings();
 	document.getElementById("flip_layout_button").addEventListener("click", apply_chat_settings);
-	document.getElementById("dim_chat_button").addEventListener("click", apply_chat_settings);
+	document.getElementById("dim_sound_button").addEventListener("click", apply_chat_settings);
+	document.getElementById("dim_join_button").addEventListener("click", apply_chat_settings);
+	document.getElementById("dim_map_button").addEventListener("click", apply_chat_settings);
+	document.getElementById("dim_server_button").addEventListener("click", apply_chat_settings);
+	document.getElementById("hover_dim_button").addEventListener("click", apply_chat_settings);
 	document.getElementById("show_web_joins_button").addEventListener("click", apply_chat_settings);
+	document.getElementById("compound_icons").addEventListener("click", apply_chat_settings);
+	document.getElementById("alt_wrap_button").addEventListener("click", apply_chat_settings);
 	document.getElementById("show_country_flags").addEventListener("click", apply_chat_settings);
 	document.getElementById("show_avatars").addEventListener("click", apply_chat_settings);
-	document.getElementById("show_web_joins_button").addEventListener("click", apply_chat_settings);
 	apply_chat_settings();
 	
 	let debug_chat = false;
@@ -2261,6 +2329,8 @@ async function setup() {
 	}
 	
 	init_common();
+	
+	handle_resize();
 }
 
 function action_denied_popup(reason, errorCode) {

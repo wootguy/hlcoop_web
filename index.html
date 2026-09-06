@@ -172,11 +172,20 @@
 				margin-left: 0;
 			}
 			
-			
 			#content.noflags .cnflag {
 				display: none;
 			}
 			#content.noavatars .avatar_container {
+				display: none;
+			}
+			
+			#content.no_compound_icons .client_os,
+			#content.no_compound_icons .client_engine,
+			#content.no_compound_icons .client_renderer {
+				display: none;
+			}
+			
+			#content.hide_web_joins .web_join_msg {
 				display: none;
 			}
 			
@@ -248,6 +257,9 @@
 				cursor: pointer;
 				min-width: 5px;
 				text-wrap: nowrap;
+			}
+			#content:not(.noflags) .player_list div {
+				max-width: 143px;
 			}
 			.player_list div.bad_guy {
 				color: #FF3F3F;
@@ -692,6 +704,20 @@
 			.chat_message .chat_msg_content a:hover {
 				color: #77d8ff;
 			}
+			.chat_message .chat_content_side {
+				display: flex;
+				flex: 1;
+			}
+			.chat_message .chat_timestamp {
+				display: inline-block;
+			}
+			
+			#content.alt_wrap .chat_content_side {
+				display: inline-block;
+			}
+			#content.alt_wrap .chat_left_side, #content.alt_wrap .chat_right_side {
+				display: inline;
+			}
 			
 			#chat_box {
 				overflow: hidden;
@@ -704,13 +730,20 @@
 			#chat_box.dim .chat_message:not(.important) {
 				opacity: 0.3;
 			}
-			#chat_box.dim .chat_message:not(.important):hover,
-			#chat_box.dim .chat_message:not(.important):hover + *,
-			#chat_box.dim .chat_message:not(.important):has(+ .chat_message:hover),
-			#chat_box.dim .chat_message:not(.important):last-child,
-			#chat_box.dim .chat_message:not(.important):nth-last-child(2),
-			#chat_box.dim .chat_message:not(.important):nth-last-child(3) {
-				opacity: 1.0;
+			
+			#chat_box.dim_map .chat_message.map_msg,
+			#chat_box.dim_server .chat_message.server_msg,
+			#chat_box.dim_join .chat_message.join_msg, 
+			#chat_box.dim_sound .chat_message.sound_msg {
+				opacity: 0.3;
+			}
+			#content.dim_hover #chat_box .chat_message:hover,
+			#content.dim_hover #chat_box .chat_message:hover + *,
+			#content.dim_hover #chat_box .chat_message:has(+ .chat_message:hover),
+			#chat_box .chat_message:last-child,
+			#chat_box .chat_message:nth-last-child(2),
+			#chat_box .chat_message:nth-last-child(3) {
+				opacity: 1.0 !important;
 			}
 			
 			#chat_settings_button {
@@ -1017,19 +1050,38 @@
 								<img src="icon/cog.png"/>
 								<div id="chat_settings_menu" class="hidden">
 									<div class="chat_settings_option">
+										<label title="Wrap chats underneath player names to make better use of space at the cost of readability.">Alternate text wrapping <input id="alt_wrap_button" type="checkbox"></label>
+									</div>
+									<div class="chat_settings_option">
+										<label title="Add badges to client icons to indicate an uncommon operating system, engine, or renderer.">Compound client icons<input id="compound_icons" type="checkbox"></label>
+									</div>
+									<div class="chat_settings_option">
 										<label title="Move chat to the opposite side of the screen">Flip layout <input id="flip_layout_button" type="checkbox"></label>
 									</div>
 									<div class="chat_settings_option">
-										<label title="Dim server messages and chat sound commands">Dim unimportant messages<input id="dim_chat_button" type="checkbox"></label>
-									</div>
-									<div class="chat_settings_option">
-										<label title="Display messages for web client logins">Log web joins<input id="show_web_joins_button" type="checkbox"></label>
+										<label title="Display messages for web client logins">Show web joins<input id="show_web_joins_button" type="checkbox"></label>
 									</div>
 									<div class="chat_settings_option">
 										<label title="Display steam avatars by player names">Show steam avatars<input id="show_avatars" type="checkbox" checked></label>
 									</div>
 									<div class="chat_settings_option hidden">
 										<label title="Display country flags by player names">Show country flags<input id="show_country_flags" type="checkbox"></label>
+									</div>
+									<hr>
+									<div class="chat_settings_option">
+										<label title="Dim chat sound commands">Dim chat sound commands<input id="dim_sound_button" type="checkbox"></label>
+									</div>
+									<div class="chat_settings_option">
+										<label title="Dim messages for players joining/leaving the server">Dim join/leave messages<input id="dim_join_button" type="checkbox"></label>
+									</div>
+									<div class="chat_settings_option">
+										<label title="Dim messages sent by the map">Dim map messages<input id="dim_map_button" type="checkbox"></label>
+									</div>
+									<div class="chat_settings_option">
+										<label title="Dim messages sent by the server">Dim server messages<input id="dim_server_button" type="checkbox"></label>
+									</div>
+									<div class="chat_settings_option">
+										<label title="Brighten dimmed messages by hovering over them with your mouse">Brighten on hover<input id="hover_dim_button" type="checkbox"></label>
 									</div>
 								</div>
 							</div>
@@ -1106,7 +1158,7 @@ Red light = Negative ratings. Low priority. Selected only if all other maps are 
 							<option value="opt-my-disliked">Your disliked maps</option>
 						</select>
 						<button id="hide_maps_button">Hide maps</button>
-						<input type="checkbox" id="hide_maps_cb" class="hidden" checked/>
+						<input type="checkbox" id="hide_maps_cb" class="hidden"/>
 					</div>
 				</div>
 			</div>
