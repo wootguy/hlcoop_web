@@ -2325,11 +2325,10 @@ async function setup() {
 		// remove newlines
 		input_box.value = input_box.value.replace(/[\r\n]/g, "");
 		
-		input_box.style.height = "auto";
 		input_box.style.height = input_box.scrollHeight + "px";
 		
-		if (input_box.scrollHeight < 40) {
-			input_box.style.height = "24px";
+		if (input_box.scrollHeight < 40 || input_box.value.length == 0) {
+			input_box.style.height = "26px";
 		}
 		
 		if (input_box.value.length) {
@@ -2499,6 +2498,7 @@ function action_denied_popup(reason, errorCode) {
 
 function handle_resize() {
 	let content = document.getElementById("content");
+	let profile = document.getElementById("player_profile");
 	let active_maps = document.getElementById("active_maps");
 	g_hide_maps = document.getElementById("hide_maps_cb").checked;
 
@@ -2512,6 +2512,7 @@ function handle_resize() {
 
 	content.classList.toggle("wide", wide);
 	content.classList.toggle("compact", compact);
+	profile.classList.toggle("compact", compact);
 	content.classList.toggle("hide_maps", g_hide_maps);
 
 	let target = (g_hide_maps || wide || compact)
