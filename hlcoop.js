@@ -1,8 +1,8 @@
 // TODO:
 // - special messages for mapchange
 // - iOS safari/firefox is missing a player in the table in hidden maps mode
-// - "move the chat settings button to where the log out is, see the site from anything that isn't Windows to see why"
 // - mutes dont work in chat. option to mute from the web.
+// - option to bright last X chats, option for 12hr clock
 
 var g_socket;
 var g_player_data = []; // players currently in the server
@@ -2155,14 +2155,18 @@ function finish_send_message() {
 }
 
 function handle_chat_ack(ackId) {	
+	if (g_message_sent)
+		return; // no pending message
+
 	if (ackId != g_message_id) {
 		console.error("Received ack for ID " + ackId + " but expected " + g_message_id);
+		fail_send_message();
+	} else {
+		finish_send_message();
+		let input_box = document.getElementById("send_message");
+		input_box.value = "";
+		handle_chat_input();
 	}
-	
-	finish_send_message();
-	let input_box = document.getElementById("send_message");
-	input_box.value = "";
-	handle_chat_input();
 }
 
 function fail_send_message() {
@@ -2174,12 +2178,6 @@ function fail_send_message() {
 	input_box_but.classList.add("failed");
 	
 	add_message(0, "", "", "Failed to send chat message. Not connected.", Date.now(), WEBMSG_CHAT_TYPE_ERROR);
-}
-
-function cancel_send_message() {
-	if (!g_message_sent) {
-		fail_send_message();
-	}
 }
 
 function send_message() {
@@ -2654,7 +2652,6 @@ function handle_resize() {
 }
 
 function websocket_closed() {
-	cancel_send_message();
 	console.log("WebSocket connection closed. Code: " + event.code);
 	
 	add_message(0, "", "", "WebSocket connection closed. Code: " + event.code, Date.now(), WEBMSG_CHAT_TYPE_ERROR);
