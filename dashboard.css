@@ -741,7 +741,7 @@ h2 {
 }
 #chat_settings_menu {
 	border: 1px solid;
-	width: 230px;
+	width: 250px;
 	position: absolute;
 	bottom: 32px;
 	left: 0;
@@ -756,6 +756,7 @@ h2 {
 }
 .chat_settings_option {
 	padding: 2px 0;
+	box-sizing: border-box;
 }
 .chat_settings_option, .chat_settings_option label {
 	display: inline-block;
@@ -770,6 +771,12 @@ h2 {
 }
 .chat_settings_option:hover {
 	background: #333;
+}
+.chat_settings_option.indent {
+	padding-left: 20px;
+}
+.chat_settings_option.disabled {
+	opacity: 0.3;
 }
 
 #filter_maps_container {
@@ -889,9 +896,9 @@ h2 {
 #content.dim_hover #chat_box .chat_message:hover,
 #content.dim_hover #chat_box .chat_message:hover + *,
 #content.dim_hover #chat_box .chat_message:has(+ .chat_message:hover),
-#chat_box .chat_message:last-child,
-#chat_box .chat_message:nth-last-child(2),
-#chat_box .chat_message:nth-last-child(3) {
+#content.dim_recent #chat_box .chat_message:last-child,
+#content.dim_recent #chat_box .chat_message:nth-last-child(2),
+#content.dim_recent #chat_box .chat_message:nth-last-child(3) {
 	opacity: 1.0 !important;
 }
 

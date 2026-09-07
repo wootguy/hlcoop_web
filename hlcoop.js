@@ -1940,11 +1940,13 @@ function remove_old_player_states() {
 
 function apply_chat_settings() {
 	g_settings.flip_layout = document.getElementById("flip_layout_button").checked;
+	g_settings.dim_enable = document.getElementById("dim_enable_button").checked;
 	g_settings.dim_sound = document.getElementById("dim_sound_button").checked;
 	g_settings.dim_join = document.getElementById("dim_join_button").checked;
 	g_settings.dim_map = document.getElementById("dim_map_button").checked;
 	g_settings.dim_server = document.getElementById("dim_server_button").checked;
 	g_settings.dim_hover = document.getElementById("hover_dim_button").checked;
+	g_settings.dim_recent = document.getElementById("dim_recent_button").checked;
 	g_settings.show_flags = document.getElementById("show_country_flags").checked;
 	g_settings.show_avatars = document.getElementById("show_avatars").checked;
 	g_settings.show_web_joins = document.getElementById("show_web_joins_button").checked;
@@ -1975,32 +1977,44 @@ function apply_chat_settings() {
 		document.getElementById("content").classList.remove("hide_web_joins");
 	}
 	
-	if (g_settings.dim_hover) {
+	if (g_settings.dim_enable && g_settings.dim_hover) {
 		document.getElementById("content").classList.add("dim_hover");
 	} else {
 		document.getElementById("content").classList.remove("dim_hover");
 	}
-	
-	if (g_settings.dim_sound) {
+	if (g_settings.dim_enable && g_settings.dim_recent) {
+		document.getElementById("content").classList.add("dim_recent");
+	} else {
+		document.getElementById("content").classList.remove("dim_recent");
+	}
+	if (g_settings.dim_enable && g_settings.dim_sound) {
 		document.getElementById("chat_box").classList.add("dim_sound");
 	} else {
 		document.getElementById("chat_box").classList.remove("dim_sound");
 	}
-	if (g_settings.dim_join) {
+	if (g_settings.dim_enable && g_settings.dim_join) {
 		document.getElementById("chat_box").classList.add("dim_join");
 	} else {
 		document.getElementById("chat_box").classList.remove("dim_join");
 	}
-	if (g_settings.dim_map) {
+	if (g_settings.dim_enable && g_settings.dim_map) {
 		document.getElementById("chat_box").classList.add("dim_map");
 	} else {
 		document.getElementById("chat_box").classList.remove("dim_map");
 	}
-	if (g_settings.dim_server) {
+	if (g_settings.dim_enable && g_settings.dim_server) {
 		document.getElementById("chat_box").classList.add("dim_server");
 	} else {
 		document.getElementById("chat_box").classList.remove("dim_server");
 	}
+	
+	
+	["dim_sound_button", "dim_join_button", "dim_map_button", "dim_server_button", "hover_dim_button",
+	"dim_recent_button"].forEach(str => {
+		document.getElementById(str).parentElement.parentElement.classList.toggle("disabled", !g_settings.dim_enable);
+		document.getElementById(str).disabled = !g_settings.dim_enable;
+	});
+	
 	
 	if (g_settings.show_flags) {
 		document.getElementById("content").classList.remove("noflags");
@@ -2108,11 +2122,13 @@ function save_settings() {
 function load_settings() {
 	g_settings = JSON.parse(localStorage.getItem("settings")) || {
 		flip_layout: false,
+		dim_enable: false,
 		dim_sound: false,
 		dim_join: false,
 		dim_map: false,
 		dim_server: false,
 		dim_hover: true,
+		dim_recent: false,
 		show_web_joins: false,
 		show_avatars: true,
 		show_flags: false,
@@ -2127,11 +2143,13 @@ function load_settings() {
 	}
 	
 	document.getElementById("flip_layout_button").checked = g_settings.flip_layout;
+	document.getElementById("dim_enable_button").checked = g_settings.dim_enable;
 	document.getElementById("dim_sound_button").checked = g_settings.dim_sound;
 	document.getElementById("dim_join_button").checked = g_settings.dim_join;
 	document.getElementById("dim_map_button").checked = g_settings.dim_map;
 	document.getElementById("dim_server_button").checked = g_settings.dim_server;
 	document.getElementById("hover_dim_button").checked = g_settings.dim_hover;
+	document.getElementById("dim_recent_button").checked = g_settings.dim_recent;
 	document.getElementById("show_country_flags").checked = g_settings.show_flags;
 	document.getElementById("show_avatars").checked = g_settings.show_avatars;
 	document.getElementById("show_web_joins_button").checked = g_settings.show_web_joins;
@@ -2529,11 +2547,13 @@ async function setup() {
 	});
 	
 	document.getElementById("flip_layout_button").addEventListener("click", apply_chat_settings);
+	document.getElementById("dim_enable_button").addEventListener("click", apply_chat_settings);
 	document.getElementById("dim_sound_button").addEventListener("click", apply_chat_settings);
 	document.getElementById("dim_join_button").addEventListener("click", apply_chat_settings);
 	document.getElementById("dim_map_button").addEventListener("click", apply_chat_settings);
 	document.getElementById("dim_server_button").addEventListener("click", apply_chat_settings);
 	document.getElementById("hover_dim_button").addEventListener("click", apply_chat_settings);
+	document.getElementById("dim_recent_button").addEventListener("click", apply_chat_settings);
 	document.getElementById("show_web_joins_button").addEventListener("click", apply_chat_settings);
 	document.getElementById("compound_icons").addEventListener("click", apply_chat_settings);
 	document.getElementById("alt_wrap_button").addEventListener("click", apply_chat_settings);
