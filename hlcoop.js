@@ -650,16 +650,31 @@ function add_message(steamid64, ipStr, name, msg, time, msgType) {
 	let chat_right_side = document.createElement('div');
 	chat_right_side.classList.add("chat_right_side");
 	
-	let chat_time = document.createElement('span');
-	chat_time.classList.add("chat_time");
+	let chat_time_24hr = document.createElement('span');
+	chat_time_24hr.classList.add("chat_time");
+	chat_time_24hr.classList.add("time24");
 	const date = new Date(Number(time));
 	const hours = date.getHours().toString().padStart(2, '0');
 	const minutes = date.getMinutes().toString().padStart(2, '0');
-	chat_time.textContent = `${hours}:${minutes}`;
+	chat_time_24hr.textContent = `${hours}:${minutes}`;
 	
-	chat_time.addEventListener("mouseover", function(ev) {
+	chat_time_24hr.addEventListener("mouseover", function(ev) {
 		const deltaTime = Number(new Date()) - Number(date);
-		chat_time.title = format_age(Math.floor(deltaTime / 1000)) + " ago";
+		chat_time_24hr.title = format_age(Math.floor(deltaTime / 1000)) + " ago";
+	});
+	
+	let chat_time_12hr = document.createElement('span');
+	chat_time_12hr.classList.add("chat_time");
+	chat_time_12hr.classList.add("time12");
+	chat_time_12hr.textContent = new Date(Number(time)).toLocaleTimeString("en-US", {
+		hour: "2-digit",
+		minute: "2-digit",
+		hour12: true
+	});
+	
+	chat_time_12hr.addEventListener("mouseover", function(ev) {
+		const deltaTime = Number(new Date()) - Number(date);
+		chat_time_12hr.title = format_age(Math.floor(deltaTime / 1000)) + " ago";
 	});
 	
 	let chat_name = document.createElement('span');
@@ -729,7 +744,8 @@ function add_message(steamid64, ipStr, name, msg, time, msgType) {
 		}
 	}
 	
-	chat_timestamp.appendChild(chat_time);
+	chat_timestamp.appendChild(chat_time_24hr);
+	chat_timestamp.appendChild(chat_time_12hr);
 	
 	if (ipStr && ipStr.length && ipStr != "0.0.0.0") {
 		let chat_flag = document.createElement('img');
@@ -1952,81 +1968,28 @@ function apply_chat_settings() {
 	g_settings.show_web_joins = document.getElementById("show_web_joins_button").checked;
 	g_settings.compound_icons = document.getElementById("compound_icons").checked;
 	g_settings.alt_wrap = document.getElementById("alt_wrap_button").checked;
+	g_settings.timestamps = document.getElementById("timestamp_selector").value;
 	
-	if (g_settings.flip_layout) {
-		document.getElementById("content").classList.add("flip");
-	} else {
-		document.getElementById("content").classList.remove("flip");
-	}
-	
-	if (!g_settings.compound_icons) {
-		document.getElementById("content").classList.add("no_compound_icons");
-	} else {
-		document.getElementById("content").classList.remove("no_compound_icons");
-	}
-	
-	if (g_settings.alt_wrap) {
-		document.getElementById("content").classList.add("alt_wrap");
-	} else {
-		document.getElementById("content").classList.remove("alt_wrap");
-	}
-	
-	if (!g_settings.show_web_joins) {
-		document.getElementById("content").classList.add("hide_web_joins");
-	} else {
-		document.getElementById("content").classList.remove("hide_web_joins");
-	}
-	
-	if (g_settings.dim_enable && g_settings.dim_hover) {
-		document.getElementById("content").classList.add("dim_hover");
-	} else {
-		document.getElementById("content").classList.remove("dim_hover");
-	}
-	if (g_settings.dim_enable && g_settings.dim_recent) {
-		document.getElementById("content").classList.add("dim_recent");
-	} else {
-		document.getElementById("content").classList.remove("dim_recent");
-	}
-	if (g_settings.dim_enable && g_settings.dim_sound) {
-		document.getElementById("chat_box").classList.add("dim_sound");
-	} else {
-		document.getElementById("chat_box").classList.remove("dim_sound");
-	}
-	if (g_settings.dim_enable && g_settings.dim_join) {
-		document.getElementById("chat_box").classList.add("dim_join");
-	} else {
-		document.getElementById("chat_box").classList.remove("dim_join");
-	}
-	if (g_settings.dim_enable && g_settings.dim_map) {
-		document.getElementById("chat_box").classList.add("dim_map");
-	} else {
-		document.getElementById("chat_box").classList.remove("dim_map");
-	}
-	if (g_settings.dim_enable && g_settings.dim_server) {
-		document.getElementById("chat_box").classList.add("dim_server");
-	} else {
-		document.getElementById("chat_box").classList.remove("dim_server");
-	}
-	
+	document.getElementById("content").classList.toggle("flip", g_settings.flip_layout);
+	document.getElementById("content").classList.toggle("no_compound_icons", !g_settings.compound_icons);
+	document.getElementById("content").classList.toggle("alt_wrap", g_settings.alt_wrap);
+	document.getElementById("content").classList.toggle("hide_web_joins", !g_settings.show_web_joins);
+	document.getElementById("content").classList.toggle("dim_hover", g_settings.dim_enable && g_settings.dim_hover);
+	document.getElementById("content").classList.toggle("dim_recent", g_settings.dim_enable && g_settings.dim_recent);
+	document.getElementById("content").classList.toggle("dim_sound", g_settings.dim_enable && g_settings.dim_sound);
+	document.getElementById("content").classList.toggle("dim_join", g_settings.dim_enable && g_settings.dim_join);
+	document.getElementById("content").classList.toggle("dim_map", g_settings.dim_enable && g_settings.dim_map);
+	document.getElementById("content").classList.toggle("dim_server", g_settings.dim_enable && g_settings.dim_server);
+	document.getElementById("content").classList.toggle("noflags", !g_settings.show_flags);
+	document.getElementById("content").classList.toggle("noavatars", !g_settings.show_avatars);
+	document.getElementById("content").classList.toggle("timestamp_12hr", g_settings.timestamps == "12hr");
+	document.getElementById("content").classList.toggle("timestamp_24hr", g_settings.timestamps == "24hr");
 	
 	["dim_sound_button", "dim_join_button", "dim_map_button", "dim_server_button", "hover_dim_button",
 	"dim_recent_button"].forEach(str => {
 		document.getElementById(str).parentElement.parentElement.classList.toggle("disabled", !g_settings.dim_enable);
 		document.getElementById(str).disabled = !g_settings.dim_enable;
 	});
-	
-	
-	if (g_settings.show_flags) {
-		document.getElementById("content").classList.remove("noflags");
-	} else {
-		document.getElementById("content").classList.add("noflags");
-	}
-	
-	if (g_settings.show_avatars) {
-		document.getElementById("content").classList.remove("noavatars");
-	} else {
-		document.getElementById("content").classList.add("noavatars");
-	}
 	
 	save_settings();
 	setTimeout(scroll_chat_to_bottom, 100);
@@ -2135,12 +2098,10 @@ function load_settings() {
 		hide_maps: true,
 		compound_icons: false,
 		alt_wrap: false,
-		server: "Public"
 	};
 	
-	if (!g_settings.server) {
-		g_settings.server = "Public";
-	}
+	g_settings.server = g_settings.server || "Public";
+	g_settings.timestamps = g_settings.timestamps || "24hr";
 	
 	document.getElementById("flip_layout_button").checked = g_settings.flip_layout;
 	document.getElementById("dim_enable_button").checked = g_settings.dim_enable;
@@ -2157,6 +2118,7 @@ function load_settings() {
 	document.getElementById("compound_icons").checked = g_settings.compound_icons;
 	document.getElementById("alt_wrap_button").checked = g_settings.alt_wrap_button;
 	document.getElementById("server_selector").value = g_settings.server;
+	document.getElementById("timestamp_selector").value = g_settings.timestamps;
 	
 	g_server_config = g_server_configs[g_settings.server];
 }
@@ -2559,6 +2521,7 @@ async function setup() {
 	document.getElementById("alt_wrap_button").addEventListener("click", apply_chat_settings);
 	document.getElementById("show_country_flags").addEventListener("click", apply_chat_settings);
 	document.getElementById("show_avatars").addEventListener("click", apply_chat_settings);
+	document.getElementById("timestamp_selector").addEventListener("change", apply_chat_settings);
 	apply_chat_settings();
 	
 	document.getElementById("server_selector").addEventListener("change", function() {

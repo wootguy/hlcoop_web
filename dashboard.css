@@ -864,6 +864,13 @@ h2 {
 .chat_message .chat_timestamp {
 	display: inline-block;
 }
+.chat_message .chat_timestamp .chat_time {
+	display: none;
+}
+#content.timestamp_12hr .chat_message .chat_time.time12,
+#content.timestamp_24hr .chat_message .chat_time.time24 {
+	display: inline;
+}
 .chat_msg_content {
 	white-space: pre-wrap;
 }
@@ -883,14 +890,14 @@ h2 {
 	height: 100%;
 }
 
-#chat_box.dim .chat_message:not(.important) {
+#content.dim .chat_message:not(.important) {
 	opacity: 0.3;
 }
 
-#chat_box.dim_map .chat_message.map_msg,
-#chat_box.dim_server .chat_message.server_msg,
-#chat_box.dim_join .chat_message.join_msg, 
-#chat_box.dim_sound .chat_message.sound_msg {
+#content.dim_map .chat_message.map_msg,
+#content.dim_server .chat_message.server_msg,
+#content.dim_join .chat_message.join_msg, 
+#content.dim_sound .chat_message.sound_msg {
 	opacity: 0.3;
 }
 #content.dim_hover #chat_box .chat_message:hover,
