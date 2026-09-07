@@ -681,7 +681,7 @@ function add_message(steamid64, ipStr, name, msg, time, msgType) {
 	chat_msg.classList.add("chat_msg_content");
 	chat_msg.textContent = msg;
 	
-	//console.log("Important? ", msg);
+	console.log("Important? ", msg);
 	
 	if (msgType == WEBMSG_CHAT_TYPE_GAME) {
 		chat_msg.classList.add("hud_msg");
@@ -771,12 +771,12 @@ function add_message(steamid64, ipStr, name, msg, time, msgType) {
 	else if (msg.startsWith("- ;name;")) {
 		chat_left_side.appendChild(chat_name);
 		chat_left_side.innerHTML += "&nbsp";
-		chat_msg.innerHTML = chat_msg.innerHTML.replace("- ;name;", "");
+		chat_msg.innerHTML = chat_msg.innerHTML.replace("- ;name; ", "");
 	}
 	else if (msg.startsWith("* ;name;")) {
 		chat_left_side.appendChild(chat_name);
 		chat_left_side.innerHTML += "&nbsp";
-		chat_msg.innerHTML = chat_msg.innerHTML.replace("* ;name;", "");
+		chat_msg.innerHTML = chat_msg.innerHTML.replace("* ;name; ", "");
 	}
 	else {
 		chat_msg.innerHTML = chat_msg.innerHTML.replace(";name;", chat_name.outerHTML);
@@ -2001,6 +2001,7 @@ function apply_chat_settings() {
 	}
 	
 	save_settings();
+	setTimeout(scroll_chat_to_bottom, 100);
 }
 
 let g_chat_cooldown_end = 0;
@@ -2139,6 +2140,7 @@ function finish_send_message() {
 	if (g_message_send_timeout)
 		clearTimeout(g_message_send_timeout);
 	g_message_send_timeout = null;
+	input_box.focus();
 }
 
 function check_message_send_status() {
@@ -2146,6 +2148,7 @@ function check_message_send_status() {
 		finish_send_message();
 		let input_box = document.getElementById("send_message");
 		input_box.value = "";
+		handle_chat_input();
 		return;
 	}
 	
@@ -2155,6 +2158,7 @@ function check_message_send_status() {
 
 function fail_send_message() {
 	finish_send_message();
+	handle_chat_input();
 	
 	let input_box_but = document.getElementById("send_message_but");
 	let input_box_but_text = document.getElementById("send_message_but_text");
@@ -2293,6 +2297,29 @@ function change_server() {
 	createWebSocket();
 }
 
+function handle_chat_input() {
+	let input_box = document.getElementById("send_message");
+	
+	// remove newlines
+	input_box.value = input_box.value.replace(/[\r\n]/g, "");
+	
+	if (Math.abs(input_box.getBoundingClientRect().height - input_box.scrollHeight) > 5) {
+		input_box.style.height = (input_box.scrollHeight + 4) + "px";
+	}
+	
+	if (input_box.scrollHeight < 40 || input_box.value.length <= 1) {
+		input_box.style.height = "28px";
+	}
+	
+	if (input_box.value.length) {
+		send_message_but.classList.remove("empty");
+	} else {
+		send_message_but.classList.add("empty");
+	}
+	
+	scroll_chat_to_bottom();
+}
+
 async function setup() {
 	load_settings();
 	
@@ -2426,24 +2453,7 @@ async function setup() {
 		send_message();
 	});
 	
-	input_box.addEventListener("input", function() {
-		// remove newlines
-		input_box.value = input_box.value.replace(/[\r\n]/g, "");
-		
-		input_box.style.height = input_box.scrollHeight + "px";
-		
-		if (input_box.scrollHeight < 40 || input_box.value.length <= 1) {
-			input_box.style.height = "28px";
-		}
-		
-		if (input_box.value.length) {
-			send_message_but.classList.remove("empty");
-		} else {
-			send_message_but.classList.add("empty");
-		}
-		
-		scroll_chat_to_bottom();
-	});
+	input_box.addEventListener("input", handle_chat_input);
 	
 	setup_openid_link();
 	

@@ -633,8 +633,10 @@ h2 {
 	background: black;
 	position: relative;
 	display: flex;
+	align-items: center;
 }
 #send_message {
+	font-family: inherit;
 	background: black;
 	flex: 1;
 	box-sizing: border-box;
@@ -643,6 +645,16 @@ h2 {
 	resize: none;
 	height: 28px;
 	overflow: hidden;
+	
+	box-sizing: border-box;
+    border: 1px solid #888;
+    border-radius: 0;
+    outline: none;
+    appearance: none;
+    -webkit-appearance: none;
+}
+#send_message:focus {
+    outline: 2px solid #3E683E;
 }
 #send_message_but {
 	display: flex;
@@ -650,12 +662,14 @@ h2 {
 	justify-content: center;
 	flex-shrink: 0;
 	width: 70px;
+	height: 100%;
 	margin-left: 5px;
 	border: 1px solid #888;
 	border-radius: 3px;
 	cursor: pointer;
 	background: #243E24;
 	user-select: none;
+	box-sizing: border-box;
 }
 #send_message_but.sending #send_message_but_text {
 	display: none;
@@ -671,6 +685,7 @@ h2 {
 }
 #send_message_but.empty {
 	background: #222;
+	color: #999;
 }
 #send_load {
 	display: none;
@@ -708,12 +723,13 @@ h2 {
 	justify-content: center;
 	flex-shrink: 0;
 	width: 28px;
-	height: 26px;
+	height: 100%;
 	border: 1px solid #888;
 	border-radius: 3px;
 	background: #000;
 	cursor: pointer;
 	margin-right: 5px;
+	box-sizing: border-box;
 }
 #chat_settings_button:hover {
 	background: #333;
@@ -839,6 +855,9 @@ h2 {
 }
 .chat_message .chat_timestamp {
 	display: inline-block;
+}
+.chat_msg_content {
+	white-space: pre-wrap;
 }
 
 #content.alt_wrap .chat_content_side {
