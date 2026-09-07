@@ -1,4 +1,4 @@
-const WEBAPP_VERSION = 3;
+const WEBAPP_VERSION = 4;
 
 var g_bans = {};
 

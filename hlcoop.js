@@ -44,9 +44,10 @@ var g_max_player_list_rows = 128; // TODO: send web client limit from server
 var g_reload_map_images = true;
 var g_load_avatar_timeout = null;
 var g_settings = {};
-var g_message_send_timeout = null;
 var g_last_sent_message = "";
 var g_first_connection = true;
+var g_message_sent = true;
+var g_message_id = 0; // used for server acks to chat messages
 
 var debug_logging = false;
 
@@ -69,6 +70,7 @@ const MESSAGE_TYPE = {
 	WEBMSG_PLAYER_IP: 17,
 	WEBMSG_WEB_CLIENT_IPS: 18,
 	WEBMSG_IP_INFO: 19,
+	WEBMSG_CHAT_ACK: 20,
 };
 
 const WEBDENY_NOT_LOGGED_IN_RATE = 0;
@@ -681,7 +683,7 @@ function add_message(steamid64, ipStr, name, msg, time, msgType) {
 	chat_msg.classList.add("chat_msg_content");
 	chat_msg.textContent = msg;
 	
-	console.log("Important? ", msg);
+	//console.log("Important? ", msg);
 	
 	if (msgType == WEBMSG_CHAT_TYPE_GAME) {
 		chat_msg.classList.add("hud_msg");
@@ -876,6 +878,15 @@ function parse_chat_message(view) {
 		
 		add_message(steamid64, ipStr, name, msg, time, msgtype);
 	}
+}
+
+function parse_chat_ack(view) {
+	let offset = 1;
+	
+	let msgId = view.getUint16(offset, true);
+	offset += 2;
+	
+	handle_chat_ack(msgId);	
 }
 
 function update_web_client_info() {
@@ -2137,23 +2148,18 @@ function finish_send_message() {
 	input_box.disabled = false;
 	input_box_but.classList.remove("sending");
 	input_box_but.classList.remove("failed");
-	if (g_message_send_timeout)
-		clearTimeout(g_message_send_timeout);
-	g_message_send_timeout = null;
 	input_box.focus();
 }
 
-function check_message_send_status() {
-	if (g_socket.bufferedAmount == 0) {
-		finish_send_message();
-		let input_box = document.getElementById("send_message");
-		input_box.value = "";
-		handle_chat_input();
-		return;
+function handle_chat_ack(ackId) {	
+	if (ackId != g_message_id) {
+		console.error("Received ack for ID " + ackId + " but expected " + g_message_id);
 	}
 	
-	//console.log("Buffered is " + g_socket.bufferedAmount);
-	g_message_send_timeout = setTimeout(check_message_send_status, 50);
+	finish_send_message();
+	let input_box = document.getElementById("send_message");
+	input_box.value = "";
+	handle_chat_input();
 }
 
 function fail_send_message() {
@@ -2168,7 +2174,7 @@ function fail_send_message() {
 }
 
 function cancel_send_message() {
-	if (g_message_send_timeout) {
+	if (!g_message_sent) {
 		fail_send_message();
 	}
 }
@@ -2181,7 +2187,7 @@ function send_message() {
 	let cooldown_timer = document.getElementById("cooldown-timer");
 	let message = input_box.value.trim();
 	
-	if (g_message_send_timeout) {
+	if (!g_message_sent) {
 		return;
 	}
 	
@@ -2210,7 +2216,8 @@ function send_message() {
 	}
 	
 	try {
-		g_socket.send("say;" + message);
+		g_message_id = (g_message_id + 1) % 65536;
+		g_socket.send("say;" + g_message_id + ";" + message);
 	} catch (e) {
 		fail_send_message();
 		add_message(0, "", "", "Failed to send. " + e, Date.now(), WEBMSG_CHAT_TYPE_ERROR);
@@ -2231,7 +2238,6 @@ function send_message() {
 	input_box_but.classList.add("sending");
 	input_box.disabled = true;
 	g_message_sent = false;
-	check_message_send_status();
 }
 
 function change_server() {
@@ -2267,11 +2273,6 @@ function change_server() {
 	if (g_load_avatar_timeout) {
 		clearTimeout(g_load_avatar_timeout);
 		g_load_avatar_timeout = null;
-	}
-	
-	if (g_message_send_timeout) {
-		clearTimeout(g_message_send_timeout);
-		g_message_send_timeout = null;
 	}
 	
 	g_first_connection = true;
@@ -2718,6 +2719,9 @@ function createWebSocket() {
 		}
 		else if (msgType == MESSAGE_TYPE.WEBMSG_CHAT) {
 			parse_chat_message(view);
+		}
+		else if (msgType == MESSAGE_TYPE.WEBMSG_CHAT_ACK) {
+			parse_chat_ack(view);
 		}
 		else if (msgType == MESSAGE_TYPE.WEBMSG_AUTH) {
 			parse_auth(view);
