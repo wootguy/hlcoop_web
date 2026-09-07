@@ -89,6 +89,7 @@ const WEBMSG_CHAT_TYPE_GAME = 4;
 const WEBMSG_CHAT_TYPE_WEB_CLIENTS = 5;
 const WEBMSG_CHAT_TYPE_ERROR = 255;
 const WEBMSG_CHAT_TYPE_GREEN = 256;
+const WEBMSG_CHAT_TYPE_GREY = 257;
 
 
 const PLAYER_STATUS_ALIVE = 0;
@@ -616,14 +617,18 @@ function parse_player_list(view) {
 	}
 }
 
+function update_server_name() {
+	document.getElementById('server_name').textContent = g_server_name;
+	document.getElementById('tab_title').textContent = g_server_name;
+}
+
 function parse_server_name(view) {
 	let offset = 1; // skip message type byte
 
 	let name = read_string(view, offset);
 	
 	g_server_name = name;
-	document.getElementById('server_name').textContent = name;
-	document.getElementById('tab_title').textContent = name;
+	update_server_name();
 }
 
 function add_message(steamid64, ipStr, name, msg, time, msgType) {
@@ -703,6 +708,10 @@ function add_message(steamid64, ipStr, name, msg, time, msgType) {
 	}
 	if (msgType == WEBMSG_CHAT_TYPE_GREEN) {
 		chat_msg.classList.add("green");
+		chat_msg.title = "This message was sent by your web browser, and only to you";
+	}
+	if (msgType == WEBMSG_CHAT_TYPE_GREY) {
+		chat_msg.classList.add("grey");
 		chat_msg.title = "This message was sent by your web browser, and only to you";
 	}
 	
@@ -811,6 +820,10 @@ function add_message(steamid64, ipStr, name, msg, time, msgType) {
 		// multi-line messages are stopping the auto scrolling? Maybe need to wait until the flex box stuff is calculated
 		setTimeout(scroll_chat_to_bottom, 100);
 	}
+}
+
+function clear_chat_messages() {
+	document.getElementById('chat_box_messages').innerHTML = "";
 }
 
 function scroll_chat_to_bottom() {
@@ -1062,6 +1075,7 @@ function parse_auth(view) {
 		login_text.textContent = "Signing in...";
 		login_text.title = name;
 		login_but.classList.add("authed");
+		login_subtext.classList.remove("red");
 		login_subtext.textContent= "(click to sign out)";
 		login_but.href = "";
 		
@@ -1851,7 +1865,10 @@ function update_map_timer() {
 	if (secondsPassed < 0)
 		secondsPassed = 0;
 	
-	if (g_map_time_limit) {
+	if (!g_current_map) {
+		timer.textContent = "";
+	}
+	else if (g_map_time_limit) {
 		timer.textContent = format_timer(secondsPassed) + " / " + format_timer(g_map_time_limit);
 	} else {
 		timer.textContent = format_timer(secondsPassed);
@@ -2057,7 +2074,7 @@ async function load_chatsounds() {
 		return;
 	}
 	
-	const url = g_fastdl_server_url + "files/chatsounds.txt?t=" + Date.now();
+	const url = g_server_config.fastdl_url + "files/chatsounds.txt?t=" + Date.now();
 	const res = await fetch(url);
 	const text = await res.text();
 	const lines = text.split(/\r?\n/);
@@ -2087,7 +2104,12 @@ function load_settings() {
 		hide_maps: true,
 		compound_icons: false,
 		alt_wrap: false,
-	};	
+		server: "Public"
+	};
+	
+	if (!g_settings.server) {
+		g_settings.server = "Public";
+	}
 	
 	document.getElementById("flip_layout_button").checked = g_settings.flip_layout;
 	document.getElementById("dim_sound_button").checked = g_settings.dim_sound;
@@ -2101,6 +2123,9 @@ function load_settings() {
 	document.getElementById("hide_maps_cb").checked = g_settings.hide_maps;
 	document.getElementById("compound_icons").checked = g_settings.compound_icons;
 	document.getElementById("alt_wrap_button").checked = g_settings.alt_wrap_button;
+	document.getElementById("server_selector").value = g_settings.server;
+	
+	g_server_config = g_server_configs[g_settings.server];
 }
 
 function finish_send_message() {
@@ -2205,7 +2230,72 @@ function send_message() {
 	check_message_send_status();
 }
 
+function change_server() {
+	let server = document.getElementById("server_selector").value;
+	g_settings.server = server;
+	save_settings();
+	
+	g_socket.removeEventListener("close", websocket_closed);
+	g_socket.close();
+	
+	// clear globals
+	g_player_data = [];
+	g_web_player_data = [];
+	g_player_states = {};
+	g_player_clients = {};
+	g_server_name = g_settings.server;
+	g_selected_map = "";
+	g_map_data = {};
+	g_web_clients = [];
+	g_guest_names = [];
+	g_map_cycle = [];
+	g_ip_info = {};
+	g_player_ips = {};
+	g_web_client_ips = {};
+	g_total_maps = 0;
+	g_upcoming_maps = new Set();
+	g_steamid = 0;
+	g_current_map = undefined;
+	g_next_map = undefined;
+	g_map_total = 0;
+	g_most_active_id = 0;
+	
+	if (g_load_avatar_timeout) {
+		clearTimeout(g_load_avatar_timeout);
+		g_load_avatar_timeout = null;
+	}
+	
+	if (g_message_send_timeout) {
+		clearTimeout(g_message_send_timeout);
+		g_message_send_timeout = null;
+	}
+	
+	g_first_connection = true;
+	g_lost_connection = false;
+	refresh_player_table();
+	
+	clear_chat_messages();
+	document.getElementById("upcoming_maps_grid").innerHTML = "";
+	update_map_timer();
+	update_map_metadata();
+	update_server_name();
+	
+	document.querySelectorAll('.map_container').forEach(function(div) {		
+		let title = div.getElementsByClassName("map_title")[0]; 
+		title.title = "";
+		title.textContent = "";
+		
+		let img = div.getElementsByClassName("map_image")[0];
+		img.src = 'img/missing_preview.png';
+	});
+	
+	g_server_config = g_server_configs[g_settings.server];
+	createWebSocket();
+}
+
 async function setup() {
+	load_settings();
+	
 	await load_shared_html();
 	await load_chatsounds();
 	await load_bans();
@@ -2360,10 +2450,6 @@ async function setup() {
 	let params = new URLSearchParams(window.location.search);
 	g_auth_token = getCookie("token");
 	
-	if (params.has("server_url")) {
-		g_server_url = params.get('server_url');
-	}
-	
 	if (params.has("openid.claimed_id")) {
 		g_auth_params = params;
 		
@@ -2430,7 +2516,6 @@ async function setup() {
 		}
 	});
 	
-	load_settings();
 	document.getElementById("flip_layout_button").addEventListener("click", apply_chat_settings);
 	document.getElementById("dim_sound_button").addEventListener("click", apply_chat_settings);
 	document.getElementById("dim_join_button").addEventListener("click", apply_chat_settings);
@@ -2443,6 +2528,10 @@ async function setup() {
 	document.getElementById("show_country_flags").addEventListener("click", apply_chat_settings);
 	document.getElementById("show_avatars").addEventListener("click", apply_chat_settings);
 	apply_chat_settings();
+	
+	document.getElementById("server_selector").addEventListener("change", function() {
+		change_server();
+	});
 	
 	let debug_chat = false;
 	if (debug_chat) {
@@ -2541,15 +2630,37 @@ function handle_resize() {
 	scroll_chat_to_bottom();
 }
 
+function websocket_closed() {
+	cancel_send_message();
+	console.log("WebSocket connection closed. Code: " + event.code);
+	
+	add_message(0, "", "", "WebSocket connection closed. Code: " + event.code, Date.now(), WEBMSG_CHAT_TYPE_ERROR);
+	
+	if (event.code == WEBERR_FULL) {
+		action_denied_popup(WEBERR_FULL);
+	} else if (event.code == WEBERR_IPERR) {
+		action_denied_popup(WEBERR_IPERR);
+	} else if (event.code == WEBERR_CONN_LIMIT) {
+		action_denied_popup(WEBERR_CONN_LIMIT);
+	} else {
+		let waitTime = 5000 - (Date.now() - g_last_connection_attempt);
+		if (waitTime < 1000) {
+			waitTime = 1000;
+		}
+		console.log("Retry in " + waitTime + "ms");
+		
+		setTimeout(createWebSocket, waitTime);
+	}
+}
+
+var g_last_connection_attempt = 0;
+
 function createWebSocket() {
-	console.log("Connecting to " + g_server_url);
+	g_last_connection_attempt = Date.now();
+	console.log("Connecting to server '" + g_settings.server + "'", g_server_config);
+	add_message(0, "", "", "Connecting to " + g_server_config.server_url, Date.now(), WEBMSG_CHAT_TYPE_GREY);
 	
-	if (!g_first_connection)
-		add_message(0, "", "", "Reconnecting to the server...", Date.now(), WEBMSG_CHAT_TYPE_ERROR);
-	
-	g_first_connection = false;
-	
-	g_socket = new WebSocket(g_server_url);
+	g_socket = new WebSocket(g_server_config.server_url);
 	lastMessageTime = Date.now();
 	
 	// Handle connection open
@@ -2665,33 +2776,25 @@ function createWebSocket() {
 	});
 
 	// Handle connection close
-	g_socket.addEventListener('close', function () {
-		cancel_send_message();
-		console.log("WebSocket connection closed. Code: " + event.code);
-		
-		add_message(0, "", "", "WebSocket connection closed. Code: " + event.code, Date.now(), WEBMSG_CHAT_TYPE_ERROR);
-		
-		if (event.code == WEBERR_FULL) {
-			action_denied_popup(WEBERR_FULL);
-		} else if (event.code == WEBERR_IPERR) {
-			action_denied_popup(WEBERR_IPERR);
-		} else if (event.code == WEBERR_CONN_LIMIT) {
-			action_denied_popup(WEBERR_CONN_LIMIT);
-		} else {
-			setTimeout(createWebSocket, 5000);
-		}
-	});
+	g_socket.addEventListener('close', websocket_closed);
 
 	// Handle errors
 	g_socket.addEventListener('error', function (error) {
 		console.error("WebSocket error:", error);
 	});
 	
+	g_socket.addEventListener("open", () => {
+		if (g_first_connection)
+			clear_chat_messages();
+		g_first_connection = false;
+		add_message(0, "", "", "Connected to " + g_server_config.server_url, Date.now(), WEBMSG_CHAT_TYPE_GREEN);
+	});
+	
 	setInterval(() => {
 		if (Date.now() - lastMessageTime > 10*1000) {
 			if (!g_lost_connection) {
 				g_lost_connection = true;
-				add_message(0, "", "", "Lost connection to the server...", Date.now(), WEBMSG_CHAT_TYPE_ERROR);
+				add_message(0, "", "", "Server not responding...", Date.now(), WEBMSG_CHAT_TYPE_ERROR);
 			}
 		}
 	}, 1000);

@@ -6,17 +6,22 @@ var g_game_id = "hl";
 var data_repo_count = 32;
 var data_repo_domain = "https://wootdata.github.io/";
 
-// official server
-var g_server_url = 'wss://w00tguy.ddns.net:3000/';
-var g_fastdl_server_url = 'https://w00tguy.ddns.net/';
+var g_server_configs = {
+	Public: {
+		server_url: 'wss://w00tguy.ddns.net:3000/',
+		fastdl_url: 'https://w00tguy.ddns.net/'
+	},
+	Stage: {
+		server_url: 'wss://w00tguy.ddns.net:3001/',
+		fastdl_url: 'https://w00tguy.ddns.net/'
+	},
+	Local: {
+		server_url: 'ws://localhost:3000/',
+		fastdl_url: '/'
+	}
+}
 
-// test server
-//var g_server_url = 'wss://w00tguy.ddns.net:3001/';
-
-// for Visual Studio debugging (also required for logging in locally)
-//var g_server_url = 'ws://localhost:3000/';
-//var g_fastdl_server_url = '/'; // for local testing
-
+var g_server_config = g_server_configs.Public;
 
 function set_badge(id, recentTime, rankDiv, mapsPlayed, mapsMultiPlayed, totalMaps, banReason) {
 	rankDiv.classList.remove("hidden");
@@ -191,7 +196,7 @@ function open_player_profile(event) {
 
 	const state = g_player_states[clickedId];
 	const avatar = "https://avatars.steamstatic.com/" + state.steamAvatar;
-	let spray = g_fastdl_server_url + "sprays/" + clickedId + ".png";
+	let spray = g_server_config.fastdl_url + "sprays/" + clickedId + ".png";
 	let firstSeenDate = new Date(state.firstSeen*1000);
 	let lastSeenDate = new Date(state.lastSeen*1000);
 	let today = Math.floor(Date.now() / 1000);
@@ -461,7 +466,7 @@ function apply_bans(data) {
 }
 
 async function load_bans() {
-	const url = g_fastdl_server_url + "files/bans.json?t=" + Date.now();
+	const url = g_server_config.fastdl_url + "files/bans.json?t=" + Date.now();
 	
 	await fetch(url)
 		.then(response => response.json())

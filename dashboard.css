@@ -748,7 +748,7 @@ h2 {
 .chat_settings_option, .chat_settings_option label, .chat_settings_option input {
 	cursor: pointer;
 }
-.chat_settings_option input {
+.chat_settings_option input, .chat_settings_option select {
 	position: absolute;
 	right: 0;
 }
@@ -929,6 +929,9 @@ h2 {
 }
 .green {
 	color: #0d0;
+}
+.grey {
+	color: #bbb;
 }
 .cyan {
 	color: #0dd;

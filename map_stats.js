@@ -21,7 +21,7 @@ function refresh_update_time() {
 }
 
 async function load_misc_data() {
-	const url = g_fastdl_server_url + "files/playerdb_misc.txt?t=" + Date.now();
+	const url = g_server_config.fastdl_url + "files/playerdb_misc.txt?t=" + Date.now();
 	const res = await fetch(url);
 	const text = await res.text();
 	const lines = text.split(/\r?\n/);
@@ -234,7 +234,7 @@ function update_stat_table() {
 async function setup() {	
 	await load_misc_data();
 
-	const url = g_fastdl_server_url + "files/map_stats.json?t=" + Date.now();
+	const url = g_server_config.fastdl_url + "files/map_stats.json?t=" + Date.now();
 	
 	let map_infos = await downloadJson("mapdb.json");
 	for (let i = 0; i < map_infos.length; i++) {
