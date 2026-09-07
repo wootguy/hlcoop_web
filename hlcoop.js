@@ -2564,7 +2564,8 @@ function action_denied_popup(reason, errorCode) {
 	document.getElementById('popup-text-banned').style.display = 'none';
 	document.getElementById('popup-text-too-new').style.display = 'none';
 	document.getElementById('popup-text-rate-limit').style.display = 'none';
-	document.getElementById('popup-text-bad-version').style.display = 'none';
+	document.getElementById('popup-text-too-old-version').style.display = 'none';
+	document.getElementById('popup-text-too-new-version').style.display = 'none';
 	document.getElementById('popup-text-no-chat').style.display = 'none';
 	document.getElementById('popup-text-steam-error').style.display = 'none';
 	document.getElementById('popup-text-server-full').style.display = 'none';
@@ -2595,9 +2596,17 @@ function action_denied_popup(reason, errorCode) {
 		document.getElementById('popup-text-steam-error').style.display = 'block';
 	}
 	if (reason == WEBDENY_BAD_VERSION) {
-		document.getElementById('popup-text-bad-version').style.display = 'block';
-		document.getElementById('web-version-local').textContent = WEBAPP_VERSION;
-		document.getElementById('web-version-server').textContent = errorCode;
+		let popup = undefined;
+		
+		if (WEBAPP_VERSION < errorCode) {
+			popup = document.getElementById('popup-text-too-old-version');
+		} else {
+			popup = document.getElementById('popup-text-too-new-version');
+		}
+		
+		popup.style.display = 'block';
+		popup.getElementsByClassName('web-version-local')[0].textContent = WEBAPP_VERSION;
+		popup.getElementsByClassName('web-version-server')[0].textContent = errorCode;
 		document.getElementById('closePopup').remove();
 	}
 	if (reason == WEBERR_FULL) {
