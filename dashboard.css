@@ -852,6 +852,7 @@ h2 {
 .chat_message .chat_content_side {
 	display: flex;
 	flex: 1;
+	align-items: baseline;
 }
 .chat_message .chat_timestamp {
 	display: inline-block;

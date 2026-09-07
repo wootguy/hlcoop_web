@@ -1096,9 +1096,12 @@ function parse_auth(view) {
 		g_steamid = steamid64;
 		
 		if (g_steamid == 76561197970806204n) {
-			// We do it live.
 			document.querySelectorAll('.chat_settings_option').forEach(el => {
 				el.classList.remove('hidden');
+			});
+		} else {
+			document.querySelectorAll('.developer_options').forEach(el => {
+				el.classList.add('hidden');
 			});
 		}
 	}
