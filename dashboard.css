@@ -778,6 +778,9 @@ h2 {
 .chat_settings_option.disabled {
 	opacity: 0.3;
 }
+#timestamp_selector {
+	width: 120px;
+}
 
 #filter_maps_container {
 	padding: 0px 0;
@@ -868,6 +871,7 @@ h2 {
 	display: none;
 }
 #content.timestamp_12hr .chat_message .chat_time.time12,
+#content.timestamp_12hrc .chat_message .chat_time.time12c,
 #content.timestamp_24hr .chat_message .chat_time.time24 {
 	display: inline;
 }

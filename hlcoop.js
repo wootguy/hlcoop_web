@@ -2,7 +2,12 @@
 // - special messages for mapchange
 // - iOS safari/firefox is missing a player in the table in hidden maps mode
 // - mutes dont work in chat. option to mute from the web.
-// - option to bright last X chats, option for 12hr clock
+// - client icons slightly too high
+// - messages sending twice while disconnected/reconnecting and pressing enter
+// - chewhavisfaction line newlined after name
+// - alt wrapping not saved
+// - map stats: going to last page after filtering is broken
+// - marcu ai bugs
 
 var g_socket;
 var g_player_data = []; // players currently in the server
@@ -677,6 +682,15 @@ function add_message(steamid64, ipStr, name, msg, time, msgType) {
 		chat_time_12hr.title = format_age(Math.floor(deltaTime / 1000)) + " ago";
 	});
 	
+	let chat_time_12hr_compact = document.createElement('span');
+	chat_time_12hr_compact.classList.add("chat_time");
+	chat_time_12hr_compact.classList.add("time12c");
+	chat_time_12hr_compact.textContent = new Date(Number(time)).toLocaleTimeString("en-US", {
+		hour: "2-digit",
+		minute: "2-digit",
+		hour12: true
+	}).replace(" AM", "a").replace(" PM", "p");
+	
 	let chat_name = document.createElement('span');
 	chat_name.classList.add("player_name");
 	chat_name.textContent = name;
@@ -746,6 +760,7 @@ function add_message(steamid64, ipStr, name, msg, time, msgType) {
 	
 	chat_timestamp.appendChild(chat_time_24hr);
 	chat_timestamp.appendChild(chat_time_12hr);
+	chat_timestamp.appendChild(chat_time_12hr_compact);
 	
 	if (ipStr && ipStr.length && ipStr != "0.0.0.0") {
 		let chat_flag = document.createElement('img');
@@ -1983,6 +1998,7 @@ function apply_chat_settings() {
 	document.getElementById("content").classList.toggle("noflags", !g_settings.show_flags);
 	document.getElementById("content").classList.toggle("noavatars", !g_settings.show_avatars);
 	document.getElementById("content").classList.toggle("timestamp_12hr", g_settings.timestamps == "12hr");
+	document.getElementById("content").classList.toggle("timestamp_12hrc", g_settings.timestamps == "12hrc");
 	document.getElementById("content").classList.toggle("timestamp_24hr", g_settings.timestamps == "24hr");
 	
 	["dim_sound_button", "dim_join_button", "dim_map_button", "dim_server_button", "hover_dim_button",
