@@ -3,6 +3,7 @@
 // - iOS safari/firefox is missing a player in the table in hidden maps mode
 // - mutes dont work in chat. option to mute from the web.
 // - messages sending twice while disconnected/reconnecting and pressing enter (can't repro)
+// - entering negative number or NaN crashes stat pages
 
 var g_socket;
 var g_player_data = []; // players currently in the server
@@ -48,6 +49,7 @@ var g_last_sent_message = "";
 var g_first_connection = true;
 var g_message_sent = true;
 var g_message_id = 0; // used for server acks to chat messages
+var g_translations = {0: {}};
 
 var debug_logging = false;
 
@@ -71,6 +73,7 @@ const MESSAGE_TYPE = {
 	WEBMSG_WEB_CLIENT_IPS: 18,
 	WEBMSG_IP_INFO: 19,
 	WEBMSG_CHAT_ACK: 20,
+	WEBMSG_TRANSLATION: 21,
 };
 
 const WEBDENY_NOT_LOGGED_IN_RATE = 0;
@@ -915,6 +918,115 @@ function parse_chat_ack(view) {
 	handle_chat_ack(msgId);	
 }
 
+function translate_chat_message(event) {
+	let button = event.currentTarget;
+	let msg_content = button.parentElement.getElementsByClassName("chat_msg_content")[0];
+	
+	if (msg_content.textContent == msg_content.getAttribute("translated")) {
+		msg_content.textContent = msg_content.getAttribute("original");
+		button.textContent = "(show translated)";
+	} else {
+		msg_content.textContent = msg_content.getAttribute("translated");
+		button.textContent = "(show original)";
+	}
+}
+
+function apply_translations() {
+	let chatbox = document.getElementById('chat_box_messages');
+	const epsilon = 10;
+	let scrolledToBottom = chatbox.scrollTop + chatbox.clientHeight + epsilon >= chatbox.scrollHeight;
+	
+	const divs = document.querySelectorAll(".chat_message");
+	
+	for (let i = divs.length - 1; i >= 0; i--) {
+		const div = divs[i];
+		let playerName = div.getElementsByClassName("player_name")[0];
+		
+		if (!playerName) {
+			continue;
+		}
+		
+		let id = playerName.getAttribute("id");
+		let msg_content = div.getElementsByClassName("chat_msg_content")[0];
+		
+		if (msg_content.getAttribute("lang")) {
+			continue; // already translated
+		}
+		
+		let original = msg_content.textContent;
+		
+		let translation = g_translations[0][original];
+		if (g_translations[id] && g_translations[id][original]) {
+			translation = g_translations[id][original];
+		}
+		
+		if (!translation) {
+			continue;
+		}
+
+		msg_content.setAttribute("original", original);
+		msg_content.setAttribute("translated", translation.translated);
+		msg_content.setAttribute("lang", translation.src_lang);
+		
+		const translate_button = document.createElement("span");
+		translate_button.classList.add("translate_button");
+		translate_button.textContent = "(show original)";
+		translate_button.addEventListener("click", translate_chat_message);
+		
+		if (g_player_states[g_steamid]) {
+			translate_button.title = "This message was translated from " + g_languages[translation.src_lang] + " to " + g_languages[g_player_states[g_steamid].language];
+		}
+		
+		msg_content.textContent = translation.translated;
+		msg_content.parentElement.appendChild(translate_button);
+	}
+	
+	// adding the translation button may resize chat
+	if (scrolledToBottom) {
+		setTimeout(scroll_chat_to_bottom, 100);
+	}
+}
+
+function parse_translation(view) {
+	let offset = 1;
+	
+	while (offset < view.byteLength) {
+		let steamid64 = view.getBigUint64(offset, true);
+		offset += 8;
+		
+		let src_lang = read_string(view, offset)
+		offset += get_utf8_data_len(src_lang);
+		
+		let targ_lang = read_string(view, offset)
+		offset += get_utf8_data_len(targ_lang);
+		
+		let original = read_string(view, offset)
+		offset += get_utf8_data_len(original);
+		
+		let translated = read_string(view, offset)
+		offset += get_utf8_data_len(translated);
+		
+		if (!(steamid64 in g_translations)) {
+			g_translations[steamid64] = {};
+		}
+		
+		if (translated.length == 0) {
+			console.error("Got empty translation for '" + original + "'" );
+			continue;
+		}
+		
+		g_translations[steamid64][original] = {
+			"src_lang": src_lang,
+			"targ_lang": targ_lang,
+			"translated": translated
+		};
+		
+		//console.log("Translation: (" + src_lang + ">" + targ_lang + ") '" + original + "' -> '" + translated + "'");
+	}
+	
+	apply_translations();
+}
+
 function update_web_client_info() {
 	g_web_player_data = [];
 	let anonCounter = 0;
@@ -1392,7 +1504,9 @@ function parse_upcoming_maps(view) {
 		let mapId = view.getUint16(offset, true);
 		offset += 2;
 		
-		g_upcoming_maps.add(g_map_cycle[mapId][0]);
+		let mapName = mapId < g_map_cycle.length ? g_map_cycle[mapId][0] : "<missing data>";
+		
+		g_upcoming_maps.add(mapName);
 	}
 	
 	if (debug_logging)
@@ -1944,9 +2058,11 @@ function filter_maps() {
 
 function remove_old_player_states() {
 	let used_ids = new Set();
+	let chat_ids = new Set();
 	
 	document.querySelectorAll('.chat_message .player_name').forEach(function(div) {
 		used_ids.add("" + div.getAttribute("id"));
+		chat_ids.add("" + div.getAttribute("id"));
 	});
 	
 	for (let i = 0; i < g_player_data.length; i++) {
@@ -1962,6 +2078,13 @@ function remove_old_player_states() {
 			console.log("Removed unused player state for ID " + id);
 			delete g_player_states[id];
 			delete g_player_clients[id];
+		}
+	});
+	
+	Object.keys(g_translations).forEach(id => {
+		if (!chat_ids.has("" + id) && id != 0) {
+			console.log("Removed unused translations for ID " + id);
+			delete g_translations[id];
 		}
 	});
 }
@@ -2730,8 +2853,14 @@ function createWebSocket() {
 		else if (msgType == MESSAGE_TYPE.WEBMSG_CHAT_ACK) {
 			parse_chat_ack(view);
 		}
+		else if (msgType == MESSAGE_TYPE.WEBMSG_TRANSLATION) {
+			parse_translation(view);
+		}
 		else if (msgType == MESSAGE_TYPE.WEBMSG_AUTH) {
 			parse_auth(view);
+			
+			// should have all chat messages at this point
+			apply_translations();
 		}
 		else if (msgType == MESSAGE_TYPE.WEBMSG_WEB_CLIENTS) {
 			parse_web_clients(view);
