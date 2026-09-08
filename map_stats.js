@@ -71,10 +71,13 @@ function first_page() {
 }
 
 function last_page() {
+	if (results_per_page < 1)
+		return;
+	
 	result_offset = 0;
 	while (true) {
 		result_offset += results_per_page;
-		if (result_offset >= g_map_stats.length) {
+		if (result_offset >= g_filtered_map_stats.length) {
 			result_offset -= results_per_page;
 			break;
 		}

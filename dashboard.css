@@ -353,6 +353,8 @@
 }
 .player_list .client_icon {
 	height: 17px;
+	top: 1px;
+	position: relative;
 }
 .player_list .client_os {
 	position: absolute;
@@ -848,6 +850,7 @@ h2 {
 }
 .chat_message .chat_left_side {
 	flex: 0 0 auto;
+	white-space: nowrap;
 }
 .chat_message .chat_right_side {
 	flex: 1;

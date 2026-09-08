@@ -101,6 +101,9 @@ function first_page() {
 }
 
 function last_page() {
+	if (results_per_page < 1)
+		return;
+	
 	result_offset = 0;
 	while (true) {
 		result_offset += results_per_page;

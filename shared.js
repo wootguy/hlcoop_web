@@ -22,6 +22,7 @@ var g_server_configs = {
 }
 
 var g_server_config = g_server_configs.Public;
+//var g_server_config = g_server_configs.Local;
 
 function set_badge(id, recentTime, rankDiv, mapsPlayed, mapsMultiPlayed, totalMaps, banReason) {
 	rankDiv.classList.remove("hidden");

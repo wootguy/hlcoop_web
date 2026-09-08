@@ -2,12 +2,7 @@
 // - special messages for mapchange
 // - iOS safari/firefox is missing a player in the table in hidden maps mode
 // - mutes dont work in chat. option to mute from the web.
-// - client icons slightly too high
-// - messages sending twice while disconnected/reconnecting and pressing enter
-// - chewhavisfaction line newlined after name
-// - alt wrapping not saved
-// - map stats: going to last page after filtering is broken
-// - marcu ai bugs
+// - messages sending twice while disconnected/reconnecting and pressing enter (can't repro)
 
 var g_socket;
 var g_player_data = []; // players currently in the server
@@ -1480,6 +1475,8 @@ function parse_map_list(view) {
 	
 	if (debug_logging)
 		console.log("Map cycle:", g_map_cycle);
+	
+	document.getElementById("upcoming_maps_grid").innerHTML = "";
 }
 
 function parse_map_info(view) {
@@ -2132,7 +2129,7 @@ function load_settings() {
 	document.getElementById("show_web_joins_button").checked = g_settings.show_web_joins;
 	document.getElementById("hide_maps_cb").checked = g_settings.hide_maps;
 	document.getElementById("compound_icons").checked = g_settings.compound_icons;
-	document.getElementById("alt_wrap_button").checked = g_settings.alt_wrap_button;
+	document.getElementById("alt_wrap_button").checked = g_settings.alt_wrap;
 	document.getElementById("server_selector").value = g_settings.server;
 	document.getElementById("timestamp_selector").value = g_settings.timestamps;
 	
@@ -2197,13 +2194,15 @@ function send_message() {
 	}
 	
 	if (input_box.classList.contains("cooldown")) {
-		cooldown_div.classList.remove("hidden");
-		setInterval(function() {
-			let timeleft = g_chat_cooldown_end - Number(new Date());
-			let secondsLeft = Math.floor(timeleft / 1000);
-			let tenthsLeft = Math.floor((timeleft % 1000) / 100);
-			cooldown_timer.textContent = secondsLeft + "." + tenthsLeft;
-		}, 20, 100);
+		if (cooldown_div.classList.contains("hidden")) {
+			cooldown_div.classList.remove("hidden");
+			setInterval(function() {
+				let timeleft = g_chat_cooldown_end - Number(new Date());
+				let secondsLeft = Math.floor(timeleft / 1000);
+				let tenthsLeft = Math.floor((timeleft % 1000) / 100);
+				cooldown_timer.textContent = secondsLeft + "." + tenthsLeft;
+			}, 20, 100);
+		}
 		return;
 	}
 	
@@ -2650,7 +2649,7 @@ function handle_resize() {
 	scroll_chat_to_bottom();
 }
 
-function websocket_closed() {
+function websocket_closed(event) {
 	console.log("WebSocket connection closed. Code: " + event.code);
 	
 	add_message(0, "", "", "WebSocket connection closed. Code: " + event.code, Date.now(), WEBMSG_CHAT_TYPE_ERROR);
