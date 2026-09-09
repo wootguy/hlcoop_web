@@ -120,8 +120,18 @@ function get_message_type_name(value) {
 }
 
 
-function get_utf8_data_len(str) {
-	return new TextEncoder().encode(str).length+1;
+function get_utf8_data_len(view, offset) {
+	let len = 1;
+	
+	for (let j = offset; j < view.byteLength; j++) {
+		let charCode = view.getUint8(j);
+		if (charCode === 0) {
+			break; // Null terminator found, end of string
+		}
+		len += 1;
+	}
+	
+	return len;
 }
 
 function read_string(view, offset) {
@@ -582,7 +592,7 @@ function parse_player_list(view) {
 		offset += 8;
 		
 		let name = read_string(view, offset)
-		offset += get_utf8_data_len(name);
+		offset += get_utf8_data_len(view, offset);
 
 		let status = view.getUint8(offset, true);
 		offset += 1;
@@ -887,10 +897,10 @@ function parse_chat_message(view) {
 		offset += 8;
 		
 		let name = read_string(view, offset)
-		offset += get_utf8_data_len(name);
+		offset += get_utf8_data_len(view, offset);
 		
 		let msg = read_string(view, offset);
-		offset += get_utf8_data_len(msg);
+		offset += get_utf8_data_len(view, offset);
 		
 		let ipStr = "";
 		
@@ -1014,16 +1024,16 @@ function parse_translation(view) {
 		offset += 8;
 		
 		let src_lang = read_string(view, offset)
-		offset += get_utf8_data_len(src_lang);
+		offset += get_utf8_data_len(view, offset);
 		
 		let targ_lang = read_string(view, offset)
-		offset += get_utf8_data_len(targ_lang);
+		offset += get_utf8_data_len(view, offset);
 		
 		let original = read_string(view, offset)
-		offset += get_utf8_data_len(original);
+		offset += get_utf8_data_len(view, offset);
 		
 		let translated = read_string(view, offset)
-		offset += get_utf8_data_len(translated);
+		offset += get_utf8_data_len(view, offset);
 		
 		if (!(steamid64 in g_translations)) {
 			g_translations[steamid64] = {};
@@ -1134,7 +1144,7 @@ function parse_guest_names(view) {
 	g_guest_names = [];
 	while (offset < view.byteLength) {
 		let name = read_string(view, offset);
-		offset += get_utf8_data_len(name);
+		offset += get_utf8_data_len(view, offset);
 		g_guest_names.push(name);
 	}
 	
@@ -1175,13 +1185,13 @@ function parse_ip_info(view) {
 	let offset = 1; // skip message type byte
 	
 	let ip = read_string(view, offset);
-	offset += get_utf8_data_len(ip);
+	offset += get_utf8_data_len(view, offset);
 	
 	let country = read_string(view, offset);
-	offset += get_utf8_data_len(country);
+	offset += get_utf8_data_len(view, offset);
 	
 	let region = read_string(view, offset);
-	offset += get_utf8_data_len(region);
+	offset += get_utf8_data_len(view, offset);
 	
 	g_ip_info[ip] = {
 		country,
@@ -1210,7 +1220,7 @@ function parse_auth(view) {
 	offset += 8;
 	
 	let token = read_string(view, offset);
-	offset += get_utf8_data_len(token);
+	offset += get_utf8_data_len(view, offset);
 	
 	if (token.length) {
 		const currentDate = new Date();
@@ -1274,7 +1284,7 @@ function parse_rating(view) {
 	offset += 1;
 	
 	let map = read_string(view, offset);
-	offset += get_utf8_data_len(map);
+	offset += get_utf8_data_len(view, offset);
 	
 	let state = g_player_states[steamid64];
 	let map_stats = state.mapstats[map];
@@ -1387,23 +1397,23 @@ function parse_player_state(view) {
 	};
 	
 	let lang = read_string(view, offset);
-	offset += get_utf8_data_len(lang);
+	offset += get_utf8_data_len(view, offset);
 	g_player_states[steamid64].language = lang;
 	
 	let name = read_string(view, offset);
-	offset += get_utf8_data_len(name);
+	offset += get_utf8_data_len(view, offset);
 	g_player_states[steamid64].name = name;
 	
 	let steamName = read_string(view, offset);
-	offset += get_utf8_data_len(steamName);
+	offset += get_utf8_data_len(view, offset);
 	g_player_states[steamid64].steamName = steamName;
 	
 	let steamAvatar = read_string(view, offset);
-	offset += get_utf8_data_len(steamAvatar);
+	offset += get_utf8_data_len(view, offset);
 	g_player_states[steamid64].steamAvatar = steamAvatar;
 	
 	let playerModel = read_string(view, offset);
-	offset += get_utf8_data_len(playerModel);
+	offset += get_utf8_data_len(view, offset);
 	g_player_states[steamid64].model = playerModel;
 	
 	g_player_states[steamid64].topcolor = view.getUint8(offset, true);
@@ -1436,7 +1446,7 @@ function parse_player_state(view) {
 	offset += 1;
 	
 	let sprayBanReason = read_string(view, offset);
-	offset += get_utf8_data_len(sprayBanReason);
+	offset += get_utf8_data_len(view, offset);
 	g_player_states[steamid64].sprayBanReason = sprayBanReason;
 	
 	let aliasCount = view.getUint8(offset, true);
@@ -1444,7 +1454,7 @@ function parse_player_state(view) {
 	
 	for (let i = 0; i < aliasCount; i++) {
 		let name = read_string(view, offset);
-		offset += get_utf8_data_len(name);
+		offset += get_utf8_data_len(view, offset);
 	
 		let firstUsed = view.getUint16(offset, true);
 		offset += 2;
@@ -1512,7 +1522,7 @@ function parse_upcoming_maps(view) {
 	let offset = 1; // skip message type byte
 
 	g_next_map = read_string(view, offset);
-	offset += get_utf8_data_len(g_next_map);
+	offset += get_utf8_data_len(view, offset);
 	
 	let upcomingMapsCount = view.getUint16(offset, true);
 	offset += 2;
@@ -1561,11 +1571,11 @@ function parse_client_details(view) {
 	offset += 1;
 	
 	let modStr = read_string(view, offset);
-	offset += get_utf8_data_len(modStr);
+	offset += get_utf8_data_len(view, offset);
 	g_player_clients[steamid64].modStr = modStr;
 	
 	let engStr = read_string(view, offset);
-	offset += get_utf8_data_len(engStr);
+	offset += get_utf8_data_len(view, offset);
 	g_player_clients[steamid64].engStr = engStr;
 	
 	if (debug_logging)
@@ -1591,7 +1601,7 @@ function parse_map_list(view) {
 	
 	while (offset < view.byteLength) {
 		let map = read_string(view, offset);
-		offset += get_utf8_data_len(map);
+		offset += get_utf8_data_len(view, offset);
 		g_total_maps += 1;
 		
 		if (map == "\n") {
@@ -1616,7 +1626,7 @@ function parse_map_info(view) {
 	let offset = 1; // skip message type byte
 	
 	g_current_map = read_string(view, offset);
-	offset += get_utf8_data_len(g_current_map);
+	offset += get_utf8_data_len(view, offset);
 	
 	g_map_start_time = view.getBigUint64(offset, true);
 	offset += 8;
