@@ -670,7 +670,7 @@ function add_message(steamid64, ipStr, name, msg, time, msgType) {
 	chat_time_12hr.classList.add("chat_time");
 	chat_time_12hr.classList.add("time12");
 	chat_time_12hr.textContent = new Date(Number(time)).toLocaleTimeString("en-US", {
-		hour: "2-digit",
+		hour: "numeric",
 		minute: "2-digit",
 		hour12: true
 	});
@@ -684,7 +684,7 @@ function add_message(steamid64, ipStr, name, msg, time, msgType) {
 	chat_time_12hr_compact.classList.add("chat_time");
 	chat_time_12hr_compact.classList.add("time12c");
 	chat_time_12hr_compact.textContent = new Date(Number(time)).toLocaleTimeString("en-US", {
-		hour: "2-digit",
+		hour: "numeric",
 		minute: "2-digit",
 		hour12: true
 	}).replace(" AM", "a").replace(" PM", "p");
@@ -950,6 +950,16 @@ function apply_translations() {
 		let msg_content = div.getElementsByClassName("chat_msg_content")[0];
 		
 		if (msg_content.getAttribute("lang")) {
+			let button = div.getElementsByClassName("translate_button")[0];
+			
+			if (g_settings.translations == "auto") {
+				msg_content.textContent = msg_content.getAttribute("translated");
+				button.textContent = "(show original)";
+			}
+			else {
+				msg_content.textContent = msg_content.getAttribute("original");
+				button.textContent = "(show translated)";
+			}
 			continue; // already translated
 		}
 		
@@ -970,14 +980,21 @@ function apply_translations() {
 		
 		const translate_button = document.createElement("span");
 		translate_button.classList.add("translate_button");
-		translate_button.textContent = "(show original)";
 		translate_button.addEventListener("click", translate_chat_message);
 		
 		if (g_player_states[g_steamid]) {
 			translate_button.title = "This message was translated from " + g_languages[translation.src_lang] + " to " + g_languages[g_player_states[g_steamid].language];
 		}
 		
-		msg_content.textContent = translation.translated;
+		if (g_settings.translations == "auto") {
+			translate_button.textContent = "(show original)";
+			msg_content.textContent = translation.translated;
+		}
+		else {
+			translate_button.textContent = "(show translated)";
+			msg_content.textContent = original;
+		}		
+		
 		msg_content.parentElement.appendChild(translate_button);
 	}
 	
@@ -2104,6 +2121,7 @@ function apply_chat_settings() {
 	g_settings.compound_icons = document.getElementById("compound_icons").checked;
 	g_settings.alt_wrap = document.getElementById("alt_wrap_button").checked;
 	g_settings.timestamps = document.getElementById("timestamp_selector").value;
+	g_settings.translations = document.getElementById("translation_mode").value;
 	
 	document.getElementById("content").classList.toggle("flip", g_settings.flip_layout);
 	document.getElementById("content").classList.toggle("no_compound_icons", !g_settings.compound_icons);
@@ -2120,12 +2138,15 @@ function apply_chat_settings() {
 	document.getElementById("content").classList.toggle("timestamp_12hr", g_settings.timestamps == "12hr");
 	document.getElementById("content").classList.toggle("timestamp_12hrc", g_settings.timestamps == "12hrc");
 	document.getElementById("content").classList.toggle("timestamp_24hr", g_settings.timestamps == "24hr");
+	document.getElementById("content").classList.toggle("no_translate", g_settings.translations == "disable");
 	
 	["dim_sound_button", "dim_join_button", "dim_map_button", "dim_server_button", "hover_dim_button",
 	"dim_recent_button"].forEach(str => {
 		document.getElementById(str).parentElement.parentElement.classList.toggle("disabled", !g_settings.dim_enable);
 		document.getElementById(str).disabled = !g_settings.dim_enable;
 	});
+	
+	apply_translations();
 	
 	save_settings();
 	setTimeout(scroll_chat_to_bottom, 100);
@@ -2238,6 +2259,7 @@ function load_settings() {
 	
 	g_settings.server = g_settings.server || "Public";
 	g_settings.timestamps = g_settings.timestamps || "24hr";
+	g_settings.translations = g_settings.translations || "auto";
 	
 	document.getElementById("flip_layout_button").checked = g_settings.flip_layout;
 	document.getElementById("dim_enable_button").checked = g_settings.dim_enable;
@@ -2255,6 +2277,7 @@ function load_settings() {
 	document.getElementById("alt_wrap_button").checked = g_settings.alt_wrap;
 	document.getElementById("server_selector").value = g_settings.server;
 	document.getElementById("timestamp_selector").value = g_settings.timestamps;
+	document.getElementById("translation_mode").value = g_settings.translations;
 	
 	g_server_config = g_server_configs[g_settings.server];
 }
@@ -2660,6 +2683,7 @@ async function setup() {
 	document.getElementById("show_country_flags").addEventListener("click", apply_chat_settings);
 	document.getElementById("show_avatars").addEventListener("click", apply_chat_settings);
 	document.getElementById("timestamp_selector").addEventListener("change", apply_chat_settings);
+	document.getElementById("translation_mode").addEventListener("change", apply_chat_settings);
 	apply_chat_settings();
 	
 	document.getElementById("server_selector").addEventListener("change", function() {

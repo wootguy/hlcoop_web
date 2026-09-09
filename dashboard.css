@@ -272,7 +272,7 @@
 	text-wrap: nowrap;
 }
 #content:not(.noflags) .player_list div {
-	max-width: 143px;
+	max-width: 136px;
 }
 .player_list div.bad_guy {
 	color: #FF3F3F;
@@ -888,6 +888,9 @@ h2 {
 	margin-left: 5px;
 	user-select: none;
 	white-space: nowrap;
+}
+#content.no_translate .translate_button {
+	display: none;
 }
 
 #content.alt_wrap .chat_content_side {
