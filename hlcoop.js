@@ -2714,6 +2714,12 @@ async function setup() {
 	init_common();
 	
 	handle_resize();
+	
+	keep_screen_awake();
+	document.addEventListener("visibilitychange", () => {
+		if (document.visibilityState === "visible")
+			keep_screen_awake();
+	});
 }
 
 function action_denied_popup(reason, errorCode) {
@@ -2806,6 +2812,19 @@ function handle_resize() {
 		target.prepend(active_maps);
 	
 	scroll_chat_to_bottom();
+}
+
+let wakeLock = null;
+
+async function keep_screen_awake() {
+    if (!("wakeLock" in navigator))
+        return;
+
+    try {
+        wakeLock = await navigator.wakeLock.request("screen");
+    } catch (err) {
+        console.error(err);
+    }
 }
 
 function websocket_closed(event) {
