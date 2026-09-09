@@ -931,7 +931,7 @@ function translate_chat_message(event) {
 	}
 }
 
-function apply_translations() {
+function apply_translations(update_existing) {
 	let chatbox = document.getElementById('chat_box_messages');
 	const epsilon = 10;
 	let scrolledToBottom = chatbox.scrollTop + chatbox.clientHeight + epsilon >= chatbox.scrollHeight;
@@ -950,15 +950,17 @@ function apply_translations() {
 		let msg_content = div.getElementsByClassName("chat_msg_content")[0];
 		
 		if (msg_content.getAttribute("lang")) {
-			let button = div.getElementsByClassName("translate_button")[0];
-			
-			if (g_settings.translations == "auto") {
-				msg_content.textContent = msg_content.getAttribute("translated");
-				button.textContent = "(show original)";
-			}
-			else {
-				msg_content.textContent = msg_content.getAttribute("original");
-				button.textContent = "(show translated)";
+			if (update_existing) {
+				let button = div.getElementsByClassName("translate_button")[0];
+				
+				if (g_settings.translations == "auto") {
+					msg_content.textContent = msg_content.getAttribute("translated");
+					button.textContent = "(show original)";
+				}
+				else {
+					msg_content.textContent = msg_content.getAttribute("original");
+					button.textContent = "(show translated)";
+				}
 			}
 			continue; // already translated
 		}
@@ -1041,7 +1043,7 @@ function parse_translation(view) {
 		//console.log("Translation: (" + src_lang + ">" + targ_lang + ") '" + original + "' -> '" + translated + "'");
 	}
 	
-	apply_translations();
+	apply_translations(false);
 }
 
 function update_web_client_info() {
@@ -2146,7 +2148,7 @@ function apply_chat_settings() {
 		document.getElementById(str).disabled = !g_settings.dim_enable;
 	});
 	
-	apply_translations();
+	apply_translations(true);
 	
 	save_settings();
 	setTimeout(scroll_chat_to_bottom, 100);
@@ -2884,7 +2886,7 @@ function createWebSocket() {
 			parse_auth(view);
 			
 			// should have all chat messages at this point
-			apply_translations();
+			apply_translations(true);
 		}
 		else if (msgType == MESSAGE_TYPE.WEBMSG_WEB_CLIENTS) {
 			parse_web_clients(view);
