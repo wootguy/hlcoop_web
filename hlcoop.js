@@ -1263,6 +1263,7 @@ function parse_auth(view) {
 		g_steamid = steamid64;
 		
 		if (g_steamid == 76561197970806204n) {
+			// w00tguy settings
 			document.querySelectorAll('.chat_settings_option').forEach(el => {
 				el.classList.remove('hidden');
 			});
@@ -2129,6 +2130,7 @@ function apply_chat_settings() {
 	g_settings.dim_recent = document.getElementById("dim_recent_button").checked;
 	g_settings.show_flags = document.getElementById("show_country_flags").checked;
 	g_settings.show_avatars = document.getElementById("show_avatars").checked;
+	g_settings.keep_screen_awake = document.getElementById("keep_screen_awake").checked;
 	g_settings.show_web_joins = document.getElementById("show_web_joins_button").checked;
 	g_settings.compound_icons = document.getElementById("compound_icons").checked;
 	g_settings.alt_wrap = document.getElementById("alt_wrap_button").checked;
@@ -2158,6 +2160,7 @@ function apply_chat_settings() {
 		document.getElementById(str).disabled = !g_settings.dim_enable;
 	});
 	
+	keep_screen_awake();
 	apply_translations(true);
 	
 	save_settings();
@@ -2263,6 +2266,7 @@ function load_settings() {
 		dim_recent: false,
 		show_web_joins: false,
 		show_avatars: true,
+		keep_screen_awake: false,
 		show_flags: false,
 		hide_maps: true,
 		compound_icons: false,
@@ -2283,6 +2287,7 @@ function load_settings() {
 	document.getElementById("dim_recent_button").checked = g_settings.dim_recent;
 	document.getElementById("show_country_flags").checked = g_settings.show_flags;
 	document.getElementById("show_avatars").checked = g_settings.show_avatars;
+	document.getElementById("keep_screen_awake").checked = g_settings.keep_screen_awake;
 	document.getElementById("show_web_joins_button").checked = g_settings.show_web_joins;
 	document.getElementById("hide_maps_cb").checked = g_settings.hide_maps;
 	document.getElementById("compound_icons").checked = g_settings.compound_icons;
@@ -2694,6 +2699,7 @@ async function setup() {
 	document.getElementById("alt_wrap_button").addEventListener("click", apply_chat_settings);
 	document.getElementById("show_country_flags").addEventListener("click", apply_chat_settings);
 	document.getElementById("show_avatars").addEventListener("click", apply_chat_settings);
+	document.getElementById("keep_screen_awake").addEventListener("click", apply_chat_settings);
 	document.getElementById("timestamp_selector").addEventListener("change", apply_chat_settings);
 	document.getElementById("translation_mode").addEventListener("change", apply_chat_settings);
 	apply_chat_settings();
@@ -2715,11 +2721,17 @@ async function setup() {
 	
 	handle_resize();
 	
-	keep_screen_awake();
-	document.addEventListener("visibilitychange", () => {
-		if (document.visibilityState === "visible")
-			keep_screen_awake();
-	});
+	if (!("wakeLock" in navigator)) {
+		document.querySelectorAll('.wakelock_settings').forEach(el => {
+			el.classList.add('hidden');
+		});
+	} else {
+		keep_screen_awake();
+		document.addEventListener("visibilitychange", () => {
+			if (document.visibilityState === "visible")
+				keep_screen_awake();
+		});
+	}
 }
 
 function action_denied_popup(reason, errorCode) {
@@ -2814,17 +2826,24 @@ function handle_resize() {
 	scroll_chat_to_bottom();
 }
 
-let wakeLock = null;
+var g_wake_lock = null;
 
 async function keep_screen_awake() {
     if (!("wakeLock" in navigator))
         return;
 
-    try {
-        wakeLock = await navigator.wakeLock.request("screen");
-    } catch (err) {
-        console.error(err);
-    }
+	if (g_settings.keep_screen_awake) {
+		try {
+			g_wake_lock = await navigator.wakeLock.request("screen");
+		} catch (err) {
+			console.error(err);
+		}
+	} else {
+		if (g_wake_lock) {
+			await g_wake_lock.release();
+			g_wake_lock = null;
+		}
+	}
 }
 
 function websocket_closed(event) {
