@@ -4,6 +4,7 @@
 // - mutes dont work in chat. option to mute from the web.
 // - messages sending twice while disconnected/reconnecting and pressing enter (can't repro)
 // - entering negative number or NaN crashes stat pages
+// - escape to close profile or buton for phones
 
 var g_socket;
 var g_player_data = []; // players currently in the server
