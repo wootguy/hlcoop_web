@@ -122,3 +122,7 @@ thrill_demo_rb
 fbj_avix
 co_spells
 co_bankjob_v3
+de_snowfacility_rb
+area49
+lv_colony_rb
+wian_b_hl
