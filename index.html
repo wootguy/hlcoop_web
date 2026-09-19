@@ -93,6 +93,9 @@
 										<label title="Keep the screen awake while the dashboard is open">Keep screen awake<input id="keep_screen_awake" type="checkbox"></label>
 									</div>
 									<div class="chat_settings_option">
+										<label title="Display server performance graph. Use this to find out if you or the server is lagging.">Performance graph<input id="show_perf" type="checkbox"></label>
+									</div>
+									<div class="chat_settings_option">
 										<label title="Display messages for web client logins and disconnects">Show web joins/disconnects<input id="show_web_joins_button" type="checkbox"></label>
 									</div>
 									<div class="chat_settings_option">
@@ -226,6 +229,29 @@ Red light = Negative ratings. Low priority. Selected only if all other maps are 
 						</select>
 						<button id="hide_maps_button">Hide maps</button>
 						<input type="checkbox" id="hide_maps_cb" class="hidden"/>
+					</div>
+					<div id="perf-container">
+						<h2>Server Performance <span class="tooltip" title="FPS = Average frames per second.
+ms = Frame time in milliseconds. No smoothing is applied. Single frame stutters will be visible on this line.
+
+ENT = Peak milliseconds for entity logic
+PLG = Peak milliseconds for plugin logic
+PLR = Peak milliseconds for player logic
+MSC = Peak milliseconds for unknown logic
+FRM = Peak milliseconds for an entire frame
+
+The bars underneath the graph represent the total time spent in each type of function.">(?)</span></h2>
+						<svg id="perf-chart" width="0" height="150" viewBox="0 -150 500 150">
+							<g transform="scale(1, -1)">
+								<g class="chartg"></g>
+							</g>
+						</svg>
+						<div id="perf-bar-container">
+							<div class="segment ent">ENT</div>
+							<div class="segment plugin">PLG</div>
+							<div class="segment player">PLR</div>
+							<div class="segment misc">MSC</div>
+						</div>
 					</div>
 				</div>
 			</div>

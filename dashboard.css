@@ -1116,3 +1116,43 @@ h2 {
 #pcount, #wcount {
 	font-family: monospace;
 }
+
+#content #perf-container {
+	display: none;
+	width: 100%;
+	margin-top: 20px;
+}
+#perf-chart {
+	width: 100%;
+}
+#content svg {
+	background: black;
+}
+#content.perf #perf-container {
+	display: block;
+}
+#content #perf-bar-container {
+	height: 20px;
+	display: flex;
+	width: 100%;
+}
+#content #perf-bar-container .segment {
+	height: 100%;
+	text-align: center;
+}
+#content #perf-bar-container .segment.ent {
+	background: #048;
+}
+#content #perf-bar-container .segment.plugin {
+	background: #408;
+}
+#content #perf-bar-container .segment.player {
+	background: #040;
+}
+#content #perf-bar-container .segment.misc {
+	background: #444;
+}
+#perf-container text {
+	font-size: 0.7em;
+	user-select: none;
+}

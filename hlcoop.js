@@ -51,6 +51,20 @@ var g_first_connection = true;
 var g_message_sent = true;
 var g_message_id = 0; // used for server acks to chat messages
 var g_translations = {0: {}};
+var g_perf_metrics = [];
+var g_perf_metrics_hist = []; // historical metrics currently in the graph
+var g_perf_warnings = [];
+var g_perf_scale_x = 1;
+var g_perf_scale_y = 1;
+var g_perf_max_points = 1000;
+var g_perf_chart_width_pad = 30;
+var g_perf_chart_height_pad = 15;
+var g_perf_init_needed = true;
+var g_perf_timer = null;
+var g_perf_smooth_fps = [];
+var g_perf_smooth_delay = [];
+var g_perf_delay = 0; // how much to lag behind the latest perf time for smooth playback
+var g_perf_delay_ideal = 0;
 
 var debug_logging = false;
 
@@ -75,6 +89,7 @@ const MESSAGE_TYPE = {
 	WEBMSG_IP_INFO: 19,
 	WEBMSG_CHAT_ACK: 20,
 	WEBMSG_TRANSLATION: 21,
+	WEBMSG_PERF: 22,
 };
 
 const WEBDENY_NOT_LOGGED_IN_RATE = 0;
@@ -1593,6 +1608,107 @@ function parse_stats(view) {
 	g_most_active_id = steamid64;
 }
 
+function parse_perf(view) {
+	let offset = 1; // skip message type byte
+
+	let frameTime = view.getBigUint64(offset, true);
+	offset += 8;
+	
+	let numMetrics = view.getUint16(offset, true);
+	offset += 2;
+	
+	
+	let delay = Number(BigInt(new Date()) - frameTime);
+	g_perf_smooth_delay.push(delay);
+	if (g_perf_smooth_delay.length > 20) {
+		g_perf_smooth_delay.shift();
+	}
+	g_perf_delay_ideal = g_perf_smooth_delay.reduce((max, value) => Math.max(max, value), -Infinity);
+	
+	if (g_perf_delay_ideal > g_perf_delay) {
+		g_perf_delay = g_perf_delay_ideal;
+	}
+	
+	for (let i = 0; i < numMetrics; i++) {
+		let bigFrame = view.getUint8(offset, true);
+		offset += 1;
+		
+		const getValue = bigFrame
+			? () => {
+				const value = view.getUint16(offset, true);
+				offset += 2;
+				return value;
+			}
+			: () => view.getUint8(offset++);
+
+		let frame = getValue();
+		let frameInt = getValue();
+		let readPackets = getValue();
+		let sendClientMessages = getValue();
+		let addToFullPack = getValue();
+		let entityPhysics = getValue();
+		let entityThinks = getValue();
+		let playerThink = getValue();
+		let playerPreThink = getValue();
+		let playerPostThink = getValue();
+		let playerMove = getValue();
+		let pluginFuncs = getValue();
+		
+		let metric = {
+			frameTime, frame, frameInt, readPackets, sendClientMessages, addToFullPack, entityPhysics, entityThinks,
+			playerThink, playerPreThink, playerPostThink, playerMove, pluginFuncs
+		};
+		
+		g_perf_smooth_fps.push(frame);
+		if (g_perf_smooth_fps.length > 32) {
+			g_perf_smooth_fps.shift();
+		}
+		
+		let avgMs = 0;
+		for (let i = 0; i < g_perf_smooth_fps.length; i++) {
+			avgMs += g_perf_smooth_fps[i];
+		}
+		avgMs /= g_perf_smooth_fps.length;
+		metric.fps = avgMs ? (1000.0 / avgMs) : 0;
+		
+		if (frameInt > 50) {
+			console.log("Frame spike! ", metric);
+		}
+		
+		g_perf_metrics.push(metric);
+		
+		frameTime += BigInt(frame);
+		
+		if (g_perf_metrics.length > 1000) {
+			g_perf_metrics.shift();
+		}
+	}
+	
+	while (offset < view.byteLength) {	
+		let logTime = view.getBigUint64(offset, true);
+		offset += 8;
+		
+		let millis = view.getUint16(offset, true);
+		offset += 2;
+		
+		let source = read_string(view, offset);
+		offset += get_utf8_data_len(view, offset);
+		
+		let func = read_string(view, offset);
+		offset += get_utf8_data_len(view, offset);
+		
+		g_perf_warnings.push({
+			logTime, source, func, millis
+		});
+		
+		if (g_perf_metrics.length > 100) {
+			g_perf_metrics.shift();
+		}
+		
+		console.log("[PERF] " + source + " " + func + " took " + millis + " ms");
+	}
+}
+
 function parse_map_list(view) {
 	g_map_cycle = [];
 	
@@ -2063,6 +2179,221 @@ function update_map_timer() {
 	
 }
 
+function init_perf_graph() {
+	let maxValue = 120;
+	
+	let container = document.getElementById("perf-container");
+	let chart = document.getElementById("perf-chart");
+	let chartg = chart.getElementsByClassName("chartg")[0];
+	
+	let svgWidth = container.offsetWidth;
+	let chartWidth = svgWidth - (g_perf_chart_width_pad);
+	let svgHeight = chart.getAttribute("height");
+	let chartHeight = svgHeight - (g_perf_chart_height_pad*2);
+	
+	g_perf_max_points = chartWidth;
+	
+	chart.setAttribute("viewBox", "0 " + -svgHeight + " " + svgWidth + " " + svgHeight);
+	
+	g_perf_scale_y = chartHeight / maxValue;
+	g_perf_scale_x = chartWidth / g_perf_max_points;
+	
+	let oldFpsPoints = undefined; 
+	let oldMsPoints = undefined;
+	
+	if (chart.getElementById("perf-line-fps")) {
+		oldFpsPoints = chart.getElementById("perf-line-fps").getAttribute("points");
+		oldMsPoints = chart.getElementById("perf-line-ms").getAttribute("points");
+	}
+	
+	// horizontal lines
+	chartg.innerHTML = "";
+	for (let i = 0; i <= maxValue; i+= 20) {
+		let start = g_perf_chart_width_pad-5 + "," + (i*g_perf_scale_y + g_perf_chart_height_pad);
+		let end = (chartWidth+g_perf_chart_width_pad) + "," + (i*g_perf_scale_y + g_perf_chart_height_pad);
+		let barpoints = start + " " + end;
+		let polyline = '<polyline fill="none" stroke="#444" stroke-width="1" points="' + barpoints + '"/>';
+		chartg.innerHTML += polyline;
+		
+		chartg.innerHTML += '<text x="' + (g_perf_chart_width_pad-20) + '" y="' + -(i*g_perf_scale_y + g_perf_chart_height_pad) + '" fill="#ddd" transform="scale(1,-1)">' + i + '</text>';
+	}
+	
+	// vertical borders
+	{
+		let start = g_perf_chart_width_pad + "," + g_perf_chart_height_pad;
+		let end = g_perf_chart_width_pad + "," + (g_perf_chart_height_pad+chartHeight);
+		let polyline = '<polyline fill="none" stroke="#444" stroke-width="1" points="' + start + " " + end + '"/>';
+		chartg.innerHTML += polyline;
+	}
+	{
+		let start = (chartWidth+g_perf_chart_width_pad-1) + "," + g_perf_chart_height_pad;
+		let end = (chartWidth+g_perf_chart_width_pad-1) + "," + (g_perf_chart_height_pad+chartHeight);
+		let polyline = '<polyline fill="none" stroke="#444" stroke-width="1" points="' + start + " " + end + '"/>';
+		chartg.innerHTML += polyline;
+	}
+	
+	let textY = -(maxValue*g_perf_scale_y + g_perf_chart_height_pad + 5);
+	chartg.innerHTML += '<text id="perf-fps" x="' + (svgWidth-2) + '" y="' + textY + '" fill="#f00" transform="scale(1,-1)" text-anchor="end"></text>';
+	
+	chartg.innerHTML += '<text id="perf-ms" x="' + (svgWidth-60) + '" y="' + textY + '" fill="#f80" transform="scale(1,-1)" text-anchor="end"></text>';
+	
+	chartg.innerHTML += '<text id="perf-peak-ent" x="' + (40) + '" y="' + textY + '" fill="#6af" transform="scale(1,-1)"></text>';
+	
+	chartg.innerHTML += '<text id="perf-peak-plugin" x="' + (120) + '" y="' + textY + '" fill="#a6f" transform="scale(1,-1)"></text>';
+	
+	chartg.innerHTML += '<text id="perf-peak-player" x="' + (200) + '" y="' + textY + '" fill="#4f4" transform="scale(1,-1)"></text>';
+	
+	chartg.innerHTML += '<text id="perf-peak-misc" x="' + (280) + '" y="' + textY + '" fill="#aaa" transform="scale(1,-1)"></text>';
+	
+	chartg.innerHTML += '<text id="perf-peak-frame" x="' + (360) + '" y="' + textY + '" fill="#f80" transform="scale(1,-1)"></text>';
+	
+	chartg.innerHTML += '<polyline id="perf-line-fps" fill="none" stroke="#f00" stroke-width="1" points=""/>';
+	chartg.innerHTML += '<polyline id="perf-line-ms" fill="none" stroke="#f80" stroke-width="1" points=""/>';
+	
+	if (oldFpsPoints) {
+		chart.getElementById("perf-line-fps").setAttribute("points", oldFpsPoints);
+		chart.getElementById("perf-line-ms").setAttribute("points", oldMsPoints);
+	}
+}
+
+function render_perf_graph() {
+	if (g_perf_init_needed) {
+		init_perf_graph();
+		g_perf_init_needed = false;
+	}
+	
+	if (!g_perf_metrics.length)
+		return;
+	
+	let chart = document.getElementById("perf-chart");	
+	let chartg = chart.getElementsByClassName("chartg")[0];
+	
+	let fps_line = chart.getElementById("perf-line-fps");
+	let ms_line = chart.getElementById("perf-line-ms");
+	let svg = fps_line.ownerSVGElement;
+	
+	let pointIdx = fps_line.points.length;
+	
+	// playback points smoothly while new points arrive in chunks
+	let maxPerfTime = Date.now() - g_perf_delay;
+	
+	let latestMetrics = undefined;
+	
+	if (g_perf_delay_ideal < g_perf_delay) {
+		g_perf_delay -= 10;
+		if (g_perf_delay < g_perf_delay_ideal)
+			g_perf_delay = g_perf_delay_ideal;
+	}
+	
+	let highestMs = 0;
+	
+	for (let i = 0; i < g_perf_metrics.length; i++) {
+		let metrics = g_perf_metrics[i];
+		
+		if (metrics.frameTime > maxPerfTime) {
+			if (i == g_perf_metrics.length - 1) {
+				g_perf_metrics = [];
+			}
+			else if (i > 0) {
+				g_perf_metrics.splice(0, i);
+			}
+			break;
+		}
+		
+		latestMetrics = metrics;
+		
+		g_perf_metrics_hist.push(metrics);
+		
+		let point_fps = svg.createSVGPoint();
+		point_fps.x = g_perf_chart_width_pad + pointIdx*g_perf_scale_x;
+		point_fps.y = g_perf_chart_height_pad + metrics.fps * g_perf_scale_y;
+		fps_line.points.appendItem(point_fps);
+		
+		let point_ms = svg.createSVGPoint();
+		point_ms.x = point_fps.x;
+		point_ms.y = g_perf_chart_height_pad + metrics.frameInt * g_perf_scale_y;
+		ms_line.points.appendItem(point_ms);
+		
+		if (metrics.frameInt > highestMs)
+			highestMs = metrics.frameInt;
+		
+		pointIdx += 1;
+	}
+	
+	if (g_perf_metrics_hist.length > g_perf_max_points) {
+		g_perf_metrics_hist.splice(0, g_perf_metrics_hist.length - g_perf_max_points);
+	}
+	
+	let misc_sum = 0;
+	let ent_sum = 0;
+	let plugin_sum = 0;
+	let player_sum = 0;
+	let total_sum = 0;
+	let peak_ent = 0;
+	let peak_plugin = 0;
+	let peak_player = 0;
+	let peak_misc = 0;
+	let peak_frame = 0;
+	
+	for (let i = 0; i < g_perf_metrics_hist.length; i++) {
+		let metrics = g_perf_metrics_hist[i];
+		
+		let ent = metrics.entityPhysics + metrics.entityThinks;
+		let player = metrics.sendClientMessages + metrics.readPackets;
+		let misc = metrics.frameInt - (ent + metrics.pluginFuncs + player);
+		
+		ent_sum += ent;
+		plugin_sum += metrics.pluginFuncs;
+		player_sum += player;
+		if (misc > 0)
+			misc_sum += misc;
+		
+		if (ent > peak_ent)
+			peak_ent = ent;
+		if (player > peak_player)
+			peak_player = player;
+		if (metrics.pluginFuncs > peak_plugin)
+			peak_plugin = metrics.pluginFuncs;
+		if (misc > peak_misc)
+			peak_misc = misc;
+		if (metrics.frameInt > peak_frame)
+			peak_frame =  metrics.frameInt;
+	}
+	
+	total_sum = ent_sum + plugin_sum + player_sum + misc_sum;
+	let misc_percent = (misc_sum / total_sum) * 100;
+	let ent_percent = (ent_sum / total_sum) * 100;
+	let plugin_percent = (plugin_sum / total_sum) * 100;
+	let player_percent = (player_sum / total_sum) * 100;	
+
+	let bar_container = document.getElementById("perf-bar-container");
+	bar_container.getElementsByClassName("ent")[0].style.width = ent_percent + "%";
+	bar_container.getElementsByClassName("plugin")[0].style.width = plugin_percent + "%";
+	bar_container.getElementsByClassName("player")[0].style.width = player_percent + "%";
+	bar_container.getElementsByClassName("misc")[0].style.width = misc_percent + "%";
+	
+	document.getElementById("perf-peak-ent").textContent = "ENT: " + peak_ent + " ms";
+	document.getElementById("perf-peak-plugin").textContent = "PLG: " + peak_plugin + " ms";
+	document.getElementById("perf-peak-player").textContent = "PLR: " + peak_player + " ms";
+	document.getElementById("perf-peak-misc").textContent = "MSC: " + peak_misc + " ms";
+	document.getElementById("perf-peak-frame").textContent = "FRM: " + peak_frame + " ms";
+	
+	if (latestMetrics) {
+		document.getElementById("perf-fps").textContent = Math.round(latestMetrics.fps) + " FPS";
+		document.getElementById("perf-ms").textContent = highestMs + " ms";
+	}
+	
+	// remove old points and shift the graph
+	let removeAmount = fps_line.points.length - g_perf_max_points;
+	for (let i = 0; i < removeAmount && i < fps_line.points.length; i++) {
+		fps_line.points.removeItem(0);
+		ms_line.points.removeItem(0);
+	}
+	for (let i = 0; i < fps_line.points.length; i++) {
+		ms_line.points[i].x = fps_line.points[i].x = g_perf_chart_width_pad + i*g_perf_scale_x;
+	}
+}
+
 function setup_openid_link() {
 	let return_to = window.location.origin + window.location.pathname;	
 	let openid_link = "https://steamcommunity.com/openid/login?openid.ns=http://specs.openid.net/auth/2.0&openid.mode=checkid_setup&openid.return_to=" + return_to + "&openid.realm=" + return_to +"&openid.identity=http://specs.openid.net/auth/2.0/identifier_select&openid.claimed_id=http://specs.openid.net/auth/2.0/identifier_select";
@@ -2121,6 +2452,8 @@ function remove_old_player_states() {
 }
 
 function apply_chat_settings() {
+	let oldWantPerf = g_settings.show_perf;
+	
 	g_settings.flip_layout = document.getElementById("flip_layout_button").checked;
 	g_settings.dim_enable = document.getElementById("dim_enable_button").checked;
 	g_settings.dim_sound = document.getElementById("dim_sound_button").checked;
@@ -2129,6 +2462,7 @@ function apply_chat_settings() {
 	g_settings.dim_server = document.getElementById("dim_server_button").checked;
 	g_settings.dim_hover = document.getElementById("hover_dim_button").checked;
 	g_settings.dim_recent = document.getElementById("dim_recent_button").checked;
+	g_settings.show_perf = document.getElementById("show_perf").checked;
 	g_settings.show_flags = document.getElementById("show_country_flags").checked;
 	g_settings.show_avatars = document.getElementById("show_avatars").checked;
 	g_settings.keep_screen_awake = document.getElementById("keep_screen_awake").checked;
@@ -2154,12 +2488,23 @@ function apply_chat_settings() {
 	document.getElementById("content").classList.toggle("timestamp_12hrc", g_settings.timestamps == "12hrc");
 	document.getElementById("content").classList.toggle("timestamp_24hr", g_settings.timestamps == "24hr");
 	document.getElementById("content").classList.toggle("no_translate", g_settings.translations == "disable");
+	document.getElementById("content").classList.toggle("perf", g_settings.show_perf);
 	
 	["dim_sound_button", "dim_join_button", "dim_map_button", "dim_server_button", "hover_dim_button",
 	"dim_recent_button"].forEach(str => {
 		document.getElementById(str).parentElement.parentElement.classList.toggle("disabled", !g_settings.dim_enable);
 		document.getElementById(str).disabled = !g_settings.dim_enable;
 	});
+	
+	if (g_settings.show_perf) {
+		g_perf_timer = setInterval(render_perf_graph, 10);
+	} else {
+		clearInterval(g_perf_timer);
+	}
+	
+	if (g_socket && g_settings.show_perf != oldWantPerf) {
+		g_socket.send("want_perf;" + (g_settings.show_perf ? "1" : "0"));
+	}
 	
 	keep_screen_awake();
 	apply_translations(true);
@@ -2268,6 +2613,7 @@ function load_settings() {
 		show_web_joins: false,
 		show_avatars: true,
 		keep_screen_awake: false,
+		show_perf: false,
 		show_flags: false,
 		hide_maps: true,
 		compound_icons: false,
@@ -2286,6 +2632,7 @@ function load_settings() {
 	document.getElementById("dim_server_button").checked = g_settings.dim_server;
 	document.getElementById("hover_dim_button").checked = g_settings.dim_hover;
 	document.getElementById("dim_recent_button").checked = g_settings.dim_recent;
+	document.getElementById("show_perf").checked = g_settings.show_perf;
 	document.getElementById("show_country_flags").checked = g_settings.show_flags;
 	document.getElementById("show_avatars").checked = g_settings.show_avatars;
 	document.getElementById("keep_screen_awake").checked = g_settings.keep_screen_awake;
@@ -2701,6 +3048,7 @@ async function setup() {
 	document.getElementById("show_country_flags").addEventListener("click", apply_chat_settings);
 	document.getElementById("show_avatars").addEventListener("click", apply_chat_settings);
 	document.getElementById("keep_screen_awake").addEventListener("click", apply_chat_settings);
+	document.getElementById("show_perf").addEventListener("click", apply_chat_settings);
 	document.getElementById("timestamp_selector").addEventListener("change", apply_chat_settings);
 	document.getElementById("translation_mode").addEventListener("change", apply_chat_settings);
 	apply_chat_settings();
@@ -2825,6 +3173,8 @@ function handle_resize() {
 		target.prepend(active_maps);
 	
 	scroll_chat_to_bottom();
+	
+	init_perf_graph();
 }
 
 var g_wake_lock = null;
@@ -2936,6 +3286,7 @@ function createWebSocket() {
 			
 			// should have all chat messages at this point
 			apply_translations(true);
+			g_socket.send("want_perf;" + (g_settings.show_perf ? "1" : "0"));
 		}
 		else if (msgType == MESSAGE_TYPE.WEBMSG_WEB_CLIENTS) {
 			parse_web_clients(view);
@@ -2994,6 +3345,9 @@ function createWebSocket() {
 		}
 		else if (msgType == MESSAGE_TYPE.WEBMSG_STATS) {
 			parse_stats(view, true);
+		}
+		else if (msgType == MESSAGE_TYPE.WEBMSG_PERF) {
+			parse_perf(view, true);
 		}
 		else {
 			console.error("Unrecognized socket message type " + msgType);
