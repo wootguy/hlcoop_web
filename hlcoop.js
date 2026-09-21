@@ -1,5 +1,4 @@
 // TODO:
-// - special messages for mapchange
 // - iOS safari/firefox is missing a player in the table in hidden maps mode
 // - mutes dont work in chat. option to mute from the web.
 // - messages sending twice while disconnected/reconnecting and pressing enter (can't repro)
@@ -31,7 +30,7 @@ var g_steamid = 0;
 var g_opened_profile_id = 0;
 var g_current_map;
 var g_next_map;
-var g_map_start_time; // epoch millis when map started
+var g_map_start_time; // epoch seconds when map started
 var g_map_time_limit; // map time limit in seconds
 var g_map_frag_limit;
 var g_list_web_users = false; // list web users instead of players
@@ -750,6 +749,30 @@ function add_message(steamid64, ipStr, name, msg, time, msgType) {
 			chat_container.classList.add("join_msg");
 		} else {
 			chat_container.classList.add("server_msg");
+		}
+		
+		if (msg.startsWith("!MAP")) {
+			let parts = msg.split("\\");
+			
+			let numPlayers = 0;
+			let playerList = "";
+			let playersCounter = '<div class="players-counter">0 players</div>';
+			for (let i = 4; i < parts.length; i += 2) {
+				if (i != 4) {
+					playerList += ", ";
+				}
+				playerList += '<span id="' + parts[i] + '" class="player_name">' + parts[i+1] + '</span>';
+				numPlayers += 1;
+			}
+			if (numPlayers >= 1) {
+				playerList = '<span class="players">' + playerList + '</span>';
+				
+				let plural = numPlayers > 1 ? "s" : "";
+				playersCounter = '<span class="players-counter">' + numPlayers + ' player' + plural + ': </span>';
+			}
+			
+			let timeTaken = format_age(parts[3], false, false);
+			chat_msg.innerHTML = '<div class="map-change-container"><div class="map-change-title"><span class="map-name">' + parts[1] + '</span> -> <span class="map-name">' + parts[2] + '</span> in <span class="map-finish-time">' + timeTaken + '</span></div><div class="players-container">' + playersCounter + playerList + '</div></div>'
 		}
 	}
 	if (msgType == WEBMSG_CHAT_TYPE_WEB_CLIENTS) {
