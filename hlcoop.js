@@ -64,6 +64,13 @@ var g_perf_smooth_fps = [];
 var g_perf_smooth_delay = [];
 var g_perf_delay = 0; // how much to lag behind the latest perf time for smooth playback
 var g_perf_delay_ideal = 0;
+var g_audio_ctx_48khz;
+var g_audio_ctx_22khz;
+var g_audio_player_48khz; // for steam voice
+var g_audio_player_22khz; // for chat sounds
+var g_opus_decoder;
+var g_vc_icon_timers = {};
+var g_vc_volume = 1.0;
 
 var debug_logging = false;
 
@@ -89,6 +96,8 @@ const MESSAGE_TYPE = {
 	WEBMSG_CHAT_ACK: 20,
 	WEBMSG_TRANSLATION: 21,
 	WEBMSG_PERF: 22,
+	WEBMSG_AUDIO: 23,
+	WEBMSG_VOICE: 24,
 };
 
 const WEBDENY_NOT_LOGGED_IN_RATE = 0;
@@ -100,6 +109,7 @@ const WEBDENY_STEAM_ERROR = 5;
 const WEBDENY_BAD_VERSION = 6;
 
 const PLAYER_FLAG_BAD_GUY = 1;
+const PLAYER_FLAG_VOICE = 2;
 
 const WEBMSG_CHAT_TYPE_NORMAL = 0;
 const WEBMSG_CHAT_TYPE_BAD_GUY = 1;
@@ -180,11 +190,11 @@ function update_table_state(ptable) {
 			let row = plist_web.rows[i];
 			let id = row.getAttribute("steamid");
 			if (id != 0 && id in g_player_states) {
-				row.cells[9].textContent = format_age(g_player_states[id].totalPlayTime, true, true, 2);
-				row.cells[10].textContent = format_age(g_player_states[id].recentPlayTime, true, true, 2);
+				row.cells[10].textContent = format_age(g_player_states[id].totalPlayTime, true, true, 2);
+				row.cells[11].textContent = format_age(g_player_states[id].recentPlayTime, true, true, 2);
 			} else {
-				row.cells[9].textContent = "none";
 				row.cells[10].textContent = "none";
+				row.cells[11].textContent = "none";
 			}
 		}
 		
@@ -201,9 +211,9 @@ function update_table_state(ptable) {
 			let id = row.getAttribute("steamid");
 			
 			if (!id) {
-				row.cells[6].textContent = "";
 				row.cells[7].textContent = "";
 				row.cells[8].textContent = "";
+				row.cells[9].textContent = "";
 				break;
 			}
 			
@@ -211,22 +221,22 @@ function update_table_state(ptable) {
 			let player_state = g_player_states[id];
 			let player_stats = player_state ? player_state.mapstats[first_map] : undefined;
 			
-			row.cells[6].classList.remove("green");
-			row.cells[6].classList.remove("cyan");
-			row.cells[6].classList.remove("red");
+			row.cells[7].classList.remove("green");
+			row.cells[7].classList.remove("cyan");
+			row.cells[7].classList.remove("red");
 			
 			if (player_stats && player_stats.lastPlay && player_stats.totalPlays) {
 				if (player_stats.rating == 0) {
-					row.cells[6].textContent = "NONE";
+					row.cells[7].textContent = "NONE";
 				} else if (player_stats.rating == 1) {
-					row.cells[6].classList.add("green");
-					row.cells[6].textContent = "LIKE";
+					row.cells[7].classList.add("green");
+					row.cells[7].textContent = "LIKE";
 				} else if (player_stats.rating == 3) {
-					row.cells[6].classList.add("cyan");
-					row.cells[6].textContent = "FAVORITE";
+					row.cells[7].classList.add("cyan");
+					row.cells[7].textContent = "FAVORITE";
 				} else if (player_stats.rating == 2) {
-					row.cells[6].classList.add("red");
-					row.cells[6].textContent = "DISLIKE";
+					row.cells[7].classList.add("red");
+					row.cells[7].textContent = "DISLIKE";
 				}
 				
 				let minutesSinceEpoch = Math.floor(Date.now() / (1000*60));
@@ -236,21 +246,21 @@ function update_table_state(ptable) {
 				let days = Math.round(timeSincePlay / (60 * 24));
 				
 				if (hours > 48) {
-					row.cells[7].textContent = days + "d";
+					row.cells[8].textContent = days + "d";
 				}
 				else if (minutes > 120) {
-					row.cells[7].textContent = hours + "h";
+					row.cells[8].textContent = hours + "h";
 				}
 				else {
-					row.cells[7].textContent = minutes + "m";
+					row.cells[8].textContent = minutes + "m";
 				}
 				
 				
-				row.cells[8].textContent = player_stats.totalPlays;
+				row.cells[9].textContent = player_stats.totalPlays;
 			} else {
-				row.cells[6].textContent = "NONE";
-				row.cells[7].textContent = "NEVER";
-				row.cells[8].textContent = "0";
+				row.cells[7].textContent = "NONE";
+				row.cells[8].textContent = "NEVER";
+				row.cells[9].textContent = "0";
 			}
 		}
 		
@@ -326,7 +336,7 @@ function refresh_player_table_single(plist, player_data, ip_data) {
 	// allocate all rows that will ever be needed (max of 128 web clients, so use that as the limit)
 	for (let i = plist.rows.length; i < g_max_player_list_rows; i++) {
 		let row = plist.insertRow(plist.rows.length);
-		row.innerHTML = "<tr><td><img class=\"cnflag\"/><span class=\"avatar_container\"><img class=\"avatar\"/></span><div></div><img class=\"rank\"/></td><td></td><td></td><td></td><td></td><td><span class=\"client_text\"></span><span class=\"client_icon_container\"><img class=\"client_icon superhidden\"></img><img class=\"client_os superhidden\"></img><img class=\"client_engine superhidden\"></img><img class=\"client_renderer superhidden\"></img></span></td><td></td><td></td><td></td><td></td><td></td></tr>";
+		row.innerHTML = "<tr><td><img class=\"cnflag\"/><span class=\"avatar_container\"><img class=\"avatar\"/></span><div></div><img class=\"rank\"/></td><td></td><td></td><td></td><td></td><td><span class=\"client_text\"></span><span class=\"client_icon_container\"><img class=\"client_icon superhidden\"></img><img class=\"client_os superhidden\"></img><img class=\"client_engine superhidden\"></img><img class=\"client_renderer superhidden\"></img></span></td><td><span class=\"vc_icon_container\"><img class=\"vc_icon\"></span></td><td></td><td></td><td></td><td></td><td></td></tr>";
 	}
 	
 	// remove extra rows
@@ -352,6 +362,7 @@ function refresh_player_table_single(plist, player_data, ip_data) {
 		let cl_os_icon = row.cells[5].getElementsByClassName('client_os')[0];
 		let cl_engine_icon = row.cells[5].getElementsByClassName('client_engine')[0];
 		let cl_renderer_icon = row.cells[5].getElementsByClassName('client_renderer')[0];
+		let vc_icon = row.cells[6].getElementsByClassName('vc_icon')[0];
 		let name = row.cells[0].getElementsByTagName('div')[0];
 		let state = g_player_states[dat.steamid64];
 		
@@ -522,14 +533,32 @@ function refresh_player_table_single(plist, player_data, ip_data) {
 			cl_os_icon.classList.add("superhidden");
 		}
 		
+		// only use the flag when audio is disabled, becuase it updates only once per 2 seconds.
+		// when audio is enabled the icon is updated much faster during parsing
+		if (!g_opus_decoder) {
+			if (dat.flags & PLAYER_FLAG_VOICE) {
+				if (!vc_icon.classList.contains("animate")) {
+					vc_icon.src = "icon/voice_talk2.png";
+					vc_icon.classList.toggle("animate", true);
+				}
+			} else {
+				vc_icon.src = "icon/voice_idle.png";
+				vc_icon.classList.toggle("animate", false);
+			}
+		} else {
+			if (!vc_icon.src) {
+				vc_icon.src = "icon/voice_idle.png";
+			}
+		}
+		
 		row.cells[2].textContent = dat.score;
 		row.cells[3].textContent = dat.deaths;
 		row.cells[4].textContent = dat.ping;
 		row.cells[5].title = get_client_details_tip(dat.steamid64);
-		row.cells[6].textContent = "";
 		row.cells[7].textContent = "";
 		row.cells[8].textContent = "";
 		row.cells[9].textContent = "";
+		row.cells[10].textContent = "";
 		
 		row.cells[4].classList.remove("ping-very-low");
 		row.cells[4].classList.remove("ping-low");
@@ -1732,6 +1761,105 @@ function parse_perf(view) {
 	}
 }
 
+function parse_audio(view) {
+	if (!g_opus_decoder) {
+		console.log("Ignoring audio packet. Audio not initialized.");
+		return;
+	}
+	
+	let offset = 1; // skip message type byte
+	
+	let samples = [];
+	while (offset < view.byteLength) {
+		let sample = view.getUint8(offset, true);
+		offset += 1;
+		
+		samples.push(sample);
+	}
+	
+	const fsamples = new Float32Array(samples.length);
+	for (let i = 0; i < samples.length; i++) {
+		fsamples[i] = (samples[i] - 128) / 128;
+	}
+	
+	console.log("Play " + samples.length + " samples", samples);
+	
+	g_audio_player_22khz.port.postMessage(fsamples, [fsamples.buffer]);
+}
+
+function parse_voice(view) {
+	if (!g_opus_decoder) {
+		console.log("Ignoring voice packet. Audio not initialized.");
+		return;
+	}
+	
+	let offset = 1; // skip message type byte
+	
+	let steamid64 = view.getBigUint64(offset, true);
+	offset += 8;
+	
+	let unknown = view.getUint8(offset, true);
+	offset += 1;
+	
+	let sampleRate = view.getUint16(offset, true);
+	offset += 2;
+	
+	let codec = view.getUint8(offset, true);
+	offset += 1;
+	
+	let payloadLength = view.getUint16(offset, true);
+	offset += 2;
+	
+	const payloadEnd = offset + payloadLength;
+	
+	if (payloadLength <= 2) {
+		return; // not sure what this is but it throws an error and can't possibly be more than a few samples.
+	}
+	
+	console.log("Recv " + payloadLength + " bytes of opus at " + sampleRate + " hz");
+	
+	while (offset < payloadEnd) {
+		const frameLength = view.getUint16(offset, true);
+		offset += 2;
+
+		const sequence = view.getUint16(offset, true);
+		offset += 2;
+
+		const opusData = new Uint8Array(
+			view.buffer,
+			view.byteOffset + offset,
+			frameLength
+		);
+
+		offset += frameLength;
+
+		g_opus_decoder.decode(new EncodedAudioChunk({
+			type: "key",
+			timestamp: 0,
+			data: opusData
+		}));
+	}
+	
+	let vc_icon = document.querySelector('.player_list tr[steamid="' + steamid64 + '"] .vc_icon');
+	if (vc_icon) {
+		if (!vc_icon.classList.contains("animate")) {
+			vc_icon.src = "icon/voice_talk2.png";
+			vc_icon.classList.toggle("animate", true);
+		}
+		
+		if (g_vc_icon_timers[steamid64])
+			clearTimeout(g_vc_icon_timers[steamid64]);
+		
+		g_vc_icon_timers[steamid64] = setTimeout(() => {
+			let icon = document.querySelector('.player_list tr[steamid="' + steamid64 + '"] .vc_icon');
+			if (icon) {
+				icon.src = "icon/voice_idle.png";
+				icon.classList.toggle("animate", false);
+			}
+		}, 200);
+	}
+}
+
 function parse_map_list(view) {
 	g_map_cycle = [];
 	
@@ -2851,6 +2979,126 @@ function handle_chat_input() {
 	scroll_chat_to_bottom();
 }
 
+async function setup_audio() {
+	if (!g_socket) {
+		console.log("Can't initialize audio yet. Not connected");
+		return;
+	}
+
+	let audio_icon_container = document.getElementById("audio-icon");
+	let audio_icon = document.getElementById("audio-icon").getElementsByTagName("img")[0];
+	
+	if (g_opus_decoder) {
+		g_opus_decoder.close();
+		g_opus_decoder = null;
+
+		g_audio_player_48khz.disconnect();
+		g_audio_player_48khz = null;
+		
+		g_audio_player_22khz.disconnect();
+		g_audio_player_22khz = null;
+
+		await g_audio_ctx_48khz.close();
+		g_audio_ctx_48khz = null;
+		
+		await g_audio_ctx_22khz.close();
+		g_audio_ctx_22khz = null;
+		
+		g_socket.send("want_audio;0");
+		console.log("Audio disabled");
+		audio_icon.src = "icon/voice_disable.png";
+		audio_icon_container.title = "Voice audio is muted";
+		return;
+	}
+	
+	audio_icon_container.title = "Voice audio is enabled. Chat sound audio is not included.";
+	
+	g_audio_ctx_48khz = new AudioContext({ sampleRate: 48000 });
+	await g_audio_ctx_48khz.audioWorklet.addModule("audio.js");
+	g_audio_player_48khz = new AudioWorkletNode(g_audio_ctx_48khz, "pcm-player");
+	g_audio_player_48khz.connect(g_audio_ctx_48khz.destination);
+	
+	g_audio_ctx_22khz = new AudioContext({ sampleRate: 22050 });
+	await g_audio_ctx_22khz.audioWorklet.addModule("audio.js");
+	g_audio_player_22khz = new AudioWorkletNode(g_audio_ctx_22khz, "pcm-player");
+	g_audio_player_22khz.connect(g_audio_ctx_22khz.destination);
+	
+	console.log("Chat sound context created with rate " + g_audio_ctx_22khz.sampleRate);
+	console.log("Voice context created with rate " + g_audio_ctx_48khz.sampleRate);
+	
+	g_opus_decoder = new AudioDecoder({
+		output: (audioData) => {
+			//console.log("Opus decoded:", audioData.numberOfFrames, audioData.sampleRate, audioData.numberOfChannels, audioData.format);
+
+			let samples = new Float32Array(audioData.numberOfFrames);
+
+			audioData.copyTo(samples, {
+				format: "f32",
+				planeIndex: 0
+			});
+			
+			if (g_vc_volume != 1.0) {
+				for (let i = 0; i < samples.length; i++)
+					samples[i] = Math.max(-1, Math.min(1, samples[i] * g_vc_volume));
+			}
+
+			audioData.close();
+
+			//console.log( "sample range:", Math.min(...samples.slice(0, 1000)), Math.max(...samples.slice(0, 1000)) );
+
+			g_audio_player_48khz.port.postMessage(samples, [samples.buffer]);
+		},
+
+		error: (e) => {
+			console.error("Opus decoder error:", e);
+		}
+	});
+
+	g_opus_decoder.configure({
+		codec: "opus",
+		sampleRate: 48000,
+		numberOfChannels: 1
+	});
+	
+	console.log("Created opus decoder ", g_opus_decoder);
+	
+	g_socket.send("want_audio;1");
+	
+	audio_icon.src = "icon/voice_talk2.png";
+}
+
+function toggle_audio() {
+	setup_audio();
+}
+
+var g_anim_frame = 0;
+
+function animate_vc_icons() {
+	g_anim_frame += 1;
+	
+	document.querySelectorAll(".player_list .vc_icon.animate").forEach(element => {
+		if (g_anim_frame % 2 == 0) {
+			element.src = "icon/voice_talk2.png";
+		} else {
+			element.src = "icon/voice_talk1.png";
+		}
+	});
+}
+
+function update_vc_volume() {
+	let volume = document.getElementById("vc_volume");
+	const x = Number(volume.value) / 100;
+	g_vc_volume = x * x * x * 10; // more accurate towards the low end
+	
+	
+	g_vc_volume = Math.floor(g_vc_volume * 100);
+	g_vc_volume = Math.floor(g_vc_volume / 5) * 5;
+	
+	document.getElementById("vc_volume_value").textContent = g_vc_volume + "%";
+	
+	g_vc_volume /= 100;
+}
+
 async function setup() {
 	load_settings();
 	
@@ -2859,6 +3107,7 @@ async function setup() {
 	await load_bans();
 	
 	setInterval(load_chatsounds, 1000*60*60, -1);
+	setInterval(animate_vc_icons, 300, -1);
 	
 	// prevent constantly reloading icons as the table refreshes, preventing them from finishing on slow connections
 	preload_image("icon/hot.png");
@@ -3074,11 +3323,17 @@ async function setup() {
 	document.getElementById("show_perf").addEventListener("click", apply_chat_settings);
 	document.getElementById("timestamp_selector").addEventListener("change", apply_chat_settings);
 	document.getElementById("translation_mode").addEventListener("change", apply_chat_settings);
+	
 	apply_chat_settings();
+	
+	document.getElementById("audio-icon").addEventListener("click", toggle_audio);
 	
 	document.getElementById("server_selector").addEventListener("change", function() {
 		change_server();
 	});
+	
+	document.getElementById("vc_volume").addEventListener("input", update_vc_volume);
+	update_vc_volume();
 	
 	let debug_chat = false;
 	if (debug_chat) {
@@ -3371,6 +3626,12 @@ function createWebSocket() {
 		}
 		else if (msgType == MESSAGE_TYPE.WEBMSG_PERF) {
 			parse_perf(view, true);
+		}
+		else if (msgType == MESSAGE_TYPE.WEBMSG_AUDIO) {
+			parse_audio(view, true);
+		}
+		else if (msgType == MESSAGE_TYPE.WEBMSG_VOICE) {
+			parse_voice(view, true);
 		}
 		else {
 			console.error("Unrecognized socket message type " + msgType);

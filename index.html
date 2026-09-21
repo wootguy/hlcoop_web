@@ -55,6 +55,7 @@
 									<th title="The number of times the player has died in the current map">Deaths</th>
 									<th title="Player's latency to the server">Ping</th>
 									<th title="Player's game client">CL</th>
+									<th title="Player's voice chat status. Click this icon to enable voice audio streaming in your web browser."><div id="audio-icon"><img src="icon/voice_disable.png"/></div></th>
 									<th title="Player's opinion of the selected map">Opinion</th>
 									<th title="Last time this player played the selected map">Last play</th>
 									<th title="Total number of times the player played the selected map">Total plays</th>
@@ -123,6 +124,10 @@ Manual = Click to translate.">Translations</label>
 											<option value="manual">Manual</option>
 											<option value="disable">Disable</option>
 										</select>
+									</div>
+									<div class="chat_settings_option">
+										<label title="Master volume for voice chat audio">Voice volume <span id="vc_volume_value">?%</span></label>
+										<input type="range" id="vc_volume" min="0" max="100" value="0">
 									</div>
 									<hr>
 									<div class="chat_settings_option">
