@@ -191,6 +191,29 @@ function get_client_details_tip(steamid) {
 	return clientStr_tip;
 }
 
+function load_profile_mutes() {
+	let player_profile = document.getElementById("player_profile");
+	
+	if (g_mutes && g_mutes[g_opened_profile_id]) {
+		let mutebits = g_mutes[g_opened_profile_id];
+		player_profile.getElementsByClassName("mute_text")[0].checked = (mutebits & FL_MUTE_TEXT) != 0;
+		player_profile.getElementsByClassName("mute_voice")[0].checked = (mutebits & FL_MUTE_VOICE) != 0;
+		player_profile.getElementsByClassName("mute_model")[0].checked = (mutebits & FL_MUTE_MODEL) != 0;
+		player_profile.getElementsByClassName("mute_spray")[0].checked = (mutebits & FL_MUTE_SPRAY) != 0;
+		
+		player_profile.getElementsByClassName("pmodel_img")[0].classList.toggle("muted", (mutebits & FL_MUTE_MODEL) != 0);
+		player_profile.getElementsByClassName("spray_img")[0].classList.toggle("muted", (mutebits & FL_MUTE_SPRAY) != 0);
+	} else {
+		player_profile.getElementsByClassName("mute_text")[0].checked = false;
+		player_profile.getElementsByClassName("mute_voice")[0].checked = false;
+		player_profile.getElementsByClassName("mute_model")[0].checked = false;
+		player_profile.getElementsByClassName("mute_spray")[0].checked = false;
+		
+		player_profile.getElementsByClassName("pmodel_img")[0].classList.toggle("muted", false);
+		player_profile.getElementsByClassName("spray_img")[0].classList.toggle("muted", false);
+	}
+}
+
 function open_player_profile(event) {
 	let clickedId = event.currentTarget.getAttribute("id");
 	if (!clickedId)
@@ -268,6 +291,10 @@ function open_player_profile(event) {
 	player_profile.getElementsByClassName("maps_played")[0].textContent = mapsPlayed;
 	player_profile.getElementsByClassName("like_cooldown")[0].value = state.likeCooldown;
 	player_profile.getElementsByClassName("like_cooldown")[0].disabled = !is_own_profile;
+	player_profile.getElementsByClassName("mute_text")[0].disabled = is_own_profile;
+	player_profile.getElementsByClassName("mute_voice")[0].disabled = is_own_profile;
+	player_profile.getElementsByClassName("mute_model")[0].disabled = is_own_profile;
+	player_profile.getElementsByClassName("mute_spray")[0].disabled = is_own_profile;
 	player_profile.getElementsByClassName("play_time")[0].textContent = format_age(state.totalPlayTime, true, true, 2);
 	player_profile.getElementsByClassName("play_time")[0].title = format_age(state.totalPlayTime, false, true, 2) + " (" + format_age(state.totalPlayTime, true, true, 3) + ")";
 	player_profile.getElementsByClassName("play_time_recent")[0].textContent = format_age(state.recentPlayTime, true, true, 2);
@@ -279,7 +306,7 @@ function open_player_profile(event) {
 	player_profile.getElementsByClassName("client_type")[0].textContent = clientStr;
 	player_profile.getElementsByClassName("client_type")[0].title = clientStr_tip;
 	
-	let bans = g_bans[clickedId]
+	let bans = g_bans[clickedId];
 	if (bans) {
 		player_profile.classList.add("punished");
 		player_profile.getElementsByClassName("punish-count")[0].textContent = bans.punish_count;
@@ -307,6 +334,8 @@ function open_player_profile(event) {
 		player_profile.getElementsByClassName("punish-count")[0].textContent = "0";
 		player_profile.getElementsByClassName("punish-age")[0].textContent = "";
 	}
+	
+	load_profile_mutes();
 	
 	if (state.sprayBanReason) {
 		player_profile.getElementsByClassName("spray_img")[0].title = 'This player lost their spray privilege.\n\nBan reason: "' + state.sprayBanReason + '"';

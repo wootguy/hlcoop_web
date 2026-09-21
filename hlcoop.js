@@ -71,6 +71,7 @@ var g_audio_player_22khz; // for chat sounds
 var g_opus_decoder;
 var g_vc_icon_timers = {};
 var g_vc_volume = 1.0;
+var g_mutes = {};
 
 var debug_logging = false;
 
@@ -98,6 +99,7 @@ const MESSAGE_TYPE = {
 	WEBMSG_PERF: 22,
 	WEBMSG_AUDIO: 23,
 	WEBMSG_VOICE: 24,
+	WEBMSG_MUTES: 25,
 };
 
 const WEBDENY_NOT_LOGGED_IN_RATE = 0;
@@ -134,6 +136,11 @@ const PLAYER_STATUS_CONSOLE = 7;
 const WEBERR_FULL = 9001;
 const WEBERR_IPERR = 9002;
 const WEBERR_CONN_LIMIT = 9003;
+
+const FL_MUTE_VOICE = 1;
+const FL_MUTE_TEXT = 2;
+const FL_MUTE_SPRAY = 4;
+const FL_MUTE_MODEL = 8;
 
 function get_message_type_name(value) {
   for (const [key, val] of Object.entries(MESSAGE_TYPE)) {
@@ -293,6 +300,27 @@ function close_player_profile() {
 	g_opened_profile_id = 0;
 }
 
+function handle_mute_toggle(div) {
+	let mutebits = 0;
+	
+	if (div.target.classList.contains("mute_text")) {
+		mutebits = FL_MUTE_TEXT;
+	}
+	else if (div.target.classList.contains("mute_voice")) {
+		mutebits = FL_MUTE_VOICE;
+	}
+	else if (div.target.classList.contains("mute_model")) {
+		mutebits = FL_MUTE_MODEL;
+	}
+	else if (div.target.classList.contains("mute_spray")) {
+		mutebits = FL_MUTE_SPRAY;
+	}
+	
+	if (g_socket) {
+		g_socket.send("mute;" + g_opened_profile_id + ";" + mutebits);
+	}
+}
+
 function update_web_player_count() {
 	let wcountStr = g_web_player_data.length;
 	for (let i = 0; i < g_web_player_data.length; i++) {
@@ -330,6 +358,13 @@ function click_player_flag(div) {
 
 function click_steam_avatar(div) {
 	window.open("https://steamcommunity.com/profiles/" + div.target.getAttribute("steamid64"), "_blank");
+}
+
+function mute_player_vc(div) {
+	let id = div.target.parentElement.parentElement.parentElement.getAttribute("steamid");
+	if (g_socket) {
+		g_socket.send("mute;" + id + ";" + FL_MUTE_VOICE);
+	}
 }
 
 function refresh_player_table_single(plist, player_data, ip_data) {	
@@ -388,11 +423,8 @@ function refresh_player_table_single(plist, player_data, ip_data) {
 		name.textContent = dat.name;
 		name.title = dat.name;
 		
-		if (dat.flags & PLAYER_FLAG_BAD_GUY) {
-			name.classList.add("bad_guy");
-		} else {
-			name.classList.remove("bad_guy");
-		}
+		name.classList.toggle("bad_guy", dat.flags & PLAYER_FLAG_BAD_GUY);
+		row.cells[0].classList.toggle("muted", is_muted(dat.steamid64, FL_MUTE_TEXT));
 
 		if (state) {
 			name.removeEventListener('click', open_player_profile);
@@ -533,9 +565,14 @@ function refresh_player_table_single(plist, player_data, ip_data) {
 			cl_os_icon.classList.add("superhidden");
 		}
 		
-		// only use the flag when audio is disabled, becuase it updates only once per 2 seconds.
-		// when audio is enabled the icon is updated much faster during parsing
-		if (!g_opus_decoder) {
+		if (is_muted(dat.steamid64, FL_MUTE_VOICE)) {
+			vc_icon.src = "icon/voice_mute.png";
+			vc_icon.classList.toggle("animate", false);
+		} 
+		else if (!g_opus_decoder) {
+			// use the flag only when audio is disabled because it's updated slowly.
+			// when audio is enabled the icon is updated much faster during parsing
+		
 			if (dat.flags & PLAYER_FLAG_VOICE) {
 				if (!vc_icon.classList.contains("animate")) {
 					vc_icon.src = "icon/voice_talk2.png";
@@ -546,10 +583,12 @@ function refresh_player_table_single(plist, player_data, ip_data) {
 				vc_icon.classList.toggle("animate", false);
 			}
 		} else {
-			if (!vc_icon.src) {
+			if (!vc_icon.classList.contains("animate"))
 				vc_icon.src = "icon/voice_idle.png";
-			}
 		}
+		vc_icon.removeEventListener('click', mute_player_vc);
+		vc_icon.addEventListener('click', mute_player_vc);
+		vc_icon.title = "Click to mute/unmute this player's voice";
 		
 		row.cells[2].textContent = dat.score;
 		row.cells[3].textContent = dat.deaths;
@@ -1787,6 +1826,10 @@ function parse_audio(view) {
 	g_audio_player_22khz.port.postMessage(fsamples, [fsamples.buffer]);
 }
 
+function is_muted(id, bits) {
+	return g_mutes[id] && (g_mutes[id] & bits);
+}
+
 function parse_voice(view) {
 	if (!g_opus_decoder) {
 		console.log("Ignoring voice packet. Audio not initialized.");
@@ -1840,6 +1883,10 @@ function parse_voice(view) {
 		}));
 	}
 	
+	if (is_muted(steamid64, FL_MUTE_VOICE)) {
+		return;
+	}
+	
 	let vc_icon = document.querySelector('.player_list tr[steamid="' + steamid64 + '"] .vc_icon');
 	if (vc_icon) {
 		if (!vc_icon.classList.contains("animate")) {
@@ -1853,11 +1900,33 @@ function parse_voice(view) {
 		g_vc_icon_timers[steamid64] = setTimeout(() => {
 			let icon = document.querySelector('.player_list tr[steamid="' + steamid64 + '"] .vc_icon');
 			if (icon) {
-				icon.src = "icon/voice_idle.png";
 				icon.classList.toggle("animate", false);
+
+				if (!is_muted(steamid64, FL_MUTE_VOICE)) {
+					icon.src = "icon/voice_idle.png";
+				}
 			}
 		}, 200);
 	}
+}
+
+function parse_mutes(view) {	
+	let offset = 1; // skip message type byte
+	
+	g_mutes = {};
+	
+	while (offset < view.byteLength) {
+		let steamid64 = view.getBigUint64(offset, true);
+		offset += 8;
+
+		let mutebits = view.getUint16(offset, true);
+		offset += 2;
+
+		g_mutes[steamid64] = mutebits;
+	}
+	
+	refresh_player_table();
+	load_profile_mutes();
 }
 
 function parse_map_list(view) {
@@ -3328,6 +3397,11 @@ async function setup() {
 	
 	document.getElementById("audio-icon").addEventListener("click", toggle_audio);
 	
+	document.querySelector("#player_profile .mute_voice").addEventListener("change", handle_mute_toggle);
+	document.querySelector("#player_profile .mute_text").addEventListener("change", handle_mute_toggle);
+	document.querySelector("#player_profile .mute_model").addEventListener("change", handle_mute_toggle);
+	document.querySelector("#player_profile .mute_spray").addEventListener("change", handle_mute_toggle);
+	
 	document.getElementById("server_selector").addEventListener("change", function() {
 		change_server();
 	});
@@ -3632,6 +3706,9 @@ function createWebSocket() {
 		}
 		else if (msgType == MESSAGE_TYPE.WEBMSG_VOICE) {
 			parse_voice(view, true);
+		}
+		else if (msgType == MESSAGE_TYPE.WEBMSG_MUTES) {
+			parse_mutes(view, true);
 		}
 		else {
 			console.error("Unrecognized socket message type " + msgType);

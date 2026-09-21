@@ -280,6 +280,9 @@
 .player_list div.bad_guy {
 	color: #FF3F3F;
 }
+.player_list td.muted {
+	opacity: 0.6;
+}
 .player_list div:hover {
 	color: #D2E6FB;
 }
@@ -384,6 +387,7 @@
 	display: inline-block;
 	height: 17px;
 	position: relative;
+	cursor: pointer;
 }
 .player_list .vc_icon {
 	position: absolute;
@@ -1213,4 +1217,13 @@ h2 {
 }
 #vc_volume {
 	width: 150px;
+}
+
+.mute_opts label {
+	display: inline-block;
+	width: 70px;
+}
+.mute_opts input {
+	height: 12px;
+	margin-left: 0;
 }
