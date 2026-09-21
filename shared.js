@@ -116,7 +116,7 @@ function format_age(secondsPassed, oneUnitOnly, longUnits, maxUnit) {
 			return "" + hours + hourUnit + separator + (minutes % 60) + minuteUnit;
 		}
 	}
-	else if (minutes > 2 && (!maxUnit || maxUnit >= 1)) {
+	else if (minutes >= 1 && (!maxUnit || maxUnit >= 1)) {
 		if (oneUnitOnly) {
 			return "" + minutes + minuteUnit;
 		} else {

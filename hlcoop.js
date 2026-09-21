@@ -68,7 +68,7 @@ var g_audio_ctx_48khz;
 var g_audio_ctx_22khz;
 var g_audio_player_48khz; // for steam voice
 var g_audio_player_22khz; // for chat sounds
-var g_opus_decoder;
+var g_opus_decoders = {};
 var g_vc_icon_timers = {};
 var g_vc_volume = 1.0;
 var g_mutes = {};
@@ -151,6 +151,22 @@ function get_message_type_name(value) {
   return "unknown";
 }
 
+var g_debug_audio = false;
+
+function debug_audio() {
+	g_debug_audio = !g_debug_audio;
+	
+	if (g_audio_player_48khz) {
+		g_audio_player_48khz.port.postMessage({
+			type: "debug",
+			value: g_debug_audio
+		});
+		g_audio_player_22khz.port.postMessage({
+			type: "debug",
+			value: g_debug_audio
+		});
+	}
+}
 
 function get_utf8_data_len(view, offset) {
 	let len = 1;
@@ -569,7 +585,7 @@ function refresh_player_table_single(plist, player_data, ip_data) {
 			vc_icon.src = "icon/voice_mute.png";
 			vc_icon.classList.toggle("animate", false);
 		} 
-		else if (!g_opus_decoder) {
+		else if (!g_audio_player_48khz) {
 			// use the flag only when audio is disabled because it's updated slowly.
 			// when audio is enabled the icon is updated much faster during parsing
 		
@@ -583,8 +599,12 @@ function refresh_player_table_single(plist, player_data, ip_data) {
 				vc_icon.classList.toggle("animate", false);
 			}
 		} else {
-			if (!vc_icon.classList.contains("animate"))
+			// audio enabled
+			if (!g_vc_icon_timers[dat.steamid64]) {
+				// don't reset if current playing audio for this id
 				vc_icon.src = "icon/voice_idle.png";
+				vc_icon.classList.toggle("animate", false);
+			}
 		}
 		vc_icon.removeEventListener('click', mute_player_vc);
 		vc_icon.addEventListener('click', mute_player_vc);
@@ -1801,7 +1821,7 @@ function parse_perf(view) {
 }
 
 function parse_audio(view) {
-	if (!g_opus_decoder) {
+	if (!g_audio_player_48khz) {
 		console.log("Ignoring audio packet. Audio not initialized.");
 		return;
 	}
@@ -1823,15 +1843,18 @@ function parse_audio(view) {
 	
 	console.log("Play " + samples.length + " samples", samples);
 	
-	g_audio_player_22khz.port.postMessage(fsamples, [fsamples.buffer]);
+	g_audio_player_22khz.port.postMessage({
+		id: 0,
+		samples: fsamples
+	}, [fsamples.buffer]);
 }
 
 function is_muted(id, bits) {
-	return g_mutes[id] && (g_mutes[id] & bits);
+	return !!g_mutes[id] && (g_mutes[id] & bits) != 0;
 }
 
 function parse_voice(view) {
-	if (!g_opus_decoder) {
+	if (!g_audio_player_48khz) {
 		console.log("Ignoring voice packet. Audio not initialized.");
 		return;
 	}
@@ -1859,7 +1882,9 @@ function parse_voice(view) {
 		return; // not sure what this is but it throws an error and can't possibly be more than a few samples.
 	}
 	
-	console.log("Recv " + payloadLength + " bytes of opus at " + sampleRate + " hz");
+	//console.log("Recv " + payloadLength + " bytes of opus at " + sampleRate + " hz");
+	
+	let decoder = get_opus_decoder(steamid64);
 	
 	while (offset < payloadEnd) {
 		const frameLength = view.getUint16(offset, true);
@@ -1876,7 +1901,7 @@ function parse_voice(view) {
 
 		offset += frameLength;
 
-		g_opus_decoder.decode(new EncodedAudioChunk({
+		decoder.decode(new EncodedAudioChunk({
 			type: "key",
 			timestamp: 0,
 			data: opusData
@@ -1898,6 +1923,16 @@ function parse_voice(view) {
 			clearTimeout(g_vc_icon_timers[steamid64]);
 		
 		g_vc_icon_timers[steamid64] = setTimeout(() => {
+			if (!g_audio_player_48khz) {
+				// audio shut down. Let the table updates handle icons
+				return;
+			}
+			
+			g_audio_player_48khz.port.postMessage({
+				type: "end",
+				id: steamid64
+			});
+			
 			let icon = document.querySelector('.player_list tr[steamid="' + steamid64 + '"] .vc_icon');
 			if (icon) {
 				icon.classList.toggle("animate", false);
@@ -1906,7 +1941,7 @@ function parse_voice(view) {
 					icon.src = "icon/voice_idle.png";
 				}
 			}
-		}, 200);
+		}, 500);
 	}
 }
 
@@ -3048,6 +3083,52 @@ function handle_chat_input() {
 	scroll_chat_to_bottom();
 }
 
+function get_opus_decoder(steamid64) {
+	if (g_opus_decoders[steamid64]) {
+		return g_opus_decoders[steamid64];
+	}
+	
+    let decoder = new AudioDecoder({
+        output: (audioData) => {
+            let samples = new Float32Array(audioData.numberOfFrames);
+
+            audioData.copyTo(samples, {
+                format: "f32",
+                planeIndex: 0
+            });
+
+            if (g_vc_volume != 1.0) {
+                for (let i = 0; i < samples.length; i++)
+                    samples[i] = Math.max(
+                        -1,
+                        Math.min(1, samples[i] * g_vc_volume)
+                    );
+            }
+
+            audioData.close();
+
+            g_audio_player_48khz.port.postMessage({
+                id: steamid64,
+                samples: samples
+            }, [samples.buffer]);
+        },
+
+        error: (e) => {
+            console.error("Opus decoder error:", e);
+        }
+    });
+	
+	decoder.configure({
+		codec: "opus",
+		sampleRate: 48000,
+		numberOfChannels: 1
+	});
+	
+	g_opus_decoders[steamid64] = decoder;
+	
+	return decoder;
+}
+
 async function setup_audio() {
 	if (!g_socket) {
 		console.log("Can't initialize audio yet. Not connected");
@@ -3057,9 +3138,11 @@ async function setup_audio() {
 	let audio_icon_container = document.getElementById("audio-icon");
 	let audio_icon = document.getElementById("audio-icon").getElementsByTagName("img")[0];
 	
-	if (g_opus_decoder) {
-		g_opus_decoder.close();
-		g_opus_decoder = null;
+	if (g_audio_player_48khz) {
+		for (const [key, value] of Object.entries(g_opus_decoders)) {
+			value.close();
+		}
+		g_opus_decoders = {};
 
 		g_audio_player_48khz.disconnect();
 		g_audio_player_48khz = null;
@@ -3094,42 +3177,6 @@ async function setup_audio() {
 	
 	console.log("Chat sound context created with rate " + g_audio_ctx_22khz.sampleRate);
 	console.log("Voice context created with rate " + g_audio_ctx_48khz.sampleRate);
-	
-	g_opus_decoder = new AudioDecoder({
-		output: (audioData) => {
-			//console.log("Opus decoded:", audioData.numberOfFrames, audioData.sampleRate, audioData.numberOfChannels, audioData.format);
-
-			let samples = new Float32Array(audioData.numberOfFrames);
-
-			audioData.copyTo(samples, {
-				format: "f32",
-				planeIndex: 0
-			});
-			
-			if (g_vc_volume != 1.0) {
-				for (let i = 0; i < samples.length; i++)
-					samples[i] = Math.max(-1, Math.min(1, samples[i] * g_vc_volume));
-			}
-
-			audioData.close();
-
-			//console.log( "sample range:", Math.min(...samples.slice(0, 1000)), Math.max(...samples.slice(0, 1000)) );
-
-			g_audio_player_48khz.port.postMessage(samples, [samples.buffer]);
-		},
-
-		error: (e) => {
-			console.error("Opus decoder error:", e);
-		}
-	});
-
-	g_opus_decoder.configure({
-		codec: "opus",
-		sampleRate: 48000,
-		numberOfChannels: 1
-	});
-	
-	console.log("Created opus decoder ", g_opus_decoder);
 	
 	g_socket.send("want_audio;1");
 	
