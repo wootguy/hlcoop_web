@@ -152,6 +152,9 @@ function get_message_type_name(value) {
 }
 
 var g_debug_audio = false;
+var g_debug_audio_timeout = false;
+var g_audio_buffer_ms = 0;
+var g_audio_rate = 0;
 
 function debug_audio() {
 	g_debug_audio = !g_debug_audio;
@@ -166,6 +169,20 @@ function debug_audio() {
 			value: g_debug_audio
 		});
 	}
+	
+	if (g_debug_audio) {
+		g_debug_audio_timeout = setInterval(function() {
+			console.log("Playback rate:", g_audio_rate, "hz  Decoder queue:", g_decoder_queue, "  Decoder rate:", g_decoder_ms, "ms  Packet rate:", g_voice_ms, "ms,  Buffer:", g_audio_buffer_ms, " ms");
+		}, 100, -1);
+	} else {
+		if (g_debug_audio_timeout) {
+			clearTimeout(g_debug_audio_timeout);
+		}
+	}
+}
+
+function backpressure() {
+	g_socket.send("backpressureall");
 }
 
 function get_utf8_data_len(view, offset) {
@@ -845,13 +862,21 @@ function add_message(steamid64, ipStr, name, msg, time, msgType) {
 			let numPlayers = 0;
 			let playerList = "";
 			let playersCounter = '<div class="players-counter">0 players</div>';
+			
+			let playerInfo = [];
 			for (let i = 4; i < parts.length; i += 2) {
-				if (i != 4) {
+				playerInfo.push({id: parts[i], name: parts[i+1]});
+			}
+			playerInfo.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
+			
+			for (let i = 0; i < playerInfo.length; i++) {
+				if (i != 0) {
 					playerList += ", ";
 				}
-				playerList += '<span id="' + parts[i] + '" class="player_name">' + parts[i+1] + '</span>';
+				playerList += '<span id="' + playerInfo[0].id + '" class="player_name">' + playerInfo[i].name + '</span>';
 				numPlayers += 1;
 			}
+			
 			if (numPlayers >= 1) {
 				playerList = '<span class="players">' + playerList + '</span>';
 				
@@ -1853,6 +1878,10 @@ function is_muted(id, bits) {
 	return !!g_mutes[id] && (g_mutes[id] & bits) != 0;
 }
 
+var last_packet_time = 0;
+var vc_packet_delays = [];
+var g_voice_ms = 0;
+
 function parse_voice(view) {
 	if (!g_audio_player_48khz) {
 		console.log("Ignoring voice packet. Audio not initialized.");
@@ -1885,6 +1914,28 @@ function parse_voice(view) {
 	//console.log("Recv " + payloadLength + " bytes of opus at " + sampleRate + " hz");
 	
 	let decoder = get_opus_decoder(steamid64);
+	
+	if (decoder.decodeQueueSize > 100) {
+		// decoder lagging behind. Clear the queue to skip ahead and prevent infinite latency
+		console.log("Opus decoder is overloaded! Clearing the queue.");
+		decoder.reset();
+
+		decoder.configure({
+			codec: "opus",
+			sampleRate: 48000,
+			numberOfChannels: 1
+		});
+	}
+	
+	let delta = Date.now() - last_packet_time;
+	last_packet_time = Date.now();
+	vc_packet_delays.push(delta);
+	
+	if (vc_packet_delays.length > 64) {
+		vc_packet_delays.shift();
+	}
+	
+	g_voice_ms = Math.floor(vc_packet_delays.reduce((a, b) => a + b, 0) / vc_packet_delays.length);
 	
 	while (offset < payloadEnd) {
 		const frameLength = view.getUint16(offset, true);
@@ -2494,13 +2545,13 @@ function init_perf_graph() {
 	
 	chartg.innerHTML += '<text id="perf-peak-ent" x="' + (40) + '" y="' + textY + '" fill="#6af" transform="scale(1,-1)"></text>';
 	
-	chartg.innerHTML += '<text id="perf-peak-plugin" x="' + (120) + '" y="' + textY + '" fill="#a6f" transform="scale(1,-1)"></text>';
+	chartg.innerHTML += '<text id="perf-peak-plugin" x="' + (115) + '" y="' + textY + '" fill="#a6f" transform="scale(1,-1)"></text>';
 	
-	chartg.innerHTML += '<text id="perf-peak-player" x="' + (200) + '" y="' + textY + '" fill="#4f4" transform="scale(1,-1)"></text>';
+	chartg.innerHTML += '<text id="perf-peak-player" x="' + (190) + '" y="' + textY + '" fill="#4f4" transform="scale(1,-1)"></text>';
 	
-	chartg.innerHTML += '<text id="perf-peak-misc" x="' + (280) + '" y="' + textY + '" fill="#aaa" transform="scale(1,-1)"></text>';
+	chartg.innerHTML += '<text id="perf-peak-misc" x="' + (265) + '" y="' + textY + '" fill="#aaa" transform="scale(1,-1)"></text>';
 	
-	chartg.innerHTML += '<text id="perf-peak-frame" x="' + (360) + '" y="' + textY + '" fill="#f80" transform="scale(1,-1)"></text>';
+	chartg.innerHTML += '<text id="perf-peak-frame" x="' + (340) + '" y="' + textY + '" fill="#f80" transform="scale(1,-1)"></text>';
 	
 	chartg.innerHTML += '<polyline id="perf-line-fps" fill="none" stroke="#f00" stroke-width="1" points=""/>';
 	chartg.innerHTML += '<polyline id="perf-line-ms" fill="none" stroke="#f80" stroke-width="1" points=""/>';
@@ -2594,7 +2645,7 @@ function render_perf_graph() {
 		let metrics = g_perf_metrics_hist[i];
 		
 		let ent = metrics.entityPhysics + metrics.entityThinks;
-		let player = metrics.sendClientMessages + metrics.readPackets;
+		let player = metrics.sendClientMessages + metrics.readPackets + metrics.addToFullPack;
 		let misc = metrics.frameInt - (ent + metrics.pluginFuncs + player);
 		
 		ent_sum += ent;
@@ -3083,6 +3134,11 @@ function handle_chat_input() {
 	scroll_chat_to_bottom();
 }
 
+var g_decoder_ms = 0;
+var g_decoder_queue = 0;
+var last_decode_time = 0;
+var vc_decode_delays = [];
+
 function get_opus_decoder(steamid64) {
 	if (g_opus_decoders[steamid64]) {
 		return g_opus_decoders[steamid64];
@@ -3106,6 +3162,17 @@ function get_opus_decoder(steamid64) {
             }
 
             audioData.close();
+			
+			let delta = Date.now() - last_decode_time;
+			last_decode_time = Date.now();
+			vc_decode_delays.push(delta);
+			
+			if (vc_decode_delays.length > 64) {
+				vc_decode_delays.shift();
+			}
+			
+			g_decoder_ms = Math.floor(vc_decode_delays.reduce((a, b) => a + b, 0) / vc_decode_delays.length);
+			g_decoder_queue = decoder.decodeQueueSize;
 
             g_audio_player_48khz.port.postMessage({
                 id: steamid64,
@@ -3169,6 +3236,11 @@ async function setup_audio() {
 	await g_audio_ctx_48khz.audioWorklet.addModule("audio.js");
 	g_audio_player_48khz = new AudioWorkletNode(g_audio_ctx_48khz, "pcm-player");
 	g_audio_player_48khz.connect(g_audio_ctx_48khz.destination);
+	
+	g_audio_player_48khz.port.onmessage = (e) => {
+		g_audio_buffer_ms = e.data.bufferMs;
+		g_audio_rate = Math.round(e.data.rate);
+	};
 	
 	g_audio_ctx_22khz = new AudioContext({ sampleRate: 22050 });
 	await g_audio_ctx_22khz.audioWorklet.addModule("audio.js");

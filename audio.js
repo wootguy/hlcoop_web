@@ -42,21 +42,24 @@ class PCMPlayer extends AudioWorkletProcessor {
             stream.bufferedSamples += samples.length;
 			
 			const maxBufferedSamples = sampleRate * 2.0;
+			const idealMaxBufferedSamples = sampleRate * 1.0;
 			
-			if (id != 0) {
+			if (id != 0 && stream.bufferedSamples > maxBufferedSamples) {
+				let oldSz = Math.floor((stream.bufferedSamples / sampleRate)*1000);
+				
 				// skip ahead if too much is buffered, unless it's the chat sound steamid
-				// which sends the full buffer in advance				
-				while (stream.bufferedSamples > maxBufferedSamples) {
+				// which sends the full buffer in advance
+				while (stream.bufferedSamples > idealMaxBufferedSamples) {
 					if (stream.queue.length === 0)
 						break;
-					
-					if (this.debug) {
-						console.log("Buffer too large for " + id + " (" + (stream.bufferedSamples / sampleRate) + " ms). Skipping ahead.")
-					}
 
 					const chunk = stream.queue.shift();
 
 					stream.bufferedSamples -= chunk.length;
+				}
+				
+				if (this.debug) {
+					console.log("Skip ahead ", id, oldSz, " ms -> ", Math.floor((stream.bufferedSamples / sampleRate)*1000), " ms");
 				}
 			}
         };
@@ -75,6 +78,8 @@ class PCMPlayer extends AudioWorkletProcessor {
 
             if (!stream.started && stream.bufferedSamples >= sampleRate * 0.50) {
                 stream.started = true;
+				this.playedSamples = 0;
+				this.playStartTime = currentTime;
             }
         }
 
@@ -117,15 +122,22 @@ class PCMPlayer extends AudioWorkletProcessor {
 
         // Log buffer levels roughly every 100ms.
 		if (this.debug) {
+			this.playedSamples += output.length;
+
+			if (currentTime - this.playStartTime >= 1) {
+				this.playbackRate = this.playedSamples / (currentTime - this.playStartTime);
+				this.playedSamples = 0;
+				this.playStartTime = currentTime;
+			}
+			
 			const now = currentTime * 1000;
 			if (now - this.lastLogTime >= 100) {
 				for (const [id, stream] of this.streams) {
-					console.log(
-						"Audio buffer",
-						id,
-						(stream.bufferedSamples / sampleRate * 1000).toFixed(1),
-						"ms"
-					);
+					this.port.postMessage({
+						type: "debug",
+						bufferMs: Math.floor(stream.bufferedSamples / sampleRate * 1000),
+						rate: this.playbackRate
+					});
 				}
 
 				this.lastLogTime = now;
