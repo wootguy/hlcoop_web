@@ -151,5 +151,5 @@ for item in mapdb:
 	img_name = item["maps"][0] + ".jpg"
 	download_map_image(item["link"], os.path.join("img", img_name), os.path.join("img_new", img_name))
 
-with open("mapdb.json", 'w') as outfile:
+with open("docs/mapdb.json", 'w') as outfile:
 	json.dump(mapdb, outfile)
