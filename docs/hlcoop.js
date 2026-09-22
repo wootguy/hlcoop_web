@@ -67,7 +67,6 @@ var g_audio_ctx_48khz;
 var g_audio_ctx_22khz;
 var g_audio_player_48khz; // for steam voice
 var g_audio_player_22khz; // for chat sounds
-var g_opus_decoders = {};
 var g_vc_icon_timers = {};
 var g_vc_volume = 1.0;
 var g_mutes = {};
@@ -145,9 +144,9 @@ const FL_MUTE_MODEL = 8;
 
 function get_message_type_name(value) {
   for (const [key, val] of Object.entries(MESSAGE_TYPE)) {
-    if (val === value) {
-      return key;
-    }
+	if (val === value) {
+	  return key;
+	}
   }
   return "unknown";
 }
@@ -175,7 +174,7 @@ function debug_audio() {
 	
 	if (g_debug_audio) {
 		g_debug_audio_timeout = setInterval(function() {
-			console.log("Playback rate:", g_audio_rate, "hz  Decoder queue:", g_decoder_queue, "  Decoder rate:", g_decoder_ms, "ms  Packet rate:", g_voice_ms, "ms,  Buffer:", g_audio_buffer_ms, " ms, Latency:", g_latency, "ms");
+			console.log("Playback rate:", g_audio_rate, "hz	 Decode time:", g_decoder_ms, "ms  Packet rate:", g_voice_ms, "ms,	Buffer:", g_audio_buffer_ms, " ms, Latency:", g_latency, "ms");
 			
 			ping();
 		}, 100, -1);
@@ -1371,8 +1370,8 @@ function parse_ip_info(view) {
 }
 
 function getCookie(name) {
-    const match = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
-    return match ? decodeURIComponent(match[1]) : null;
+	const match = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+	return match ? decodeURIComponent(match[1]) : null;
 }
 
 function parse_auth(view) {
@@ -1530,8 +1529,8 @@ function rate_map(ev) {
 }
 
 function handle_img_error(event) {
-    event.target.src = 'img/missing_preview.png'; // Fallback image URL
-    event.target.onerror = null; // Prevent infinite loop if the fallback also fails
+	event.target.src = 'img/missing_preview.png'; // Fallback image URL
+	event.target.onerror = null; // Prevent infinite loop if the fallback also fails
 }
 
 function load_new_avatars() {
@@ -1672,13 +1671,13 @@ function parse_player_state(view) {
 	update_map_metadata();
 	
 	if (g_load_avatar_timeout !== null) {
-        clearTimeout(g_load_avatar_timeout);
-    }
+		clearTimeout(g_load_avatar_timeout);
+	}
 
-    g_load_avatar_timeout = setTimeout(() => {
-        load_new_avatars();
-        timeoutId = null;
-    }, 100);
+	g_load_avatar_timeout = setTimeout(() => {
+		load_new_avatars();
+		timeoutId = null;
+	}, 100);
 }
 
 function parse_upcoming_maps(view) {
@@ -1871,17 +1870,17 @@ function parse_audio(view) {
 		samples.push(sample);
 	}
 	
-	const fsamples = new Float32Array(samples.length);
+	const samples16 = new Int16Array(samples.length);
 	for (let i = 0; i < samples.length; i++) {
-		fsamples[i] = (samples[i] - 128) / 128;
+		samples16[i] = (samples[i] - 128) * 256;
 	}
 	
 	console.log("Play " + samples.length + " samples", samples);
 	
 	g_audio_player_22khz.port.postMessage({
 		id: 0,
-		samples: fsamples
-	}, [fsamples.buffer]);
+		samples: samples16
+	}, [samples16.buffer]);
 }
 
 function is_muted(id, bits) {
@@ -1891,6 +1890,9 @@ function is_muted(id, bits) {
 var last_packet_time = 0;
 var vc_packet_delays = [];
 var g_voice_ms = 0;
+
+var g_wasm_opus_input;
+var g_wasm_opus_output;
 
 function parse_voice(view) {
 	if (!g_audio_player_48khz) {
@@ -1903,39 +1905,37 @@ function parse_voice(view) {
 	let steamid64 = view.getBigUint64(offset, true);
 	offset += 8;
 	
-	let unknown = view.getUint8(offset, true);
-	offset += 1;
+	const start = performance.now();
 	
-	let sampleRate = view.getUint16(offset, true);
-	offset += 2;
+	const maxSamples = 1024*10;
 	
-	let codec = view.getUint8(offset, true);
-	offset += 1;
-	
-	let payloadLength = view.getUint16(offset, true);
-	offset += 2;
-	
-	const payloadEnd = offset + payloadLength;
-	
-	if (payloadLength <= 2) {
-		return; // not sure what this is but it throws an error and can't possibly be more than a few samples.
+	if (!g_wasm_opus_input || !g_wasm_opus_output) {
+		const maxPacketSz = 1024*2;
+		g_wasm_opus_input = Module._malloc(maxPacketSz);
+		g_wasm_opus_output = Module._malloc(maxSamples * 2);
 	}
 	
-	//console.log("Recv " + payloadLength + " bytes of opus at " + sampleRate + " hz");
+	Module.HEAPU8.set(
+		new Uint8Array(view.buffer, view.byteOffset + 1, view.byteLength - 1),
+		g_wasm_opus_input
+	);
 	
-	let decoder = get_opus_decoder(steamid64);
+	const samples = Module.ccall("decode_steam_voice", "number",
+		["number", "number", "number", "number", "number"],
+		[g_wasm_opus_input, view.byteLength - 1, g_wasm_opus_output, maxSamples, 48000]
+	);
+		
+	const pcm = Module.HEAP16.slice(
+		g_wasm_opus_output >> 1,
+		(g_wasm_opus_output >> 1) + samples
+	);
 	
-	if (decoder.decodeQueueSize > 100) {
-		// decoder lagging behind. Clear the queue to skip ahead and prevent infinite latency
-		console.log("Opus decoder is overloaded! Clearing the queue.");
-		decoder.reset();
-
-		decoder.configure({
-			codec: "opus",
-			sampleRate: 48000,
-			numberOfChannels: 1
-		});
-	}
+	g_audio_player_48khz.port.postMessage({
+		id: steamid64,
+		samples: pcm
+	}, [pcm.buffer]);
+	
+	g_decoder_ms = Math.floor(performance.now() - start);
 	
 	let delta = Date.now() - last_packet_time;
 	last_packet_time = Date.now();
@@ -1946,28 +1946,6 @@ function parse_voice(view) {
 	}
 	
 	g_voice_ms = Math.floor(vc_packet_delays.reduce((a, b) => a + b, 0) / vc_packet_delays.length);
-	
-	while (offset < payloadEnd) {
-		const frameLength = view.getUint16(offset, true);
-		offset += 2;
-
-		const sequence = view.getUint16(offset, true);
-		offset += 2;
-
-		const opusData = new Uint8Array(
-			view.buffer,
-			view.byteOffset + offset,
-			frameLength
-		);
-
-		offset += frameLength;
-
-		decoder.decode(new EncodedAudioChunk({
-			type: "key",
-			timestamp: 0,
-			data: opusData
-		}));
-	}
 	
 	if (is_muted(steamid64, FL_MUTE_VOICE)) {
 		return;
@@ -3159,66 +3137,6 @@ function handle_chat_input() {
 }
 
 var g_decoder_ms = 0;
-var g_decoder_queue = 0;
-var last_decode_time = 0;
-var vc_decode_delays = [];
-
-function get_opus_decoder(steamid64) {
-	if (g_opus_decoders[steamid64]) {
-		return g_opus_decoders[steamid64];
-	}
-	
-    let decoder = new AudioDecoder({
-        output: (audioData) => {
-            let samples = new Float32Array(audioData.numberOfFrames);
-
-            audioData.copyTo(samples, {
-                format: "f32",
-                planeIndex: 0
-            });
-
-            if (g_vc_volume != 1.0) {
-                for (let i = 0; i < samples.length; i++)
-                    samples[i] = Math.max(
-                        -1,
-                        Math.min(1, samples[i] * g_vc_volume)
-                    );
-            }
-
-            audioData.close();
-			
-			let delta = Date.now() - last_decode_time;
-			last_decode_time = Date.now();
-			vc_decode_delays.push(delta);
-			
-			if (vc_decode_delays.length > 64) {
-				vc_decode_delays.shift();
-			}
-			
-			g_decoder_ms = Math.floor(vc_decode_delays.reduce((a, b) => a + b, 0) / vc_decode_delays.length);
-			g_decoder_queue = decoder.decodeQueueSize;
-
-            g_audio_player_48khz.port.postMessage({
-                id: steamid64,
-                samples: samples
-            }, [samples.buffer]);
-        },
-
-        error: (e) => {
-            console.error("Opus decoder error:", e);
-        }
-    });
-	
-	decoder.configure({
-		codec: "opus",
-		sampleRate: 48000,
-		numberOfChannels: 1
-	});
-	
-	g_opus_decoders[steamid64] = decoder;
-	
-	return decoder;
-}
 
 async function setup_audio() {
 	if (!g_socket) {
@@ -3230,11 +3148,6 @@ async function setup_audio() {
 	let audio_icon = document.getElementById("audio-icon").getElementsByTagName("img")[0];
 	
 	if (g_audio_player_48khz) {
-		for (const [key, value] of Object.entries(g_opus_decoders)) {
-			value.close();
-		}
-		g_opus_decoders = {};
-
 		g_audio_player_48khz.disconnect();
 		g_audio_player_48khz = null;
 		
@@ -3675,8 +3588,8 @@ function handle_resize() {
 var g_wake_lock = null;
 
 async function keep_screen_awake() {
-    if (!("wakeLock" in navigator))
-        return;
+	if (!("wakeLock" in navigator))
+		return;
 
 	if (g_settings.keep_screen_awake) {
 		try {
