@@ -1,6 +1,5 @@
 // TODO:
 // - iOS safari/firefox is missing a player in the table in hidden maps mode
-// - mutes dont work in chat. option to mute from the web.
 // - messages sending twice while disconnected/reconnecting and pressing enter (can't repro)
 // - entering negative number or NaN crashes stat pages
 // - escape to close profile or buton for phones
@@ -100,6 +99,8 @@ const MESSAGE_TYPE = {
 	WEBMSG_AUDIO: 23,
 	WEBMSG_VOICE: 24,
 	WEBMSG_MUTES: 25,
+	WEBMSG_BACKPRESSURE: 26,
+	WEBMSG_PING: 27,
 };
 
 const WEBDENY_NOT_LOGGED_IN_RATE = 0;
@@ -155,6 +156,8 @@ var g_debug_audio = false;
 var g_debug_audio_timeout = false;
 var g_audio_buffer_ms = 0;
 var g_audio_rate = 0;
+var g_ping_start = 0;
+var g_latency = 0;
 
 function debug_audio() {
 	g_debug_audio = !g_debug_audio;
@@ -172,7 +175,9 @@ function debug_audio() {
 	
 	if (g_debug_audio) {
 		g_debug_audio_timeout = setInterval(function() {
-			console.log("Playback rate:", g_audio_rate, "hz  Decoder queue:", g_decoder_queue, "  Decoder rate:", g_decoder_ms, "ms  Packet rate:", g_voice_ms, "ms,  Buffer:", g_audio_buffer_ms, " ms");
+			console.log("Playback rate:", g_audio_rate, "hz  Decoder queue:", g_decoder_queue, "  Decoder rate:", g_decoder_ms, "ms  Packet rate:", g_voice_ms, "ms,  Buffer:", g_audio_buffer_ms, " ms, Latency:", g_latency, "ms");
+			
+			ping();
 		}, 100, -1);
 	} else {
 		if (g_debug_audio_timeout) {
@@ -183,6 +188,11 @@ function debug_audio() {
 
 function backpressure() {
 	g_socket.send("backpressureall");
+}
+
+function ping() {
+	g_ping_start = Date.now();
+	g_socket.send("ping");
 }
 
 function get_utf8_data_len(view, offset) {
@@ -873,7 +883,7 @@ function add_message(steamid64, ipStr, name, msg, time, msgType) {
 				if (i != 0) {
 					playerList += ", ";
 				}
-				playerList += '<span id="' + playerInfo[0].id + '" class="player_name">' + playerInfo[i].name + '</span>';
+				playerList += '<span id="' + playerInfo[i].id + '" class="player_name">' + playerInfo[i].name + '</span>';
 				numPlayers += 1;
 			}
 			
@@ -2013,6 +2023,20 @@ function parse_mutes(view) {
 	
 	refresh_player_table();
 	load_profile_mutes();
+}
+
+function parse_backpressure(view) {
+	let offset = 1; // skip message type byte
+	
+	let pressure = view.getUint32(offset, true);
+	offset += 4;
+	
+	console.log("Got backpressure ", pressure);
+}
+
+function parse_ping(view) {
+	let offset = 1; // skip message type byte
+	g_latency = Date.now() - g_ping_start;
 }
 
 function parse_map_list(view) {
@@ -3758,6 +3782,9 @@ function createWebSocket() {
 			// should have all chat messages at this point
 			apply_translations(true);
 			g_socket.send("want_perf;" + (g_settings.show_perf ? "1" : "0"));
+			
+			if (g_audio_ctx_48khz)
+				g_socket.send("want_audio;1");
 		}
 		else if (msgType == MESSAGE_TYPE.WEBMSG_WEB_CLIENTS) {
 			parse_web_clients(view);
@@ -3828,6 +3855,12 @@ function createWebSocket() {
 		}
 		else if (msgType == MESSAGE_TYPE.WEBMSG_MUTES) {
 			parse_mutes(view, true);
+		}
+		else if (msgType == MESSAGE_TYPE.WEBMSG_BACKPRESSURE) {
+			parse_backpressure(view, true);
+		}
+		else if (msgType == MESSAGE_TYPE.WEBMSG_PING) {
+			parse_ping(view, true);
 		}
 		else {
 			console.error("Unrecognized socket message type " + msgType);
