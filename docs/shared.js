@@ -1,6 +1,7 @@
 const WEBAPP_VERSION = 4;
 
 var g_bans = {};
+var g_mutes = {};
 
 var g_game_id = "hl";
 var data_repo_count = 32;
