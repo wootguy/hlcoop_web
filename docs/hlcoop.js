@@ -161,7 +161,7 @@ var g_latency = 0;
 function debug_audio() {
 	g_debug_audio = !g_debug_audio;
 	
-	if (g_audio_player_48khz) {
+	if (g_audio_ctx_48khz) {
 		g_audio_player_48khz.port.postMessage({
 			type: "debug",
 			value: g_debug_audio
@@ -611,7 +611,7 @@ function refresh_player_table_single(plist, player_data, ip_data) {
 			vc_icon.src = "icon/voice_mute.png";
 			vc_icon.classList.toggle("animate", false);
 		} 
-		else if (!g_audio_player_48khz) {
+		else if (!g_audio_ctx_48khz) {
 			// use the flag only when audio is disabled because it's updated slowly.
 			// when audio is enabled the icon is updated much faster during parsing
 		
@@ -1855,7 +1855,7 @@ function parse_perf(view) {
 }
 
 function parse_audio(view) {
-	if (!g_audio_player_48khz) {
+	if (!g_audio_ctx_48khz) {
 		console.log("Ignoring audio packet. Audio not initialized.");
 		return;
 	}
@@ -1895,7 +1895,7 @@ var g_wasm_opus_input;
 var g_wasm_opus_output;
 
 function parse_voice(view) {
-	if (!g_audio_player_48khz) {
+	if (!g_audio_ctx_48khz) {
 		console.log("Ignoring voice packet. Audio not initialized.");
 		return;
 	}
@@ -1962,7 +1962,7 @@ function parse_voice(view) {
 			clearTimeout(g_vc_icon_timers[steamid64]);
 		
 		g_vc_icon_timers[steamid64] = setTimeout(() => {
-			if (!g_audio_player_48khz) {
+			if (!g_audio_ctx_48khz) {
 				// audio shut down. Let the table updates handle icons
 				return;
 			}
@@ -3147,7 +3147,7 @@ async function setup_audio() {
 	let audio_icon_container = document.getElementById("audio-icon");
 	let audio_icon = document.getElementById("audio-icon").getElementsByTagName("img")[0];
 	
-	if (g_audio_player_48khz) {
+	if (g_audio_ctx_48khz) {
 		g_audio_player_48khz.disconnect();
 		g_audio_player_48khz = null;
 		
