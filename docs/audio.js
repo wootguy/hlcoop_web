@@ -6,9 +6,10 @@ class PCMPlayer extends AudioWorkletProcessor {
 		this.endedStreams = new Set();
 		this.lastLogTime = 0;
 		this.debug = false;
+		this.volume = 1.0;
 
 		this.port.onmessage = (e) => {
-			const { id, samples } = e.data;
+			const { id, samples, volume } = e.data;
 			let stream = this.streams.get(id);
 			
 			if (e.data.type === "debug") {
@@ -24,6 +25,7 @@ class PCMPlayer extends AudioWorkletProcessor {
 			}
 			
 			this.endedStreams.delete(id);
+			this.volume = volume;
 
 			if (!stream) {
 				stream = {
@@ -108,7 +110,7 @@ class PCMPlayer extends AudioWorkletProcessor {
 
 				for (let i = 0; i < count; i++) {
 					output[pos + i] +=
-						stream.current[stream.offset + i] / 32768;
+						(stream.current[stream.offset + i] / 32768) * this.volume;
 				}
 
 				stream.offset += count;

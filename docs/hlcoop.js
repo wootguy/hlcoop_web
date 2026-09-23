@@ -1879,7 +1879,8 @@ function parse_audio(view) {
 	
 	g_audio_player_22khz.port.postMessage({
 		id: 0,
-		samples: samples16
+		samples: samples16,
+		volume: g_vc_volume
 	}, [samples16.buffer]);
 }
 
@@ -1932,7 +1933,8 @@ function parse_voice(view) {
 	
 	g_audio_player_48khz.port.postMessage({
 		id: steamid64,
-		samples: pcm
+		samples: pcm,
+		volume: g_vc_volume
 	}, [pcm.buffer]);
 	
 	g_decoder_ms = Math.floor(performance.now() - start);
@@ -3215,9 +3217,17 @@ function update_vc_volume() {
 	const x = Number(volume.value) / 100;
 	g_vc_volume = x * x * x * 10; // more accurate towards the low end
 	
-	
 	g_vc_volume = Math.floor(g_vc_volume * 100);
-	g_vc_volume = Math.floor(g_vc_volume / 5) * 5;
+	
+	if (g_vc_volume >= 500) {
+		g_vc_volume = Math.floor(g_vc_volume / 50) * 50;
+	} 
+	else if (g_vc_volume >= 200) {
+		g_vc_volume = Math.floor(g_vc_volume / 10) * 10;
+	}
+	else {
+		g_vc_volume = Math.floor(g_vc_volume / 5) * 5;
+	}
 	
 	document.getElementById("vc_volume_value").textContent = g_vc_volume + "%";
 	
