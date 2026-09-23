@@ -358,7 +358,7 @@ function handle_mute_toggle(div) {
 		mutebits = FL_MUTE_SPRAY;
 	}
 	
-	if (g_socket) {
+	if (g_socket && g_socket.readyState === WebSocket.OPEN) {
 		g_socket.send("mute;" + g_opened_profile_id + ";" + mutebits);
 	}
 }
@@ -404,7 +404,7 @@ function click_steam_avatar(div) {
 
 function mute_player_vc(div) {
 	let id = div.target.parentElement.parentElement.parentElement.getAttribute("steamid");
-	if (g_socket) {
+	if (g_socket && g_socket.readyState === WebSocket.OPEN) {
 		g_socket.send("mute;" + id + ";" + FL_MUTE_VOICE);
 	}
 }
@@ -2810,7 +2810,7 @@ function apply_chat_settings() {
 		clearInterval(g_perf_timer);
 	}
 	
-	if (g_socket && g_settings.show_perf != oldWantPerf) {
+	if (g_socket && g_socket.readyState === WebSocket.OPEN && g_settings.show_perf != oldWantPerf) {
 		g_socket.send("want_perf;" + (g_settings.show_perf ? "1" : "0"));
 	}
 	
@@ -3025,7 +3025,7 @@ function send_message() {
 		return;
 	}
 	
-	if (g_socket.readyState != WebSocket.OPEN) {
+	if (!g_socket || g_socket.readyState != WebSocket.OPEN) {
 		fail_send_message();
 		return;
 	}
@@ -3139,7 +3139,7 @@ function handle_chat_input() {
 var g_decoder_ms = 0;
 
 async function setup_audio() {
-	if (!g_socket) {
+	if (!g_socket || g_socket.readyState != WebSocket.OPEN) {
 		console.log("Can't initialize audio yet. Not connected");
 		return;
 	}
