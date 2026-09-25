@@ -71,8 +71,9 @@ with open('pool.json') as f:
 	json_dat = json.loads(f.read())
 	
 # generate this with 'scmapdb.py dump_links'
-with open('bsp_links.json') as f:
-	bsp_links = json.loads(f.read())
+if os.path.exists("bsp_links.json"):
+	with open('bsp_links.json') as f:
+		bsp_links = json.loads(f.read())
 	
 with open("mapcycle.txt") as f:
 	mapcycle = f.read().splitlines()
@@ -137,6 +138,9 @@ for line in mapcycle:
 			continue
 			
 	if bsp not in ignore_missing:
+		img_name = bsp.replace(".bsp", "") + ".jpg"
+		if os.path.exists(os.path.join("docs", "img", img_name)):
+			continue
 		print("No link found for '%s'" % bsp)
 	
 	item = {
@@ -149,7 +153,7 @@ for item in mapdb:
 	if not item["link"]:
 		continue
 	img_name = item["maps"][0] + ".jpg"
-	download_map_image(item["link"], os.path.join("img", img_name), os.path.join("img_new", img_name))
+	download_map_image(item["link"], os.path.join("docs", "img", img_name), os.path.join("img_new", img_name))
 
 with open("docs/mapdb.json", 'w') as outfile:
 	json.dump(mapdb, outfile)
