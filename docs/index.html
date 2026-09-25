@@ -57,7 +57,7 @@
 									<th title="The number of times the player has died in the current map">Deaths</th>
 									<th title="Player's latency to the server">Ping</th>
 									<th title="Player's game client">CL</th>
-									<th title="Player's voice chat status. Click this icon to enable voice audio streaming in your web browser."><div id="audio-icon"><img src="icon/voice_disable.png"/></div></th>
+									<th title="Player's voice chat status. Click this icon to enable voice audio streaming in your web browser."><div id="audio-icon" class="authed_only hidden"><img src="icon/voice_disable.png"/></div></th>
 									<th title="Player's opinion of the selected map">Opinion</th>
 									<th title="Last time this player played the selected map">Last play</th>
 									<th title="Total number of times the player played the selected map">Total plays</th>
@@ -83,7 +83,7 @@
 							<div id="chat_settings_button">
 								<img src="icon/cog.png"/>
 								<div id="chat_settings_menu" class="hidden">
-									<div class="chat_settings_option">
+									<div class="chat_settings_option authed_only hidden">
 										<label title="Wrap chats underneath player names to make better use of space at the cost of readability.">Alternate text wrapping <input id="alt_wrap_button" type="checkbox"></label>
 									</div>
 									<div class="chat_settings_option">
@@ -95,10 +95,10 @@
 									<div class="chat_settings_option wakelock_settings">
 										<label title="Keep the screen awake while the dashboard is open">Keep screen awake<input id="keep_screen_awake" type="checkbox"></label>
 									</div>
-									<div class="chat_settings_option">
+									<div class="chat_settings_option authed_only hidden">
 										<label title="Display server performance graph. Use this to find out if you or the server is lagging.">Performance graph<input id="show_perf" type="checkbox"></label>
 									</div>
-									<div class="chat_settings_option">
+									<div class="chat_settings_option authed_only hidden">
 										<label title="Display messages for web client logins and disconnects">Show web joins/disconnects<input id="show_web_joins_button" type="checkbox"></label>
 									</div>
 									<div class="chat_settings_option">
@@ -107,7 +107,7 @@
 									<div class="chat_settings_option hidden">
 										<label title="Display country flags by player names">Show country flags<input id="show_country_flags" type="checkbox"></label>
 									</div>
-									<div class="chat_settings_option">
+									<div class="chat_settings_option authed_only hidden">
 										<label title="Change chat message timestamp format">Timestamps<input id="show_country_flags" type="checkbox"></label>
 										<select id="timestamp_selector">
 											<option value="24hr">24 Hour</option>
@@ -116,7 +116,7 @@
 											<option value="none">None</option>
 										</select>
 									</div>
-									<div class="chat_settings_option">
+									<div class="chat_settings_option authed_only hidden">
 										<label title="Translate chat messages to your configured language. Use the .lang command in-game to change your language.
 
 Auto = Replace original message automatically.
@@ -127,30 +127,30 @@ Manual = Click to translate.">Translations</label>
 											<option value="disable">Disable</option>
 										</select>
 									</div>
-									<div class="chat_settings_option">
+									<div class="chat_settings_option authed_only hidden">
 										<label title="Master volume for voice chat audio">Voice volume <span id="vc_volume_value">?%</span></label>
 										<input type="range" id="vc_volume" min="0" max="100" value="47">
 									</div>
-									<hr>
-									<div class="chat_settings_option">
+									<hr class="authed_only hidden">
+									<div class="chat_settings_option authed_only hidden">
 										<label title="Enables message dimming, using the settings below to control which messages are dimmed">Enable message dimming<input id="dim_enable_button" type="checkbox"></label>
 									</div>
-									<div class="chat_settings_option indent">
+									<div class="chat_settings_option indent authed_only hidden">
 										<label title="Dim chat sound commands">Dim chat sound commands<input id="dim_sound_button" type="checkbox"></label>
 									</div>
-									<div class="chat_settings_option indent">
+									<div class="chat_settings_option indent authed_only hidden">
 										<label title="Dim messages for players joining/leaving the server">Dim join/leave messages<input id="dim_join_button" type="checkbox"></label>
 									</div>
-									<div class="chat_settings_option indent">
+									<div class="chat_settings_option indent authed_only hidden">
 										<label title="Dim messages sent by the map">Dim map messages<input id="dim_map_button" type="checkbox"></label>
 									</div>
-									<div class="chat_settings_option indent">
+									<div class="chat_settings_option indent authed_only hidden">
 										<label title="Dim messages sent by the server">Dim server messages<input id="dim_server_button" type="checkbox"></label>
 									</div>
-									<div class="chat_settings_option indent">
+									<div class="chat_settings_option indent authed_only hidden">
 										<label title="Brighten dimmed messages by hovering over them with your mouse">Brighten on hover<input id="hover_dim_button" type="checkbox"></label>
 									</div>
-									<div class="chat_settings_option indent">
+									<div class="chat_settings_option indent authed_only hidden">
 										<label title="Brighten the most recently sent messages">Brighten recent messages<input id="dim_recent_button" type="checkbox"></label>
 									</div>
 									<div class="developer_options">
@@ -239,7 +239,7 @@ Red light = Negative ratings. Low priority. Selected only if all other maps are 
 						<button id="hide_maps_button">Hide maps</button>
 						<input type="checkbox" id="hide_maps_cb" class="hidden"/>
 					</div>
-					<div id="perf-container">
+					<div id="perf-container" class="authed_only hidden">
 						<h2>Server Performance <span class="tooltip" title="FPS = Average frames per second.
 ms = Frame time in milliseconds. No smoothing is applied. Single frame stutters will be visible on this line.
 

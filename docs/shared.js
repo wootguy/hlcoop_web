@@ -292,10 +292,10 @@ function open_player_profile(event) {
 	player_profile.getElementsByClassName("maps_played")[0].textContent = mapsPlayed;
 	player_profile.getElementsByClassName("like_cooldown")[0].value = state.likeCooldown;
 	player_profile.getElementsByClassName("like_cooldown")[0].disabled = !is_own_profile;
-	player_profile.getElementsByClassName("mute_text")[0].disabled = is_own_profile;
-	player_profile.getElementsByClassName("mute_voice")[0].disabled = is_own_profile;
-	player_profile.getElementsByClassName("mute_model")[0].disabled = is_own_profile;
-	player_profile.getElementsByClassName("mute_spray")[0].disabled = is_own_profile;
+	player_profile.getElementsByClassName("mute_text")[0].disabled = is_own_profile || g_steamid <= 1 || g_is_stats_page;
+	player_profile.getElementsByClassName("mute_voice")[0].disabled = is_own_profile || g_steamid <= 1 || g_is_stats_page;
+	player_profile.getElementsByClassName("mute_model")[0].disabled = is_own_profile || g_steamid <= 1 || g_is_stats_page;
+	player_profile.getElementsByClassName("mute_spray")[0].disabled = is_own_profile || g_steamid <= 1 || g_is_stats_page;
 	player_profile.getElementsByClassName("play_time")[0].textContent = format_age(state.totalPlayTime, true, true, 2);
 	player_profile.getElementsByClassName("play_time")[0].title = format_age(state.totalPlayTime, false, true, 2) + " (" + format_age(state.totalPlayTime, true, true, 3) + ")";
 	player_profile.getElementsByClassName("play_time_recent")[0].textContent = format_age(state.recentPlayTime, true, true, 2);

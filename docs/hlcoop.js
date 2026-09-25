@@ -634,7 +634,7 @@ function refresh_player_table_single(plist, player_data, ip_data) {
 		}
 		vc_icon.removeEventListener('click', mute_player_vc);
 		vc_icon.addEventListener('click', mute_player_vc);
-		vc_icon.title = "Click to mute/unmute this player's voice";
+		vc_icon.title = g_steamid > 1 ? "Click to mute/unmute this player's voice" : "Voices are disabled for anonymous users";
 		
 		row.cells[2].textContent = dat.score;
 		row.cells[3].textContent = dat.deaths;
@@ -1432,6 +1432,14 @@ function parse_auth(view) {
 			document.querySelectorAll('.developer_options').forEach(el => {
 				el.classList.add('hidden');
 			});
+		}
+		
+		document.querySelectorAll('.authed_only').forEach(el => {
+			el.classList.remove('hidden');
+		});
+		
+		if (!g_perf_init_needed) {
+			init_perf_graph();
 		}
 	}
 }
