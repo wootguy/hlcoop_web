@@ -2151,6 +2151,16 @@ function update_map_metadata() {
 	else if (mapFilterType == "opt-my-disliked") {
 		document.getElementById('upcoming_maps_count').textContent = upcoming.querySelectorAll(".dislike_button.own_rating").length;
 	}
+	else if (mapFilterType == "opt-my-unrated") {
+		document.getElementById('upcoming_maps_count').textContent =
+			upcoming.querySelectorAll(".map_container").length -
+			(upcoming.querySelectorAll(".dislike_button.own_rating").length
+			+ upcoming.querySelectorAll(".fav_button.own_rating").length
+			+ upcoming.querySelectorAll(".like_button.own_rating").length);
+	}
+	else if (mapFilterType == "opt-my-unplayed") {
+		document.getElementById('upcoming_maps_count').textContent = upcoming.querySelectorAll(".unplayed").length;
+	}
 	else if (showingAllMaps) {
 		document.getElementById('upcoming_maps_count').textContent = upcoming.getElementsByClassName("map_container").length;
 	}
@@ -2277,8 +2287,15 @@ function update_map_data() {
 			else if (mapFilterType == "opt-my-disliked" && mystats[first_map].rating != 2) {
 				div.classList.add("filter_wrong_opinion");
 			}
+			else if (mapFilterType == "opt-my-unrated" && mystats[first_map].rating != 0) {
+				div.classList.add("filter_wrong_opinion");
+			}
+			else if (mapFilterType == "opt-my-unplayed" && mystats[first_map].totalPlays != 0) {
+				div.classList.add("filter_wrong_opinion");
+			}
 		}
-		else if (mapFilterType == "opt-my-liked" || mapFilterType == "opt-my-disliked" || mapFilterType == "opt-my-favorited") {
+		else if (mapFilterType == "opt-my-liked" || mapFilterType == "opt-my-disliked"
+				|| mapFilterType == "opt-my-favorited" || mapFilterType == "opt-my-unrated" || mapFilterType == "opt-my-unplayed") {
 			div.classList.add("filter_wrong_opinion");
 		}
 		
@@ -2367,6 +2384,7 @@ function update_map_ratings() {
 		like_button.classList.remove("own_rating");
 		fav_button.classList.remove("own_rating");
 		dislike_button.classList.remove("own_rating");
+		div.classList.remove("unplayed");
 		
 		let numLike = 0;
 		let numFav = 0;
@@ -2387,6 +2405,10 @@ function update_map_ratings() {
 			if (player_stats) {
 				if (player_stats.totalPlays > 0 && id in connectedIds) {
 					was_played = true;
+				}
+				
+				if (id == g_steamid && player_stats.totalPlays == 0) {
+					div.classList.add("unplayed");
 				}
 				
 				if (player_stats.rating == 1) {
@@ -3302,6 +3324,18 @@ async function setup() {
 		else if (this.value == "opt-my-disliked") {
 			upcoming.classList.add("all_maps");
 			document.getElementById("upcoming_title").textContent = "Your disliked maps";
+			document.getElementById("empty_notice").classList.add("hidden");
+			document.getElementById("content").classList.remove("empty_server");
+		}
+		else if (this.value == "opt-my-unrated") {
+			upcoming.classList.add("all_maps");
+			document.getElementById("upcoming_title").textContent = "Your unrated maps";
+			document.getElementById("empty_notice").classList.add("hidden");
+			document.getElementById("content").classList.remove("empty_server");
+		}
+		else if (this.value == "opt-my-unplayed") {
+			upcoming.classList.add("all_maps");
+			document.getElementById("upcoming_title").textContent = "Your unplayed maps";
 			document.getElementById("empty_notice").classList.add("hidden");
 			document.getElementById("content").classList.remove("empty_server");
 		}
