@@ -2208,7 +2208,7 @@ function update_map_data() {
 			like.setAttribute("rating", "1");
 			like.addEventListener("click", rate_map);
 			like.title= "Rating this map positively will raise its chance of being picked while you're on the server."
-			+ "\n\nYou can configure the cooldown for your liked maps in your profile. By default, liked maps can't be replayed until 1 day has passed. This cooldown applies to each map individually.";
+			+ "\n\nYou can configure the cooldown for your liked maps in your profile. By default, liked maps can't be replayed until 7 days have passed. This cooldown applies to each map individually.";
 			
 			let fav = document.createElement('img');
 			fav.classList.add("fav_button");
@@ -2313,7 +2313,7 @@ function update_map_data() {
 		like.setAttribute("rating", "1");
 		like.addEventListener("click", rate_map);
 		like.title= "Rating this map positively will raise its chance of being picked while you're on the server."
-		+ "\n\nYou can configure the cooldown for your liked maps in your profile. By default, liked maps can't be replayed until 1 day has passed. This cooldown applies to each map individually.";
+		+ "\n\nYou can configure the cooldown for your liked maps in your profile. By default, liked maps can't be replayed until 7 days have passed. This cooldown applies to each map individually.";
 		
 		let fav = div.getElementsByClassName("fav_button")[0];
 		fav.classList.add("fav_button");
