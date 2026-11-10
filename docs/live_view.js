@@ -4,10 +4,10 @@
 // The player runs on threads, which browsers only allow on a cross-origin isolated page. An iframe
 // can only be isolated if the page around it is too, so the dashboard itself needs the
 // Cross-Origin-Opener-Policy and Cross-Origin-Embedder-Policy headers:
-//   - server.bat (bspbot's web/serve.py --coep credentialless) sends them on every page. It also
-//     relays the stream and proxies fastdl downloads, so the player doesn't need the game server to
-//     have a WebSocket relay or CORS headers.
-//   - GitHub Pages can't send headers, so live-sw.js adds them. It only does that for pages loaded
+//   - bspbot's web/serve.py --coep credentialless sends them on every page. It also relays the
+//     stream and proxies fastdl downloads, so the player doesn't need the game server to have a
+//     WebSocket relay or CORS headers.
+//   - GitHub Pages (or any plain static server) can't send headers, so live-sw.js adds them. It only does that for pages loaded
 //     with ?live=1, so the dashboard reloads once with that parameter the first time the live view
 //     opens. The player then connects to the game server directly (see web/README.md in bspbot):
 //     files come from fastdl, and the stream through the WebServer plugin's relay at
@@ -27,9 +27,20 @@ function live_session_set(key, val) {
 	} catch (e) {}
 }
 
-// true when served by server.bat, which proxies the stream and fastdl for the player
-function live_has_proxy() {
-	return ["localhost", "127.0.0.1", "[::1]"].includes(location.hostname);
+// Resolves to true when this page is served by bspbot's web/serve.py (server_adv.bat), which
+// proxies the stream and fastdl for the player. It marks its responses with X-Bspguy-Relay.
+// Other servers, such as a plain "python -m http.server", don't have the proxy.
+var g_live_has_proxy = null;
+function live_check_proxy() {
+	if (g_live_has_proxy !== null)
+		return Promise.resolve(g_live_has_proxy);
+	if (!["localhost", "127.0.0.1", "[::1]"].includes(location.hostname))
+		return Promise.resolve(g_live_has_proxy = false);
+	return fetch(location.pathname, { method: "HEAD", cache: "no-store" }).then(function(res) {
+		return g_live_has_proxy = res.headers.get("X-Bspguy-Relay") === "1";
+	}).catch(function() {
+		return g_live_has_proxy = false;
+	});
 }
 
 function live_server_config() {
@@ -37,12 +48,12 @@ function live_server_config() {
 	return (selector && g_server_configs[selector.value]) || g_server_config;
 }
 
-function live_player_url() {
+function live_player_url(hasProxy) {
 	let config = live_server_config();
 	let params = new URLSearchParams();
 	params.set("server", config.hltv_address);
 	params.set("connect", "1");
-	if (!live_has_proxy()) {
+	if (!hasProxy) {
 		params.set("direct", "1");
 		params.set("stream", new URL("hltv", config.server_url).href);
 	}
@@ -149,10 +160,15 @@ function open_live_view() {
 	history.replaceState(history.state, "", live_page_url(true)); // reloading keeps the view open
 	live_status("");
 
-	let frame = document.createElement("iframe");
-	frame.src = live_player_url();
-	frame.allow = "autoplay; fullscreen";
-	document.getElementById("live_view_frame_container").appendChild(frame);
+	live_check_proxy().then(function(hasProxy) {
+		if (!live_view_is_open())
+			return; // closed while checking
+		remove_live_frame();
+		let frame = document.createElement("iframe");
+		frame.src = live_player_url(hasProxy);
+		frame.allow = "autoplay; fullscreen";
+		document.getElementById("live_view_frame_container").appendChild(frame);
+	});
 }
 
 function close_live_view() {
