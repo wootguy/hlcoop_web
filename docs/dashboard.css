@@ -1292,6 +1292,31 @@ h2 {
 	height: 100%;
 	border: 0;
 }
+/* maximized live view: the rest of the dashboard isn't drawn, so it costs nothing */
+body.live_maximized #content > :not(#content-container),
+body.live_maximized #content-container > :not(#map_list_container),
+body.live_maximized #map_list_container > :not(#live_view),
+body.live_maximized #player_profile {
+	display: none !important;
+}
+body.live_maximized #live_view {
+	position: fixed;
+	left: 0;
+	top: 0;
+	right: 0;
+	bottom: 0;
+	z-index: 100;
+	margin: 0;
+	padding: 0 8px 8px 8px;
+	background: #181818;
+	height: auto;
+	min-height: 0;
+}
+body.live_maximized #live_view_header {
+	padding-top: 6px;
+	margin: 0 0 6px 0;
+	font-size: 18px;
+}
 #live_view_status {
 	color: #ccc;
 	padding: 20px;

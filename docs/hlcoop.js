@@ -2656,6 +2656,9 @@ function init_perf_graph() {
 }
 
 function render_perf_graph() {
+	if (document.body.classList.contains("live_maximized"))
+		return; // hidden behind the live view (see live_view.js), and this runs every 10ms
+	
 	if (g_perf_init_needed) {
 		init_perf_graph();
 		g_perf_init_needed = false;

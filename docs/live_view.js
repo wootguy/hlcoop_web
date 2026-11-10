@@ -81,6 +81,20 @@ function set_maps_hidden(hidden) {
 	} catch (e) {}
 }
 
+// fills the window with the player and hides the rest of the dashboard, so the browser doesn't
+// spend time drawing it
+function set_live_view_maximized(maximized) {
+	document.body.classList.toggle("live_maximized", maximized);
+	let button = document.getElementById("maximize_live_button");
+	button.textContent = maximized ? "Restore" : "Maximize";
+	button.title = maximized ? "Show the rest of the dashboard again"
+		: "Fill the window with the player and hide the rest of the dashboard, which also makes the player run faster";
+}
+
+function live_view_is_maximized() {
+	return document.body.classList.contains("live_maximized");
+}
+
 function remove_live_frame() {
 	document.querySelectorAll("#live_view_frame_container iframe").forEach(function(frame) {
 		frame.remove();
@@ -135,10 +149,10 @@ function open_live_view() {
 	frame.src = live_player_url();
 	frame.allow = "autoplay; fullscreen";
 	document.getElementById("live_view_frame_container").appendChild(frame);
-	document.getElementById("live_view_newtab").href = frame.src;
 }
 
 function close_live_view() {
+	set_live_view_maximized(false);
 	remove_live_frame();
 	set_live_view_visible(false);
 	history.replaceState(history.state, "", live_page_url(false));
@@ -152,6 +166,14 @@ ready(function() {
 	document.getElementById("watch_live_button").addEventListener("click", open_live_view);
 	document.getElementById("watch_live_alt_button").addEventListener("click", open_live_view); // shown while maps are hidden
 	document.getElementById("close_live_button").addEventListener("click", close_live_view);
+	document.getElementById("maximize_live_button").addEventListener("click", function() {
+		set_live_view_maximized(!live_view_is_maximized());
+	});
+	document.addEventListener("keydown", function(e) {
+		// only reaches here when the player doesn't have focus
+		if (e.key == "Escape" && live_view_is_maximized())
+			set_live_view_maximized(false);
+	});
 
 	document.getElementById("server_selector").addEventListener("change", function() {
 		if (live_view_is_open() && window.crossOriginIsolated)
