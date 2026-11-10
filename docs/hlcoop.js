@@ -17,6 +17,7 @@ var g_auth_params;
 var g_auth_token;
 var g_map_data = {}; // information about each map (link)
 var g_web_clients = []; // list of steam ids
+var g_web_client_status = {}; // steam id string -> { lastActive: Date.now() timestamp or 0, hltv: watching the stream }
 var g_guest_names = [];
 var g_map_cycle = [];
 var g_chatsounds = new Set();
@@ -124,6 +125,9 @@ const WEBMSG_CHAT_TYPE_GREEN = 256;
 const WEBMSG_CHAT_TYPE_GREY = 257;
 
 
+const WEBCLIENT_FL_HLTV = 1; // watching the HLTV stream in the browser
+const WEBCLIENT_NO_ACTIVITY = 0xFFFFFFFF; // seconds since activity, if none was logged
+const WEB_IDLE_SECONDS = 3*60; // web clients are idle after this long without activity
 const PLAYER_STATUS_ALIVE = 0;
 const PLAYER_STATUS_DEAD = 1;
 const PLAYER_STATUS_SPECTATOR = 2;
@@ -222,6 +226,43 @@ function read_string(view, offset) {
 	return new TextDecoder('utf-8').decode(new Uint8Array(bytes));
 }
 
+// Status column of the web clients table. Watching the stream comes first, then active (recent
+// activity or playing on the server), then idle.
+function set_web_client_status(cell, id, in_game) {
+	cell.classList.remove("web_watch", "web_active", "web_idle");
+	cell.title = "";
+
+	if (!id || id == "0") {
+		cell.textContent = ""; // guests
+		return;
+	}
+
+	let status = g_web_client_status[id];
+	let idleSeconds = status && status.lastActive ? Math.max(0, Math.floor((Date.now() - status.lastActive) / 1000)) : Infinity;
+
+	if (status && status.hltv) {
+		cell.textContent = "WATCH";
+		cell.classList.add("web_watch");
+		cell.title = "Watching the game in the browser";
+	}
+	else if (in_game.has(id) || idleSeconds < WEB_IDLE_SECONDS) {
+		cell.textContent = "ACTIVE";
+		cell.classList.add("web_active");
+		if (in_game.has(id)) {
+			cell.title = "Active now (playing on the server)";
+		} else if (idleSeconds < 60) {
+			cell.title = "Active less than a minute ago";
+		} else {
+			let minutes = Math.floor(idleSeconds / 60);
+			cell.title = "Active " + minutes + " minute" + (minutes != 1 ? "s" : "") + " ago";
+		}
+	}
+	else {
+		cell.textContent = "IDLE";
+		cell.classList.add("web_idle");
+	}
+}
+
 function update_table_state(ptable) {
 	let plist = ptable.querySelector('tbody');
 	
@@ -235,15 +276,18 @@ function update_table_state(ptable) {
 	}
 	
 	if (g_list_web_users || g_wide_mode) {
+		let in_game = new Set(g_player_data.map(p => "" + p.steamid64));
+
 		for (let i = 0; i < plist_web.rows.length; i++) {
 			let row = plist_web.rows[i];
 			let id = row.getAttribute("steamid");
+			set_web_client_status(row.cells[10], id, in_game);
 			if (id != 0 && id in g_player_states) {
-				row.cells[10].textContent = format_age(g_player_states[id].totalPlayTime, true, true, 2);
-				row.cells[11].textContent = format_age(g_player_states[id].recentPlayTime, true, true, 2);
+				row.cells[11].textContent = format_age(g_player_states[id].totalPlayTime, true, true, 2);
+				row.cells[12].textContent = format_age(g_player_states[id].recentPlayTime, true, true, 2);
 			} else {
-				row.cells[10].textContent = "none";
 				row.cells[11].textContent = "none";
+				row.cells[12].textContent = "none";
 			}
 		}
 		
@@ -413,7 +457,7 @@ function refresh_player_table_single(plist, player_data, ip_data) {
 	// allocate all rows that will ever be needed (max of 128 web clients, so use that as the limit)
 	for (let i = plist.rows.length; i < g_max_player_list_rows; i++) {
 		let row = plist.insertRow(plist.rows.length);
-		row.innerHTML = "<tr><td><img class=\"cnflag\"/><span class=\"avatar_container\"><img class=\"avatar\"/></span><div></div><img class=\"rank\"/></td><td></td><td></td><td></td><td></td><td><span class=\"client_text\"></span><span class=\"client_icon_container\"><img class=\"client_icon superhidden\"></img><img class=\"client_os superhidden\"></img><img class=\"client_engine superhidden\"></img><img class=\"client_renderer superhidden\"></img></span></td><td><span class=\"vc_icon_container\"><img class=\"vc_icon\"></span></td><td></td><td></td><td></td><td></td><td></td></tr>";
+		row.innerHTML = "<tr><td><img class=\"cnflag\"/><span class=\"avatar_container\"><img class=\"avatar\"/></span><div></div><img class=\"rank\"/></td><td></td><td></td><td></td><td></td><td><span class=\"client_text\"></span><span class=\"client_icon_container\"><img class=\"client_icon superhidden\"></img><img class=\"client_os superhidden\"></img><img class=\"client_engine superhidden\"></img><img class=\"client_renderer superhidden\"></img></span></td><td><span class=\"vc_icon_container\"><img class=\"vc_icon\"></span></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>";
 	}
 	
 	// remove extra rows
@@ -1287,13 +1331,28 @@ function update_web_client_info() {
 
 function parse_web_clients(view) {
 	let offset = 1; // skip message type byte
-	
+	let now = Date.now();
+
 	g_web_clients = [];
-	while (offset < view.byteLength) {
+	g_web_client_status = {};
+	while (offset + 13 <= view.byteLength) {
 		let steamid64 = view.getBigUint64(offset, true);
 		offset += 8;
-		
+
+		let idleSeconds = view.getUint32(offset, true);
+		offset += 4;
+
+		let flags = view.getUint8(offset);
+		offset += 1;
+
 		g_web_clients.push(steamid64);
+
+		if (steamid64 > 1) {
+			g_web_client_status["" + steamid64] = {
+				lastActive: idleSeconds == WEBCLIENT_NO_ACTIVITY ? 0 : now - idleSeconds*1000,
+				hltv: (flags & WEBCLIENT_FL_HLTV) != 0
+			};
+		}
 	}
 	
 	update_web_client_info();
@@ -3104,6 +3163,7 @@ function change_server() {
 	g_selected_map = "";
 	g_map_data = {};
 	g_web_clients = [];
+	g_web_client_status = {};
 	g_guest_names = [];
 	g_map_cycle = [];
 	g_ip_info = {};

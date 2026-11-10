@@ -1,4 +1,4 @@
-const WEBAPP_VERSION = 4;
+const WEBAPP_VERSION = 5;
 
 var g_bans = {};
 var g_mutes = {};

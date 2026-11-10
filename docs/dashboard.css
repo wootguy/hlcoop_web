@@ -253,10 +253,13 @@
 	width: 88px;
 }
 .player_list td:nth-child(11), .player_list th:nth-child(11) {
-	width: 111px;
+	width: 50px;
 }
 .player_list td:nth-child(12), .player_list th:nth-child(12) {
-	width: 111px;
+	width: 86px;
+}
+.player_list td:nth-child(13), .player_list th:nth-child(13) {
+	width: 86px;
 }
 .player_list th {
 	text-align: left;
@@ -319,11 +322,23 @@
 .player_list .shortidle {
 	color: #ff0;
 }
+.player_list .web_watch {
+	color: #0d0;
+	cursor: help;
+}
+.player_list .web_active {
+	color: #fff;
+	cursor: help;
+}
+.player_list .web_idle {
+	color: #888;
+}
 .player_list td:nth-child(8), .player_list th:nth-child(8),
 .player_list td:nth-child(9), .player_list th:nth-child(9),
 .player_list td:nth-child(10), .player_list th:nth-child(10),
 .player_list td:nth-child(11), .player_list th:nth-child(11),
-.player_list td:nth-child(12), .player_list th:nth-child(12) {
+.player_list td:nth-child(12), .player_list th:nth-child(12),
+.player_list td:nth-child(13), .player_list th:nth-child(13) {
 	display: none;
 }
 .player_list.stat_view td:nth-child(2), .player_list.stat_view th:nth-child(2),
@@ -348,7 +363,8 @@
 	display: none;
 }
 .player_list.web_users td:nth-child(11), .player_list.web_users th:nth-child(11),
-.player_list.web_users td:nth-child(12), .player_list.web_users th:nth-child(12) {
+.player_list.web_users td:nth-child(12), .player_list.web_users th:nth-child(12),
+.player_list.web_users td:nth-child(13), .player_list.web_users th:nth-child(13) {
 	display: table-cell;
 }
 .player_list.web_users_names div {
