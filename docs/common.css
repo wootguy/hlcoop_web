@@ -23,6 +23,17 @@ body {
 #server_link_container {
 	text-align: center;
 }
+#update_notice {
+	text-align: center;
+	margin-top: 8px;
+	color: #44EE44;
+	font-family: monospace;
+	font-size: 14px;
+	cursor: pointer;
+}
+#update_notice:hover {
+	text-decoration: underline;
+}
 .server_link {
 	display: inline-block;
 	margin: 0 10px;

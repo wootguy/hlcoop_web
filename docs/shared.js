@@ -437,6 +437,93 @@ function init_common() {
 			dropdown_menu.classList.add('hidden');
 		}
 	});
+
+	init_update_check();
+}
+
+// Tells the viewer when the site has been updated since the page loaded. Every few minutes this asks
+// the server (HEAD, skipping the browser cache) for the version of this page, its scripts and
+// stylesheets, and the live view's player. If any of them changed, a green notice appears under the
+// header links. GitHub Pages gives every file the deploy time as its ETag and Last-Modified, so any
+// new commit shows the notice, not only ones that change WEBAPP_VERSION. Pages' CDN caches files for
+// up to 10 minutes, so the notice can lag a deploy, but it never shows before the new files are live.
+const UPDATE_CHECK_INTERVAL = 5*60*1000;
+
+function init_update_check() {
+	let urls = [location.href.split('#')[0]];
+	document.querySelectorAll("script[src], link[rel=stylesheet][href]").forEach(function(el) {
+		urls.push(el.src || el.href);
+	});
+	if (document.getElementById("live_view")) {
+		urls.push(new URL("player/bspguy.js", location.href).href);
+		urls.push(new URL("player/bspguy.wasm", location.href).href);
+	}
+	urls = [...new Set(urls)].filter(function(url) {
+		return new URL(url).origin === location.origin;
+	});
+
+	let baseline = {}; // url -> version seen when the page loaded
+	let lastCheck = 0;
+	let found = false;
+
+	async function file_version(url) {
+		try {
+			let res = await fetch(url, { method: 'HEAD', cache: 'no-store' });
+			if (!res.ok) {
+				return undefined;
+			}
+			return res.headers.get('ETag') || res.headers.get('Last-Modified') || res.headers.get('Content-Length') || undefined;
+		} catch (e) {
+			return undefined; // offline, try again next time
+		}
+	}
+
+	async function check() {
+		if (found) {
+			return;
+		}
+		lastCheck = Date.now();
+		let versions = await Promise.all(urls.map(file_version));
+		for (let i = 0; i < urls.length; i++) {
+			let ver = versions[i];
+			if (ver === undefined) {
+				continue;
+			}
+			if (baseline[urls[i]] === undefined) {
+				baseline[urls[i]] = ver;
+			} else if (baseline[urls[i]] !== ver) {
+				console.log("Update available: " + urls[i] + " changed from " + baseline[urls[i]] + " to " + ver);
+				show_update_notice();
+				return;
+			}
+		}
+	}
+
+	function show_update_notice() {
+		found = true;
+		let notice = document.createElement("div");
+		notice.id = "update_notice";
+		notice.textContent = "An update is available. Refresh the page to get it.";
+		notice.title = "Click to refresh";
+		notice.addEventListener('click', function() {
+			location.reload();
+		});
+		let links = document.getElementById("server_link_container");
+		if (links) {
+			links.after(notice);
+		} else {
+			document.body.prepend(notice);
+		}
+	}
+
+	check();
+	setInterval(check, UPDATE_CHECK_INTERVAL);
+	// timers are throttled in background tabs, so also check when the viewer comes back to the tab
+	document.addEventListener('visibilitychange', function() {
+		if (document.visibilityState === 'visible' && Date.now() - lastCheck > 60*1000) {
+			check();
+		}
+	});
 }
 
 function get_punish_desc(ban, omitDate, omitReason) {
