@@ -141,6 +141,31 @@ function live_send_mutes() {
 	live_post({ type: "bspguy_mutes", mutes: mutes });
 }
 
+// Chat translations into the viewer's language, which the player shows in place of the original
+// like apply_translations does. items = [[steamid64, original, translation entry], ...] from
+// g_translations, or all of them when null.
+function live_send_translations(items) {
+	if (!items) {
+		items = [];
+		Object.keys(g_translations).forEach(function(id) {
+			Object.keys(g_translations[id]).forEach(function(original) {
+				items.push([id, original, g_translations[id][original]]);
+			});
+		});
+	}
+	let langName = function(code) {
+		return (typeof g_languages !== "undefined" && g_languages[code]) || code || "";
+	};
+	live_post({ type: "bspguy_translations", items: items.map(function(t) {
+		return [String(t[0]), t[1], t[2].translated, langName(t[2].src_lang), langName(t[2].targ_lang)];
+	}) });
+}
+
+// the Translations chat setting ("auto", "manual" or "disable"). Called by apply_chat_settings.
+function live_send_translation_mode() {
+	live_post({ type: "bspguy_translation_mode", mode: g_settings.translations });
+}
+
 // the text of the web app's popup for a WEBDENY_* reason
 function live_deny_text(reason, errorCode) {
 	let ids = {};
@@ -195,6 +220,8 @@ window.addEventListener("message", function(e) {
 
 	if (e.data.type === "bspguy_ready") {
 		live_send_mutes();
+		live_send_translation_mode();
+		live_send_translations(null);
 	}
 	else if (e.data.type === "bspguy_mute") {
 		// same as handle_mute_toggle: the server toggles the bits and sends the new list

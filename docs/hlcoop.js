@@ -1223,7 +1223,8 @@ function apply_translations(update_existing) {
 
 function parse_translation(view) {
 	let offset = 1;
-	
+	let live_items = [];
+
 	while (offset < view.byteLength) {
 		let steamid64 = view.getBigUint64(offset, true);
 		offset += 8;
@@ -1254,11 +1255,13 @@ function parse_translation(view) {
 			"targ_lang": targ_lang,
 			"translated": translated
 		};
-		
+		live_items.push([steamid64, original, g_translations[steamid64][original]]);
+
 		//console.log("Translation: (" + src_lang + ">" + targ_lang + ") '" + original + "' -> '" + translated + "'");
 	}
-	
+
 	apply_translations(false);
+	live_send_translations(live_items);
 }
 
 function update_web_client_info() {
@@ -2916,6 +2919,7 @@ function apply_chat_settings() {
 	
 	keep_screen_awake();
 	apply_translations(true);
+	live_send_translation_mode();
 	
 	save_settings();
 	setTimeout(scroll_chat_to_bottom, 100);
