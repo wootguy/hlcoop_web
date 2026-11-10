@@ -4,6 +4,7 @@
 		<link rel="shortcut icon" type="image/x-icon" href="icon/favicon.ico">
 		<script type="text/javascript" src="shared.js"></script>
 		<script type="text/javascript" src="hlcoop.js"></script>
+		<script type="text/javascript" src="live_view.js"></script>
 		<script async type="text/javascript" src="app.js"></script>
 		<script>var Module = { print: console.log, printErr: console.error };</script>
 		<link rel="stylesheet" href="dashboard.css">
@@ -43,6 +44,7 @@
 				<div id="player_list_container">
 					<div id="player_list_content">
 						<button id="show_maps_button">Show upcoming maps</button>
+						<button id="watch_live_alt_button" title="Watch the game live in your browser">Watch live</button>
 						<h2 class="list_header_container">
 							<div id="pcount_header" class="list_header selected">Players (<span class="pcount">?</span>)</div>
 							<div id="wcount_header" class="list_header">Web Clients (<span class="wcount">?</span>)</div>
@@ -236,8 +238,21 @@ Red light = Negative ratings. Low priority. Selected only if all other maps are 
 							<option value="opt-my-unrated">Your unrated maps</option>
 							<option value="opt-my-unplayed">Your unplayed maps</option>
 						</select>
+						<button id="watch_live_button" title="Watch the game live in your browser">Watch live</button>
 						<button id="hide_maps_button">Hide maps</button>
 						<input type="checkbox" id="hide_maps_cb" class="hidden"/>
+					</div>
+					<div id="live_view" class="hidden">
+						<h2 id="live_view_header">
+							Live view
+							<span id="live_view_controls">
+								<a id="live_view_newtab" class="server_link" target="_blank" href="" title="Open the player in its own tab">Open in new tab</a>
+								<button id="close_live_button">Close</button>
+							</span>
+						</h2>
+						<div id="live_view_frame_container">
+							<div id="live_view_status" class="hidden"></div>
+						</div>
 					</div>
 					<div id="perf-container" class="authed_only hidden">
 						<h2>Server Performance <span class="tooltip" title="FPS = Average frames per second.

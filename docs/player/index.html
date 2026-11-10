@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>bspguy demo player</title>
+<style>
+	html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; }
+	canvas { display: block; position: absolute; left: 0; top: 0; outline: none; }
+	#status {
+		position: absolute; left: 0; right: 0; top: 45%; text-align: center;
+		font: 16px sans-serif; color: #ccc; white-space: pre-line; pointer-events: none;
+	}
+</style>
+</head>
+<body>
+<canvas id="canvas" tabindex="0" oncontextmenu="event.preventDefault()"></canvas>
+<div id="status">Loading...</div>
+<script>
+	// Options (query string):
+	//   server=host:port  address shown in the Connect dialog
+	//   connect=1         connect to `server` right away instead of showing the Connect dialog. If
+	//                     this page has a "token" cookie (from logging in to the hlcoop_web site),
+	//                     it's sent in place of the stream password.
+	//   direct=1          connect to the game server directly instead of through web/serve.py.
+	//                     Assets then come from https://host/<path> (the fastdl server, which must
+	//                     allow this page's origin with CORS) and the stream from wss://host:port,
+	//                     which needs a WebSocket relay in front of the HLTV port.
+	var params = new URLSearchParams(location.search);
+	var config = {};
+	if (params.get('server'))
+		config.server = params.get('server');
+	if (params.get('connect'))
+		config.connect = params.get('connect');
+	var token = document.cookie.match(/(?:^|; )token=([^;]*)/);
+	if (token && token[1] && token[1] !== 'DELETED')
+		config.token = decodeURIComponent(token[1]);
+	if (params.get('direct') !== '1') {
+		// web/serve.py relays the stream and proxies fastdl downloads, avoiding CORS and TLS problems
+		var ws = (location.protocol === 'https:' ? 'wss' : 'ws') + '://' + location.host;
+		config.streamUrl = ws + '/stream/{host}/{port}';
+		config.assetUrl = location.origin + '/fastdl/{host}/{path}';
+	}
+
+	var statusEl = document.getElementById('status');
+	var canvas = document.getElementById('canvas');
+	canvas.width = window.innerWidth;
+	canvas.height = window.innerHeight;
+
+	var Module = {
+		canvas: canvas,
+		bspguyConfig: config,
+		print: function(text) { console.log(text); },
+		printErr: function(text) { console.warn(text); },
+		setStatus: function(text) { statusEl.textContent = text; },
+		onRuntimeInitialized: function() { statusEl.textContent = ''; canvas.focus(); },
+		onAbort: function(what) { statusEl.textContent = 'The player crashed: ' + what; },
+	};
+
+	// Threads need SharedArrayBuffer, which browsers only allow when the page is served with the
+	// Cross-Origin-Opener-Policy and Cross-Origin-Embedder-Policy headers. serve.py sends them. On
+	// hosts that can't (GitHub Pages), coi-sw.js adds them from a service worker and reloads once.
+	function start() {
+		var script = document.createElement('script');
+		script.src = 'bspguy.js';
+		document.body.appendChild(script);
+	}
+	if (window.crossOriginIsolated) {
+		start();
+	} else if ('serviceWorker' in navigator && window.isSecureContext && !sessionStorage.getItem('coi-reloaded')) {
+		navigator.serviceWorker.register('coi-sw.js').then(function() {
+			return navigator.serviceWorker.ready;
+		}).then(function() {
+			sessionStorage.setItem('coi-reloaded', '1'); // only once, in case the headers don't help
+			location.reload();
+		}).catch(function(e) {
+			statusEl.textContent = 'This page needs cross-origin isolation, and the service worker failed: ' + e;
+		});
+	} else {
+		statusEl.textContent = 'This page must be served with Cross-Origin-Opener-Policy: same-origin and\n'
+			+ 'Cross-Origin-Embedder-Policy: require-corp headers (use web/serve.py).';
+	}
+</script>
+</body>
+</html>

@@ -158,6 +158,13 @@
 #content.compact #show_maps_button {
 	margin-bottom: 20px;
 }
+#watch_live_alt_button {
+	display: none;
+}
+#content.hide_maps #watch_live_alt_button {
+	display: inline-block;
+	margin: 0 auto 5px auto;
+}
 #content.hide_maps #content-container #player_list_container {
 	max-width: 1100px !important;
 }
@@ -1230,4 +1237,46 @@ h2 {
 .mute_opts input {
 	height: 12px;
 	margin-left: 0;
+}
+#map_list_container.live_active #upcoming_maps_header,
+#map_list_container.live_active #upcoming_maps,
+#map_list_container.live_active #filter_maps_container {
+	display: none;
+}
+#live_view {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	min-height: 300px;
+}
+#content.compact #live_view {
+	flex: none;
+	height: 75vh;
+}
+#live_view_header {
+	padding-top: 20px;
+	clear: both;
+}
+#live_view_controls {
+	float: right;
+	font-size: 14px;
+	font-weight: normal;
+}
+#live_view_frame_container {
+	flex: 1;
+	position: relative;
+	background: #000;
+	border: 1px solid #888;
+}
+#live_view_frame_container iframe {
+	position: absolute;
+	left: 0;
+	top: 0;
+	width: 100%;
+	height: 100%;
+	border: 0;
+}
+#live_view_status {
+	color: #ccc;
+	padding: 20px;
 }

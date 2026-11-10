@@ -10,15 +10,18 @@ var data_repo_domain = "https://wootdata.github.io/";
 var g_server_configs = {
 	Public: {
 		server_url: 'wss://w00tguy.ddns.net:3000/',
-		fastdl_url: 'https://w00tguy.ddns.net/'
+		fastdl_url: 'https://w00tguy.ddns.net/',
+		hltv_address: '207.148.12.159:27055' // HLTV stream (hltv.stream_port) for the live view
 	},
 	Stage: {
 		server_url: 'wss://w00tguy.ddns.net:3001/',
-		fastdl_url: 'https://w00tguy.ddns.net/'
+		fastdl_url: 'https://w00tguy.ddns.net/',
+		hltv_address: '207.148.12.159:27055'
 	},
 	Local: {
 		server_url: 'ws://localhost:3000/',
-		fastdl_url: '/'
+		fastdl_url: '/',
+		hltv_address: '127.0.0.1:28015'
 	}
 }
 
