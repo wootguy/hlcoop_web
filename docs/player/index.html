@@ -26,6 +26,8 @@
 	//                     Assets then come from https://host/<path> (the fastdl server, which must
 	//                     allow this page's origin with CORS) and the stream from wss://host:port,
 	//                     which needs a WebSocket relay in front of the HLTV port.
+	//   stream=url        with direct=1: a WebSocket relay for the stream of `server` (only that
+	//                     address), such as wss://host:3000/hltv from the hlcoop_webserver plugin.
 	var params = new URLSearchParams(location.search);
 	var config = {};
 	if (params.get('server'))
@@ -40,6 +42,9 @@
 		var ws = (location.protocol === 'https:' ? 'wss' : 'ws') + '://' + location.host;
 		config.streamUrl = ws + '/stream/{host}/{port}';
 		config.assetUrl = location.origin + '/fastdl/{host}/{path}';
+	}
+	else if (params.get('stream')) {
+		config.streamRelay = params.get('stream');
 	}
 
 	var statusEl = document.getElementById('status');

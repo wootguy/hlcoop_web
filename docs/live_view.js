@@ -9,7 +9,9 @@
 //     have a WebSocket relay or CORS headers.
 //   - GitHub Pages can't send headers, so live-sw.js adds them. It only does that for pages loaded
 //     with ?live=1, so the dashboard reloads once with that parameter the first time the live view
-//     opens. The player then connects to the game server directly (see web/README.md in bspbot).
+//     opens. The player then connects to the game server directly (see web/README.md in bspbot):
+//     files come from fastdl, and the stream through the WebServer plugin's relay at
+//     <server_url>/hltv, since browsers can't open the HLTV port's TCP connection themselves.
 
 var LIVE_URL_PARAM = "live";
 var LIVE_RELOAD_KEY = "live-view-reloaded";
@@ -30,18 +32,20 @@ function live_has_proxy() {
 	return ["localhost", "127.0.0.1", "[::1]"].includes(location.hostname);
 }
 
-function live_server_address() {
+function live_server_config() {
 	let selector = document.getElementById("server_selector");
-	let config = (selector && g_server_configs[selector.value]) || g_server_config;
-	return config.hltv_address;
+	return (selector && g_server_configs[selector.value]) || g_server_config;
 }
 
 function live_player_url() {
+	let config = live_server_config();
 	let params = new URLSearchParams();
-	params.set("server", live_server_address());
+	params.set("server", config.hltv_address);
 	params.set("connect", "1");
-	if (!live_has_proxy())
+	if (!live_has_proxy()) {
 		params.set("direct", "1");
+		params.set("stream", new URL("hltv", config.server_url).href);
+	}
 	return "player/index.html?" + params.toString();
 }
 

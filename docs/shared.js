@@ -11,12 +11,14 @@ var g_server_configs = {
 	Public: {
 		server_url: 'wss://w00tguy.ddns.net:3000/',
 		fastdl_url: 'https://w00tguy.ddns.net/',
-		hltv_address: '207.148.12.159:27055' // HLTV stream (hltv.stream_port) for the live view
+		// HLTV stream (hltv.stream_port) for the live view. The player downloads files from
+		// https://<host>/, so this must be the hostname the fastdl certificate is for.
+		hltv_address: 'w00tguy.ddns.net:27055'
 	},
 	Stage: {
 		server_url: 'wss://w00tguy.ddns.net:3001/',
 		fastdl_url: 'https://w00tguy.ddns.net/',
-		hltv_address: '207.148.12.159:27056'
+		hltv_address: 'w00tguy.ddns.net:27056'
 	},
 	Local: {
 		server_url: 'ws://localhost:3000/',
