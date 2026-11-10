@@ -226,7 +226,7 @@
 	padding-left: 10px;
 }
 .player_list td:nth-child(2), .player_list th:nth-child(2) {
-	width: 50px;
+	width: 60px; /* same as the web clients' Status column (11), so the two tables line up */
 }
 .player_list td:nth-child(3), .player_list th:nth-child(3) {
 	width: 50px;
@@ -253,7 +253,7 @@
 	width: 88px;
 }
 .player_list td:nth-child(11), .player_list th:nth-child(11) {
-	width: 60px;
+	width: 60px; /* same as the players' Status column (2) */
 }
 .player_list td:nth-child(12), .player_list th:nth-child(12) {
 	width: 86px;
