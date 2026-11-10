@@ -260,6 +260,11 @@ function set_web_client_status(cell, id, in_game) {
 	else {
 		cell.textContent = "IDLE";
 		cell.classList.add("web_idle");
+		if (idleSeconds == Infinity) {
+			cell.title = "No activity recorded";
+		} else {
+			cell.title = "Idle for " + format_age(idleSeconds, true, true);
+		}
 	}
 }
 

@@ -253,7 +253,7 @@
 	width: 88px;
 }
 .player_list td:nth-child(11), .player_list th:nth-child(11) {
-	width: 50px;
+	width: 60px;
 }
 .player_list td:nth-child(12), .player_list th:nth-child(12) {
 	width: 86px;
@@ -332,6 +332,7 @@
 }
 .player_list .web_idle {
 	color: #888;
+	cursor: help;
 }
 .player_list td:nth-child(8), .player_list th:nth-child(8),
 .player_list td:nth-child(9), .player_list th:nth-child(9),
