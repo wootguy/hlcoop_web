@@ -1559,6 +1559,8 @@ function finish_logout() {
 	document.querySelectorAll('.chat_message').forEach(element => {
 		element.remove();
 	});
+
+	live_send_mutes();
 }
 
 
@@ -2067,9 +2069,10 @@ function parse_mutes(view) {
 
 		g_mutes[steamid64] = mutebits;
 	}
-	
+
 	refresh_player_table();
 	load_profile_mutes();
+	live_send_mutes();
 }
 
 function parse_backpressure(view) {
@@ -3831,7 +3834,8 @@ function createWebSocket() {
 		}
 		else if (msgType == MESSAGE_TYPE.WEBMSG_NOT_AUTHED) {
 			let errorCode = view.byteLength >= 4 ? view.getUint16(2, true) : 0;
-			action_denied_popup(view.getUint8(1), errorCode);
+			if (!live_chat_denied(view.getUint8(1), errorCode))
+				action_denied_popup(view.getUint8(1), errorCode);
 		}
 		else if (msgType == MESSAGE_TYPE.WEBMSG_LOGOUT) {
 			finish_logout();

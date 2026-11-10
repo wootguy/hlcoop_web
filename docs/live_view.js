@@ -96,6 +96,106 @@ function set_maps_hidden(hidden) {
 	} catch (e) {}
 }
 
+//
+// The player uses this page's connection to the web server for chat and mutes (WebPlatform.cpp in
+// bspbot), so the viewer isn't logged in a second time. Messages are only accepted from the player's
+// frame on this origin.
+//
+
+var g_live_say_time = 0; // when the player last sent chat, so errors go to its chat instead of a popup
+
+function live_frame_window() {
+	let frame = document.querySelector("#live_view_frame_container iframe");
+	return frame ? frame.contentWindow : null;
+}
+
+function live_post(msg) {
+	let win = live_frame_window();
+	if (win)
+		win.postMessage(msg, location.origin);
+}
+
+// called whenever g_mutes or the login changes. null mutes = not logged in, so the player keeps
+// its own mutes.
+function live_send_mutes() {
+	let mutes = null;
+	if (g_steamid > 1) {
+		mutes = Object.keys(g_mutes).map(function(id) {
+			return [id, g_mutes[id]];
+		});
+	}
+	live_post({ type: "bspguy_mutes", mutes: mutes });
+}
+
+// the text of the web app's popup for a WEBDENY_* reason
+function live_deny_text(reason, errorCode) {
+	let ids = {};
+	ids[WEBDENY_NOT_LOGGED_IN_CHAT] = "popup-text-no-chat";
+	ids[WEBDENY_BANNED] = "popup-text-banned";
+	ids[WEBDENY_TOO_NEW] = "popup-text-too-new";
+	ids[WEBDENY_RATE_LIMITED] = "popup-text-rate-limit";
+	ids[WEBDENY_STEAM_ERROR] = "popup-text-steam-error";
+	let el = ids[reason] ? document.getElementById(ids[reason]) : null;
+	if (!el)
+		return "Chat message denied (reason " + reason + ")";
+	if (reason == WEBDENY_STEAM_ERROR)
+		document.getElementById("popup-error-code").textContent = errorCode;
+	return el.textContent.replace(/\s+/g, " ").trim();
+}
+
+// WEBMSG_NOT_AUTHED. Returns true if it was about chat the player just sent, which shows it in
+// the player's chat instead of the popup.
+function live_chat_denied(reason, errorCode) {
+	if (!live_frame_window() || Date.now() - g_live_say_time > 10000)
+		return false;
+	g_live_say_time = 0;
+	live_post({ type: "bspguy_error", text: live_deny_text(reason, errorCode) });
+	return true;
+}
+
+// like send_message, without its input box
+function live_say(text) {
+	text = String(text).trim();
+	if (!text)
+		return;
+	if (g_steamid <= 1) {
+		live_post({ type: "bspguy_error", text: live_deny_text(WEBDENY_NOT_LOGGED_IN_CHAT, 0) });
+		return;
+	}
+	if (!g_socket || g_socket.readyState != WebSocket.OPEN) {
+		live_post({ type: "bspguy_error", text: "Failed to send chat message. Not connected." });
+		return;
+	}
+	try {
+		g_message_id = (g_message_id + 1) % 65536;
+		g_socket.send("say;" + g_message_id + ";" + text);
+		g_live_say_time = Date.now();
+	} catch (e) {
+		live_post({ type: "bspguy_error", text: "Failed to send. " + e });
+	}
+}
+
+window.addEventListener("message", function(e) {
+	if (e.origin !== location.origin || !e.data || e.source !== live_frame_window())
+		return;
+
+	if (e.data.type === "bspguy_ready") {
+		live_send_mutes();
+	}
+	else if (e.data.type === "bspguy_mute") {
+		// same as handle_mute_toggle: the server toggles the bits and sends the new list
+		let id = String(e.data.id);
+		let bits = (e.data.bits | 0) & (FL_MUTE_VOICE | FL_MUTE_TEXT | FL_MUTE_SPRAY | FL_MUTE_MODEL);
+		if (/^\d+$/.test(id) && bits && g_steamid > 1 && g_socket && g_socket.readyState == WebSocket.OPEN)
+			g_socket.send("mute;" + id + ";" + bits);
+		else
+			live_send_mutes(); // undo the player's change
+	}
+	else if (e.data.type === "bspguy_say") {
+		live_say(e.data.text);
+	}
+});
+
 // fills the window with the player and hides the rest of the dashboard, so the browser doesn't
 // spend time drawing it
 function set_live_view_maximized(maximized) {
