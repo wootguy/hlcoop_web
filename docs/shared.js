@@ -16,7 +16,7 @@ var g_server_configs = {
 	Stage: {
 		server_url: 'wss://w00tguy.ddns.net:3001/',
 		fastdl_url: 'https://w00tguy.ddns.net/',
-		hltv_address: '207.148.12.159:27055'
+		hltv_address: '207.148.12.159:27056'
 	},
 	Local: {
 		server_url: 'ws://localhost:3000/',
