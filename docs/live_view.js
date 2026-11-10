@@ -48,11 +48,25 @@ function live_server_config() {
 	return (selector && g_server_configs[selector.value]) || g_server_config;
 }
 
+// The admin's "Watch live (password)" buttons open the player without connect=1, so it shows its
+// Connect dialog (with the server filled in) to enter the stream password instead of using the login.
+var g_live_password_mode = false;
+var LIVE_ADMIN_ID = 76561197970806204n; // same id hlcoop.js checks in parse_auth
+
+// shows the admin-only buttons when logged in as the admin. Called by parse_auth and finish_logout.
+function live_update_admin_buttons() {
+	let admin = g_steamid == LIVE_ADMIN_ID;
+	document.querySelectorAll(".live_admin_only").forEach(function(el) {
+		el.classList.toggle("hidden", !admin);
+	});
+}
+
 function live_player_url(hasProxy) {
 	let config = live_server_config();
 	let params = new URLSearchParams();
 	params.set("server", config.hltv_address);
-	params.set("connect", "1");
+	if (!g_live_password_mode)
+		params.set("connect", "1");
 	if (!hasProxy) {
 		params.set("direct", "1");
 		params.set("stream", new URL("hltv", config.server_url).href);
@@ -283,8 +297,13 @@ function close_live_view() {
 }
 
 ready(function() {
-	document.getElementById("watch_live_button").addEventListener("click", open_live_view);
-	document.getElementById("watch_live_alt_button").addEventListener("click", open_live_view); // shown while maps are hidden
+	// the alt buttons are shown while maps are hidden
+	["watch_live_button", "watch_live_alt_button", "watch_live_password_button", "watch_live_password_alt_button"].forEach(function(id) {
+		document.getElementById(id).addEventListener("click", function() {
+			g_live_password_mode = id.indexOf("password") != -1;
+			open_live_view();
+		});
+	});
 	document.getElementById("close_live_button").addEventListener("click", close_live_view);
 	document.getElementById("maximize_live_button").addEventListener("click", function() {
 		set_live_view_maximized(!live_view_is_maximized());

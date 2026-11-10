@@ -158,10 +158,10 @@
 #content.compact #show_maps_button {
 	margin-bottom: 20px;
 }
-#watch_live_alt_button {
+#watch_live_alt_button, #watch_live_password_alt_button {
 	display: none;
 }
-#content.hide_maps #watch_live_alt_button {
+#content.hide_maps #watch_live_alt_button, #content.hide_maps #watch_live_password_alt_button {
 	display: inline-block;
 	margin: 0 auto 5px auto;
 }

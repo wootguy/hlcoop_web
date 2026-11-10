@@ -1501,6 +1501,8 @@ function parse_auth(view) {
 			init_perf_graph();
 		}
 	}
+
+	live_update_admin_buttons();
 }
 
 function parse_rating(view) {
@@ -1561,6 +1563,7 @@ function finish_logout() {
 	});
 
 	live_send_mutes();
+	live_update_admin_buttons();
 }
 
 
