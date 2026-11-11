@@ -47,6 +47,42 @@
 		config.streamRelay = params.get('stream');
 	}
 
+	// Alt slows movement, so keep Alt+key presses (Alt+S, Alt+D, Alt+Left...) away from the browser's
+	// menus and shortcuts, and stop a lone Alt press from focusing the menu bar. The player still sees
+	// the keys. AltGr also sets ctrlKey on Windows, and is left alone so it can still type characters.
+	window.addEventListener('keydown', function(e) {
+		if (e.altKey && !e.ctrlKey && !e.metaKey) e.preventDefault();
+	}, true);
+	window.addEventListener('keyup', function(e) {
+		if (e.key === 'Alt') e.preventDefault();
+	});
+
+	// Dragging the camera with the right mouse button can end outside the canvas, and releasing it there
+	// would open the browser's context menu. The website's live view shows the player in a same-origin
+	// iframe, so the drag can also end over the outer page.
+	// A context menu opened by the mouse is only allowed in a window that saw the right button pressed
+	// over something other than the canvas. A drag that started on the canvas, here or in the iframe,
+	// never presses the button in the outer page. This doesn't depend on when the browser sends the event
+	// (Firefox on Windows sends it well after the release). Menus opened from the keyboard are left alone.
+	function blockDragContextMenu(win) {
+		var allowNext = false;
+		win.addEventListener('mousedown', function(e) {
+			if (e.button === 2)
+				allowNext = !(e.target && e.target.id === 'canvas');
+		}, true);
+		win.addEventListener('contextmenu', function(e) {
+			var fromMouse = e.button === 2 && !(e.mozInputSource === 6); // 6 = MOZ_SOURCE_KEYBOARD
+			if (fromMouse && !allowNext)
+				e.preventDefault();
+			allowNext = false;
+		}, true);
+	}
+	blockDragContextMenu(window);
+	try {
+		if (window.parent !== window)
+			blockDragContextMenu(window.parent);
+	} catch (e) {} // embedded by another site
+
 	var statusEl = document.getElementById('status');
 	var canvas = document.getElementById('canvas');
 	canvas.width = window.innerWidth;
