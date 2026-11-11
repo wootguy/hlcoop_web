@@ -90,8 +90,11 @@
 	display: none;
 	margin-top: 0px;
 }
-#content.wide #player_list2, #content.wide .ptable_header {
+#content.wide .ptable_header {
 	display: block;
+}
+#content.wide #player_list2 {
+	display: table;
 }
 
 #content.compact #player_list_container {
@@ -367,6 +370,37 @@
 .player_list.web_users td:nth-child(12), .player_list.web_users th:nth-child(12),
 .player_list.web_users td:nth-child(13), .player_list.web_users th:nth-child(13) {
 	display: table-cell;
+}
+/* Wide mode stacks the players and web clients tables in a 450px column. With the automatic layout,
+   the players table's columns shrank to fit it and the web clients' columns stretched to fill it, so
+   Name and Status didn't line up. Fixed layout keeps the set widths in both tables, and the last
+   visible column of each takes whatever space is left. */
+#content.wide .player_list {
+	display: table;
+	table-layout: fixed;
+}
+#content.wide .player_list td:first-child, #content.wide .player_list th:first-child {
+	width: 185px;
+	overflow: hidden;
+	white-space: nowrap;
+}
+#content.wide .player_list td:nth-child(3), #content.wide .player_list th:nth-child(3),
+#content.wide .player_list td:nth-child(4), #content.wide .player_list th:nth-child(4) {
+	width: 45px;
+}
+#content.wide .player_list td:nth-child(5), #content.wide .player_list th:nth-child(5) {
+	width: 36px;
+}
+#content.wide .player_list td:nth-child(7), #content.wide .player_list th:nth-child(7),
+#content.wide .player_list.web_users td:nth-child(13), #content.wide .player_list.web_users th:nth-child(13) {
+	width: auto;
+}
+/* flag, avatar and rank icon take 70px of the name column */
+#content.wide .player_list div {
+	max-width: 140px;
+}
+#content.wide:not(.noflags) .player_list div {
+	max-width: 115px;
 }
 .player_list.web_users_names div {
 	color: #99FF99;
