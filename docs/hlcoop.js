@@ -226,26 +226,67 @@ function read_string(view, offset) {
 	return new TextDecoder('utf-8').decode(new Uint8Array(bytes));
 }
 
-// Status column of the web clients table. Watching the stream comes first, then active (recent
-// activity or playing on the server), then idle.
+const WEB_RANK_WATCH = 0;
+const WEB_RANK_ACTIVE = 1;
+const WEB_RANK_IDLE = 2;
+const WEB_RANK_GUEST = 3;
+
+function get_web_client_idle_seconds(id) {
+	let status = g_web_client_status[id];
+	return status && status.lastActive ? Math.max(0, Math.floor((Date.now() - status.lastActive) / 1000)) : Infinity;
+}
+
+// The web clients table is sorted by this: watching the stream, then active (recent activity or
+// playing on the server), then idle, then guests.
+function get_web_client_rank(id, in_game) {
+	if (!id || id == "0") {
+		return WEB_RANK_GUEST;
+	}
+	let status = g_web_client_status[id];
+	if (status && status.hltv) {
+		return WEB_RANK_WATCH;
+	}
+	if (in_game.has(id) || get_web_client_idle_seconds(id) < WEB_IDLE_SECONDS) {
+		return WEB_RANK_ACTIVE;
+	}
+	return WEB_RANK_IDLE;
+}
+
+// sorts by status, then name. Guests keep their order at the end.
+function sort_web_player_data() {
+	let in_game = new Set(g_player_data.map(p => "" + p.steamid64));
+	let ranks = new Map(g_web_player_data.map(d => [d, get_web_client_rank("" + d.steamid64, in_game)]));
+	g_web_player_data.sort((a, b) => {
+		let ra = ranks.get(a), rb = ranks.get(b);
+		if (ra != rb) {
+			return ra - rb;
+		}
+		if (ra == WEB_RANK_GUEST) {
+			return 0;
+		}
+		return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
+	});
+}
+
+// Status column of the web clients table
 function set_web_client_status(cell, id, in_game) {
 	cell.classList.remove("web_watch", "web_active", "web_idle");
 	cell.title = "";
 
-	if (!id || id == "0") {
-		cell.textContent = ""; // guests
+	let rank = get_web_client_rank(id, in_game);
+	if (rank == WEB_RANK_GUEST) {
+		cell.textContent = "";
 		return;
 	}
 
-	let status = g_web_client_status[id];
-	let idleSeconds = status && status.lastActive ? Math.max(0, Math.floor((Date.now() - status.lastActive) / 1000)) : Infinity;
+	let idleSeconds = get_web_client_idle_seconds(id);
 
-	if (status && status.hltv) {
+	if (rank == WEB_RANK_WATCH) {
 		cell.textContent = "WATCH";
 		cell.classList.add("web_watch");
 		cell.title = "Watching the game in the browser";
 	}
-	else if (in_game.has(id) || idleSeconds < WEB_IDLE_SECONDS) {
+	else if (rank == WEB_RANK_ACTIVE) {
 		cell.textContent = "ACTIVE";
 		cell.classList.add("web_active");
 		if (in_game.has(id)) {
@@ -727,7 +768,10 @@ function refresh_player_table() {
 	let oldRowCount = plist.rows.length;
 	
 	let shouldScrollPage = is_page_scrolled_to_bottom();
-	
+
+	// statuses change with time and with the player list, so sort every refresh
+	sort_web_player_data();
+
 	if (g_wide_mode) {
 		let ptable_web = document.getElementById('player_list2');
 		let plist_web = ptable_web.querySelector('tbody');
