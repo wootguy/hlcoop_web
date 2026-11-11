@@ -161,13 +161,6 @@
 #content.compact #show_maps_button {
 	margin-bottom: 20px;
 }
-#watch_live_alt_button, #watch_live_password_alt_button {
-	display: none;
-}
-#content.hide_maps #watch_live_alt_button, #content.hide_maps #watch_live_password_alt_button {
-	display: inline-block;
-	margin: 0 auto 5px auto;
-}
 #content.hide_maps #content-container #player_list_container {
 	max-width: 1100px !important;
 }
@@ -650,6 +643,81 @@ h2 {
 }
 .like_button {
 	right: 0;
+}
+
+/* opens the live view. Centered between the favorite button (top edge 50px from the bottom) and the
+   top of the map image, with the admin's password version to its right. Hidden until the map is hovered. */
+.watch_live_button {
+	position: absolute;
+	bottom: 65px; /* 50 + (140 image - 50) / 2 - 60 / 2 */
+	left: 50%;
+	transform: translate(-50%, 0);
+	width: 80px;
+	height: 60px;
+	border-radius: 12px;
+	background: rgba(0, 0, 0, 0.6);
+	cursor: pointer;
+	opacity: 0.0; /* shown on hover, like the rating buttons */
+	z-index: 2;
+}
+.map_container:hover .watch_live_button {
+	opacity: 0.8;
+}
+.map_container:hover .watch_live_button:hover {
+	opacity: 1.0;
+	background: rgba(0, 0, 0, 0.85);
+}
+.watch_live_button svg {
+	width: 56px;
+	height: 56px;
+	margin-top: 2px;
+	fill: white;
+}
+/* half size, because two large buttons don't fit beside each other with the first one centered */
+/* shown while the live view is open, when clicking closes it */
+.watch_live_button .live_close_cross {
+	display: none;
+	fill: none;
+	stroke: #e22;
+	stroke-width: 2.5;
+	stroke-linecap: round;
+}
+.watch_live_button.live_open .live_close_cross {
+	display: inline;
+}
+#watch_live_password_button {
+	transform: translate(46px, 0);
+	bottom: 80px;
+	width: 40px;
+	height: 30px;
+	border-radius: 6px;
+}
+#watch_live_password_button svg {
+	width: 28px;
+	height: 28px;
+	margin-top: 1px;
+}
+#content.wide .watch_live_button, #content.hide_maps .watch_live_button {
+	bottom: 63px; /* 136px image */
+}
+#content.wide #watch_live_password_button, #content.hide_maps #watch_live_password_button {
+	bottom: 78px;
+}
+/* the 34px gap above the rating buttons is too small for the large icon */
+#content.compact .watch_live_button, #content.hide_maps.compact .watch_live_button {
+	bottom: 52px;
+	width: 40px;
+	height: 30px;
+	border-radius: 6px;
+}
+#content.compact .watch_live_button svg {
+	width: 28px;
+	height: 28px;
+	margin-top: 1px;
+}
+#content.compact #watch_live_password_button, #content.hide_maps.compact #watch_live_password_button {
+	transform: translate(26px, 0);
+	bottom: 52px;
 }
 .fav_button {
 	left: 50%;
@@ -1307,19 +1375,12 @@ h2 {
 	display: flex;
 	flex-direction: column;
 	min-height: 300px;
+	margin-top: 20px; /* the space the old header took */
+	clear: both;
 }
 #content.compact #live_view {
 	flex: none;
 	height: 75vh;
-}
-#live_view_header {
-	padding-top: 20px;
-	clear: both;
-}
-#live_view_controls {
-	float: right;
-	font-size: 14px;
-	font-weight: normal;
 }
 #live_view_frame_container {
 	flex: 1;
@@ -1350,15 +1411,13 @@ body.live_maximized #live_view {
 	bottom: 0;
 	z-index: 100;
 	margin: 0;
-	padding: 0 8px 8px 8px;
+	padding: 0;
 	background: #181818;
 	height: auto;
 	min-height: 0;
 }
-body.live_maximized #live_view_header {
-	padding-top: 6px;
-	margin: 0 0 6px 0;
-	font-size: 18px;
+body.live_maximized #live_view_frame_container {
+	border: none;
 }
 #live_view_status {
 	color: #ccc;

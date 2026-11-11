@@ -48,7 +48,7 @@ function live_server_config() {
 	return (selector && g_server_configs[selector.value]) || g_server_config;
 }
 
-// The admin's "Watch live (password)" buttons open the player without connect=1, so it shows its
+// The admin's password camera button opens the player without connect=1, so it shows its
 // Connect dialog (with the server filled in) to enter the stream password instead of using the login.
 var g_live_password_mode = false;
 var LIVE_ADMIN_ID = 76561197970806204n; // same id hlcoop.js checks in parse_auth
@@ -96,6 +96,14 @@ function live_view_is_open() {
 function set_live_view_visible(visible) {
 	document.getElementById("map_list_container").classList.toggle("live_active", visible);
 	document.getElementById("live_view").classList.toggle("hidden", !visible);
+
+	// the camera icons on the current map close the view while it's open, and show a red cross
+	document.querySelectorAll(".watch_live_button").forEach(function(el) {
+		el.classList.toggle("live_open", visible);
+		if (!el.dataset.openTitle)
+			el.dataset.openTitle = el.title;
+		el.title = visible ? "Close the live view" : el.dataset.openTitle;
+	});
 }
 
 // hlcoop.js's setup() may still be running (it's async), so this sets the state the same way its
@@ -219,6 +227,7 @@ window.addEventListener("message", function(e) {
 		return;
 
 	if (e.data.type === "bspguy_ready") {
+		live_post({ type: "bspguy_maximized", maximized: live_view_is_maximized() });
 		live_send_mutes();
 		live_send_translation_mode();
 		live_send_translations(null);
@@ -235,16 +244,16 @@ window.addEventListener("message", function(e) {
 	else if (e.data.type === "bspguy_say") {
 		live_say(e.data.text);
 	}
+	else if (e.data.type === "bspguy_maximize") {
+		set_live_view_maximized(!!e.data.maximized);
+	}
 });
 
-// fills the window with the player and hides the rest of the dashboard, so the browser doesn't
-// spend time drawing it
+// fills the page with the player and hides the rest of the dashboard, so the browser doesn't spend
+// time drawing it. The player's toolbar has the button for it (bspguy_maximize).
 function set_live_view_maximized(maximized) {
 	document.body.classList.toggle("live_maximized", maximized);
-	let button = document.getElementById("maximize_live_button");
-	button.textContent = maximized ? "Restore" : "Maximize";
-	button.title = maximized ? "Show the rest of the dashboard again"
-		: "Fill the window with the player and hide the rest of the dashboard, which also makes the player run faster";
+	live_post({ type: "bspguy_maximized", maximized: maximized });
 }
 
 function live_view_is_maximized() {
@@ -324,16 +333,18 @@ function close_live_view() {
 }
 
 ready(function() {
-	// the alt buttons are shown while maps are hidden
-	["watch_live_button", "watch_live_alt_button", "watch_live_password_button", "watch_live_password_alt_button"].forEach(function(id) {
-		document.getElementById(id).addEventListener("click", function() {
+	// camera icons on the current map's image. They open the live view, or close it if it's open.
+	["watch_live_button", "watch_live_password_button"].forEach(function(id) {
+		document.getElementById(id).addEventListener("click", function(e) {
+			e.preventDefault(); // the map image is a link to the map's page
+			e.stopPropagation();
+			if (live_view_is_open()) {
+				close_live_view();
+				return;
+			}
 			g_live_password_mode = id.indexOf("password") != -1;
 			open_live_view();
 		});
-	});
-	document.getElementById("close_live_button").addEventListener("click", close_live_view);
-	document.getElementById("maximize_live_button").addEventListener("click", function() {
-		set_live_view_maximized(!live_view_is_maximized());
 	});
 	document.addEventListener("keydown", function(e) {
 		// only reaches here when the player doesn't have focus

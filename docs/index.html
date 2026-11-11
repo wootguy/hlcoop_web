@@ -44,8 +44,6 @@
 				<div id="player_list_container">
 					<div id="player_list_content">
 						<button id="show_maps_button">Show upcoming maps</button>
-						<button id="watch_live_alt_button" title="Watch the game live in your browser">Watch live</button>
-						<button id="watch_live_password_alt_button" class="live_admin_only hidden" title="Watch live using the stream password instead of your login">Watch live (password)</button>
 						<h2 class="list_header_container">
 							<div id="pcount_header" class="list_header selected">Players (<span class="pcount">?</span>)</div>
 							<div id="wcount_header" class="list_header">Web Clients (<span class="wcount">?</span>)</div>
@@ -187,6 +185,8 @@ Manual = Click to translate.">Translations</label>
 								<img class="like_button" src="icon/thumbs_up.png"/>
 								<img class="fav_button" src="icon/favorite.png"/>
 								<img class="dislike_button" src="icon/thumbs_down.png"/>
+								<span id="watch_live_button" class="watch_live_button" title="Watch the game live in your browser"><svg viewBox="0 0 24 24"><rect x="1" y="6" width="15" height="12" rx="2"/><path d="M17 10.5l6-3.5v10l-6-3.5z"/><path class="live_close_cross" d="M4 3l16 18M20 3L4 21"/></svg></span>
+								<span id="watch_live_password_button" class="watch_live_button live_admin_only hidden" title="Watch live using the stream password instead of your login"><svg viewBox="0 0 24 24"><rect x="1" y="6" width="15" height="12" rx="2"/><path d="M17 10.5l6-3.5v10l-6-3.5z"/><path class="live_close_cross" d="M4 3l16 18M20 3L4 21"/></svg></span>
 								<div id="map_timer"></div>
 							</a>
 						</div>
@@ -240,19 +240,10 @@ Red light = Negative ratings. Low priority. Selected only if all other maps are 
 							<option value="opt-my-unrated">Your unrated maps</option>
 							<option value="opt-my-unplayed">Your unplayed maps</option>
 						</select>
-						<button id="watch_live_button" title="Watch the game live in your browser">Watch live</button>
-						<button id="watch_live_password_button" class="live_admin_only hidden" title="Watch live using the stream password instead of your login">Watch live (password)</button>
 						<button id="hide_maps_button">Hide maps</button>
 						<input type="checkbox" id="hide_maps_cb" class="hidden"/>
 					</div>
 					<div id="live_view" class="hidden">
-						<h2 id="live_view_header">
-							Live view
-							<span id="live_view_controls">
-								<button id="maximize_live_button" title="Fill the window with the player and hide the rest of the dashboard, which also makes the player run faster">Maximize</button>
-								<button id="close_live_button">Close</button>
-							</span>
-						</h2>
 						<div id="live_view_frame_container">
 							<div id="live_view_status" class="hidden"></div>
 						</div>
