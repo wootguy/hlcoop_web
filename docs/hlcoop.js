@@ -17,7 +17,9 @@ var g_auth_params;
 var g_auth_token;
 var g_map_data = {}; // information about each map (link)
 var g_web_clients = []; // list of steam ids
-var g_web_client_status = {}; // steam id string -> { lastActive: Date.now() timestamp or 0, hltv: watching the stream }
+// steam id string -> { lastActive: Date.now() timestamp or 0, hltv: watching the stream,
+// hltvLoading: can't spectate properly yet, hltvBackground: still loading other files }
+var g_web_client_status = {};
 var g_guest_names = [];
 var g_map_cycle = [];
 var g_chatsounds = new Set();
@@ -126,6 +128,8 @@ const WEBMSG_CHAT_TYPE_GREY = 257;
 
 
 const WEBCLIENT_FL_HLTV = 1; // watching the HLTV stream in the browser
+const WEBCLIENT_FL_HLTV_LOADING = 2; // with WEBCLIENT_FL_HLTV: missing the map or player model, so it can't spectate properly yet
+const WEBCLIENT_FL_HLTV_BACKGROUND = 4; // with WEBCLIENT_FL_HLTV: can spectate, but still loading other files
 const WEBCLIENT_NO_ACTIVITY = 0xFFFFFFFF; // seconds since activity, if none was logged
 const WEB_IDLE_SECONDS = 3*60; // web clients are idle after this long without activity
 const PLAYER_STATUS_ALIVE = 0;
@@ -227,24 +231,25 @@ function read_string(view, offset) {
 }
 
 const WEB_RANK_WATCH = 0;
-const WEB_RANK_ACTIVE = 1;
-const WEB_RANK_IDLE = 2;
-const WEB_RANK_GUEST = 3;
+const WEB_RANK_LOAD = 1;
+const WEB_RANK_ACTIVE = 2;
+const WEB_RANK_IDLE = 3;
+const WEB_RANK_GUEST = 4;
 
 function get_web_client_idle_seconds(id) {
 	let status = g_web_client_status[id];
 	return status && status.lastActive ? Math.max(0, Math.floor((Date.now() - status.lastActive) / 1000)) : Infinity;
 }
 
-// The web clients table is sorted by this: watching the stream, then active (recent activity or
-// playing on the server), then idle, then guests.
+// The web clients table is sorted by this: watching the stream, then loading the stream, then active
+// (recent activity or playing on the server), then idle, then guests.
 function get_web_client_rank(id, in_game) {
 	if (!id || id == "0") {
 		return WEB_RANK_GUEST;
 	}
 	let status = g_web_client_status[id];
 	if (status && status.hltv) {
-		return WEB_RANK_WATCH;
+		return status.hltvLoading ? WEB_RANK_LOAD : WEB_RANK_WATCH;
 	}
 	if (in_game.has(id) || get_web_client_idle_seconds(id) < WEB_IDLE_SECONDS) {
 		return WEB_RANK_ACTIVE;
@@ -270,7 +275,7 @@ function sort_web_player_data() {
 
 // Status column of the web clients table
 function set_web_client_status(cell, id, in_game) {
-	cell.classList.remove("web_watch", "web_active", "web_idle");
+	cell.classList.remove("web_watch", "web_watch_loading", "web_load", "web_active", "web_idle");
 	cell.title = "";
 
 	let rank = get_web_client_rank(id, in_game);
@@ -283,8 +288,18 @@ function set_web_client_status(cell, id, in_game) {
 
 	if (rank == WEB_RANK_WATCH) {
 		cell.textContent = "WATCH";
-		cell.classList.add("web_watch");
-		cell.title = "Watching the game in the browser";
+		if (g_web_client_status[id].hltvBackground) {
+			cell.classList.add("web_watch_loading");
+			cell.title = "Watching the game in the browser (still loading some models, sounds or textures)";
+		} else {
+			cell.classList.add("web_watch");
+			cell.title = "Watching the game in the browser";
+		}
+	}
+	else if (rank == WEB_RANK_LOAD) {
+		cell.textContent = "LOAD";
+		cell.classList.add("web_load");
+		cell.title = "Opened the live view, but it's still loading the map";
 	}
 	else if (rank == WEB_RANK_ACTIVE) {
 		cell.textContent = "ACTIVE";
@@ -1402,7 +1417,9 @@ function parse_web_clients(view) {
 		if (steamid64 > 1) {
 			g_web_client_status["" + steamid64] = {
 				lastActive: idleSeconds == WEBCLIENT_NO_ACTIVITY ? 0 : now - idleSeconds*1000,
-				hltv: (flags & WEBCLIENT_FL_HLTV) != 0
+				hltv: (flags & WEBCLIENT_FL_HLTV) != 0,
+				hltvLoading: (flags & WEBCLIENT_FL_HLTV_LOADING) != 0,
+				hltvBackground: (flags & WEBCLIENT_FL_HLTV_BACKGROUND) != 0
 			};
 		}
 	}

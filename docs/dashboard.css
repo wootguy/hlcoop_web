@@ -329,6 +329,14 @@
 	color: #0d0;
 	cursor: help;
 }
+.player_list .web_watch_loading {
+	color: #ff0;
+	cursor: help;
+}
+.player_list .web_load {
+	color: #fff;
+	cursor: help;
+}
 .player_list .web_active {
 	color: #fff;
 	cursor: help;
