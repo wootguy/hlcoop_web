@@ -61,13 +61,21 @@
 #content.wide .list_header_container {
 	display: none;
 }
+/* The tables are 450px and the column grows by the width of the table container's scrollbar, if
+   it has one. Classic scrollbars (Chrome/Edge on Windows) took 15px from inside a 450px column, the
+   fixed-layout players table couldn't shrink to fit, and a horizontal scrollbar appeared too. */
 #content.wide #player_list_container > #player_list_content {
-	width: 450px;
+	width: auto;
+	min-width: 450px;
 }
 #content.wide #player_table_container {
 	height: 100%;
 	max-height: none;
 	background: none;
+	scrollbar-gutter: stable;
+}
+#content.wide #player_table_container > .player_list {
+	width: 450px;
 }
 #content.wide #player_list_container > #chat_content {
 	padding-right: 10px;
