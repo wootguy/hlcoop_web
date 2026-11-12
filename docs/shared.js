@@ -452,7 +452,7 @@ function init_common() {
 // W/"6af53d16-4905" from one and W/"6af53d17-4905" from the next (the ETag is the modified time and
 // the size, in hex). Times that close count as the same version.
 const UPDATE_CHECK_INTERVAL = 5*60*1000;
-const UPDATE_TIME_TOLERANCE = 10; // seconds
+const UPDATE_TIME_TOLERANCE = 30; // seconds
 
 function init_update_check() {
 	let urls = [location.href.split('#')[0]];
