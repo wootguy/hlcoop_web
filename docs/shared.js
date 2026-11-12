@@ -445,7 +445,7 @@ function init_common() {
 // the server (HEAD, skipping the browser cache) for the version of this page, its scripts and
 // stylesheets, and the live view's player. If any of them changed, a green notice appears under the
 // header links. GitHub Pages gives every file the deploy time as its ETag and Last-Modified, so any
-// new commit shows the notice, not only ones that change WEBAPP_VERSION. Pages' CDN caches files for
+// new commit shows the notice (the dashboard puts it in the top-left corner instead, outside the phone layout), not only ones that change WEBAPP_VERSION. Pages' CDN caches files for
 // up to 10 minutes, so the notice can lag a deploy, but it never shows before the new files are live.
 const UPDATE_CHECK_INTERVAL = 5*60*1000;
 
@@ -503,7 +503,7 @@ function init_update_check() {
 		found = true;
 		let notice = document.createElement("div");
 		notice.id = "update_notice";
-		notice.textContent = "An update is available. Refresh the page to get it.";
+		notice.textContent = "Update available. Click to refresh.";
 		notice.title = "Click to refresh";
 		notice.addEventListener('click', function() {
 			location.reload();
