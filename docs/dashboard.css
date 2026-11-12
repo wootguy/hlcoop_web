@@ -1136,6 +1136,9 @@ h2 {
 .superhidden {
 	display: none;
 }
+.chat_message.muted_chat {
+	display: none;
+}
 .tooltip {
 	font-size: 12px;
 	vertical-align: top;

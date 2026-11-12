@@ -898,6 +898,13 @@ function add_message(steamid64, ipStr, name, msg, time, msgType) {
 	
 	let chat_container = document.createElement('div');
 	chat_container.classList.add("chat_message");
+
+	// the server only filters muted chat that it sends live. History is sent again on every
+	// (re)connect, maybe before the mute list arrives, so mark player chat to hide it here too.
+	if (steamid64 > 1 && msg.startsWith(";name;: ")) {
+		chat_container.setAttribute("data-chat-steamid", steamid64.toString());
+		chat_container.classList.toggle("muted_chat", is_muted(steamid64, FL_MUTE_TEXT));
+	}
 	
 	let chat_timestamp = document.createElement('div');
 	chat_timestamp.classList.add("chat_timestamp");
@@ -2145,7 +2152,16 @@ function parse_voice(view) {
 	}
 }
 
-function parse_mutes(view) {	
+// hide chat from text-muted players that's already in the chat box
+function apply_chat_mutes() {
+	let msgs = document.querySelectorAll("#chat_box_messages .chat_message[data-chat-steamid]");
+	for (let i = 0; i < msgs.length; i++) {
+		let id = msgs[i].getAttribute("data-chat-steamid");
+		msgs[i].classList.toggle("muted_chat", is_muted(id, FL_MUTE_TEXT));
+	}
+}
+
+function parse_mutes(view) {
 	let offset = 1; // skip message type byte
 	
 	g_mutes = {};
@@ -2160,6 +2176,7 @@ function parse_mutes(view) {
 		g_mutes[steamid64] = mutebits;
 	}
 
+	apply_chat_mutes();
 	refresh_player_table();
 	load_profile_mutes();
 	live_send_mutes();
