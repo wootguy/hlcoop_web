@@ -249,6 +249,12 @@ Red light = Negative ratings. Low priority. Selected only if all other maps are 
 						</div>
 					</div>
 					<div id="perf-container" class="authed_only hidden">
+						<div id="perf-header">
+						<div id="perf-ups-control">
+							<button id="perf_ups_down" title="Fewer graph updates per second">&lt;</button>
+							<span id="perf_ups_text" title="60 graph updates per second">60 UPS</span>
+							<button id="perf_ups_up" title="More graph updates per second">&gt;</button>
+						</div>
 						<h2>Server Performance <span class="tooltip" title="FPS = Average frames per second.
 ms = Frame time in milliseconds. No smoothing is applied. Single frame stutters will be visible on this line.
 
@@ -259,11 +265,8 @@ MSC = Peak milliseconds for unknown logic
 FRM = Peak milliseconds for an entire frame
 
 The bars underneath the graph represent the total time spent in each type of function.">(?)</span></h2>
-						<svg id="perf-chart" width="0" height="150" viewBox="0 -150 500 150">
-							<g transform="scale(1, -1)">
-								<g class="chartg"></g>
-							</g>
-						</svg>
+						</div>
+						<canvas id="perf-chart"></canvas>
 						<div id="perf-bar-container">
 							<div class="segment ent">ENT</div>
 							<div class="segment plugin">PLG</div>
@@ -286,6 +289,9 @@ The bars underneath the graph represent the total time spent in each type of fun
 				</p>
 				<p id="popup-text-no-chat" class="popup-text">
 					Sign in with Steam to send chat messages.
+				</p>
+				<p id="popup-text-no-live" class="popup-text">
+					Sign in with Steam to watch the game live.
 				</p>
 				<p id="popup-text-banned" class="popup-text">
 					You are banned from the server and cannot sign in.

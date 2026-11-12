@@ -61,7 +61,13 @@ var g_perf_max_points = 1000;
 var g_perf_chart_width_pad = 30;
 var g_perf_chart_height_pad = 15;
 var g_perf_init_needed = true;
-var g_perf_timer = null;
+var g_perf_rendering = false; // requestAnimationFrame loop running
+var g_perf_last_bars = {}; // last bar widths set, to skip redundant style writes
+var g_perf_bar_update_time = 0;
+var g_perf_chart_width = 0; // CSS pixels
+var g_perf_last_render_time = 0;
+const PERF_UPS_STEPS = [1, 2, 5, 10, 20, 30, 60, 100]; // graph update rates to choose from
+const PERF_UPS_UNFOCUSED = 30; // update rate limit while the page isn't focused
 var g_perf_smooth_fps = [];
 var g_perf_smooth_delay = [];
 var g_perf_delay = 0; // how much to lag behind the latest perf time for smooth playback
@@ -112,6 +118,7 @@ const WEBDENY_TOO_NEW = 3;
 const WEBDENY_RATE_LIMITED = 4;
 const WEBDENY_STEAM_ERROR = 5;
 const WEBDENY_BAD_VERSION = 6;
+const WEBDENY_NOT_LOGGED_IN_LIVE = 100; // only used by this page, never sent by the server
 
 const PLAYER_FLAG_BAD_GUY = 1;
 const PLAYER_FLAG_VOICE = 2;
@@ -491,6 +498,7 @@ function set_flag(flag, ip, ipinfo) {
 
 function set_avatar(avatar, state, steamid64) {
 	preload_image("https://avatars.steamstatic.com/" + state.steamAvatar);
+	avatar.crossOrigin = "anonymous"; // the dashboard is cross-origin isolated (see live-sw.js)
 	avatar.src = "https://avatars.steamstatic.com/" + state.steamAvatar;
 	avatar.title = state.steamName + "\n" + steamid64_to_steamid(steamid64);
 	avatar.setAttribute("steamid64", steamid64);
@@ -1026,6 +1034,9 @@ function add_message(steamid64, ipStr, name, msg, time, msgType) {
 	if (msgType == WEBMSG_CHAT_TYPE_NORMAL || msgType == WEBMSG_CHAT_TYPE_BAD_GUY || msgType == WEBMSG_CHAT_TYPE_WEB_USER) {
 		if (msg.startsWith("- ;name;") || msg.startsWith("* ;name;") ) {
 			chat_container.classList.add("join_msg");
+		}
+		else if (msgType == WEBMSG_CHAT_TYPE_WEB_USER && (msg == ";name; is now spectating" || msg == ";name; stopped spectating")) {
+			chat_container.classList.add("join_msg"); // HLTV live stream viewer started/stopped watching
 		}
 		else if (msg.startsWith(";name;: ")) {
 			let words = msg.substring(";name;: ".length).trim().toLowerCase();
@@ -1730,6 +1741,7 @@ function parse_player_state(view) {
 		let login_icon = document.getElementById("login_icon");
 		login_name.textContent = name;
 		login_name.title = name + "\n\n" + "The name shown here and in chat may not be your most recently used in-game name. A more common name is chosen if you haven't used your new name long enough.";
+		login_icon.crossOrigin = "anonymous";
 		login_icon.src = "https://avatars.steamstatic.com/" + steamAvatar;
 	}
 	
@@ -1987,8 +1999,8 @@ function parse_perf(view) {
 			logTime, source, func, millis
 		});
 		
-		if (g_perf_metrics.length > 100) {
-			g_perf_metrics.shift();
+		if (g_perf_warnings.length > 100) {
+			g_perf_warnings.shift();
 		}
 		
 		console.log("[PERF] " + source + " " + func + " took " + millis + " ms");
@@ -2653,221 +2665,225 @@ function update_map_timer() {
 	
 }
 
+// The graph is drawn on a canvas. As an SVG, Firefox spent most of the graph's CPU time repainting
+// the polylines every frame.
 function init_perf_graph() {
-	let maxValue = 120;
-	
 	let container = document.getElementById("perf-container");
-	let chart = document.getElementById("perf-chart");
-	let chartg = chart.getElementsByClassName("chartg")[0];
-	
-	let svgWidth = container.offsetWidth;
-	let chartWidth = svgWidth - (g_perf_chart_width_pad);
-	let svgHeight = chart.getAttribute("height");
-	let chartHeight = svgHeight - (g_perf_chart_height_pad*2);
-	
-	g_perf_max_points = chartWidth;
-	
-	chart.setAttribute("viewBox", "0 " + -svgHeight + " " + svgWidth + " " + svgHeight);
-	
-	g_perf_scale_y = chartHeight / maxValue;
-	g_perf_scale_x = chartWidth / g_perf_max_points;
-	
-	let oldFpsPoints = undefined; 
-	let oldMsPoints = undefined;
-	
-	if (chart.getElementById("perf-line-fps")) {
-		oldFpsPoints = chart.getElementById("perf-line-fps").getAttribute("points");
-		oldMsPoints = chart.getElementById("perf-line-ms").getAttribute("points");
+	let canvas = document.getElementById("perf-chart");
+
+	g_perf_chart_width = container.offsetWidth;
+	let chartWidth = g_perf_chart_width - g_perf_chart_width_pad;
+	let chartHeight = canvas.clientHeight - g_perf_chart_height_pad*2;
+
+	g_perf_max_points = Math.max(chartWidth, 0);
+	g_perf_scale_y = chartHeight / 120;
+	g_perf_scale_x = 1;
+
+	let dpr = window.devicePixelRatio || 1;
+	canvas.width = Math.round(g_perf_chart_width * dpr);
+	canvas.height = Math.round(canvas.clientHeight * dpr);
+	g_perf_last_bars = {};
+
+	draw_perf_graph(undefined, 0);
+}
+
+function draw_perf_graph(stats, highestMs) {
+	let canvas = document.getElementById("perf-chart");
+	if (!g_perf_chart_width || !canvas.height)
+		return; // hidden
+
+	let ctx = canvas.getContext("2d");
+	let dpr = canvas.width / g_perf_chart_width;
+	let w = g_perf_chart_width;
+	let h = canvas.height / dpr;
+	let pad_x = g_perf_chart_width_pad;
+	let pad_y = g_perf_chart_height_pad;
+	let chartWidth = w - pad_x;
+	let maxValue = 120;
+	let toY = (v) => h - (pad_y + v*g_perf_scale_y);
+
+	ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+	ctx.fillStyle = "#000";
+	ctx.fillRect(0, 0, w, h);
+
+	// grid. +0.5 centers 1px lines on pixels
+	ctx.lineWidth = 1;
+	ctx.strokeStyle = "#444";
+	ctx.beginPath();
+	for (let i = 0; i <= maxValue; i += 20) {
+		let y = Math.round(toY(i)) + 0.5;
+		ctx.moveTo(pad_x - 5, y);
+		ctx.lineTo(chartWidth + pad_x, y);
 	}
-	
-	// horizontal lines
-	chartg.innerHTML = "";
-	for (let i = 0; i <= maxValue; i+= 20) {
-		let start = g_perf_chart_width_pad-5 + "," + (i*g_perf_scale_y + g_perf_chart_height_pad);
-		let end = (chartWidth+g_perf_chart_width_pad) + "," + (i*g_perf_scale_y + g_perf_chart_height_pad);
-		let barpoints = start + " " + end;
-		let polyline = '<polyline fill="none" stroke="#444" stroke-width="1" points="' + barpoints + '"/>';
-		chartg.innerHTML += polyline;
-		
-		chartg.innerHTML += '<text x="' + (g_perf_chart_width_pad-20) + '" y="' + -(i*g_perf_scale_y + g_perf_chart_height_pad) + '" fill="#ddd" transform="scale(1,-1)">' + i + '</text>';
+	ctx.moveTo(pad_x + 0.5, toY(0));
+	ctx.lineTo(pad_x + 0.5, toY(maxValue));
+	ctx.moveTo(chartWidth + pad_x - 0.5, toY(0));
+	ctx.lineTo(chartWidth + pad_x - 0.5, toY(maxValue));
+	ctx.stroke();
+
+	let style = getComputedStyle(canvas);
+	ctx.font = (parseFloat(style.fontSize) * 0.7) + "px " + style.fontFamily;
+	ctx.textAlign = "left";
+	ctx.fillStyle = "#ddd";
+	for (let i = 0; i <= maxValue; i += 20) {
+		ctx.fillText(i, pad_x - 20, toY(i));
 	}
-	
-	// vertical borders
-	{
-		let start = g_perf_chart_width_pad + "," + g_perf_chart_height_pad;
-		let end = g_perf_chart_width_pad + "," + (g_perf_chart_height_pad+chartHeight);
-		let polyline = '<polyline fill="none" stroke="#444" stroke-width="1" points="' + start + " " + end + '"/>';
-		chartg.innerHTML += polyline;
+
+	// lines, newest point on the right once the graph is full
+	let hist = g_perf_metrics_hist;
+	let lines = [["#f00", (m) => m.fps], ["#f80", (m) => m.frameInt]];
+	for (let [color, value] of lines) {
+		ctx.strokeStyle = color;
+		ctx.beginPath();
+		for (let i = 0; i < hist.length; i++) {
+			let x = pad_x + i*g_perf_scale_x;
+			let y = toY(value(hist[i]));
+			if (i == 0)
+				ctx.moveTo(x, y);
+			else
+				ctx.lineTo(x, y);
+		}
+		ctx.stroke();
 	}
-	{
-		let start = (chartWidth+g_perf_chart_width_pad-1) + "," + g_perf_chart_height_pad;
-		let end = (chartWidth+g_perf_chart_width_pad-1) + "," + (g_perf_chart_height_pad+chartHeight);
-		let polyline = '<polyline fill="none" stroke="#444" stroke-width="1" points="' + start + " " + end + '"/>';
-		chartg.innerHTML += polyline;
+
+	if (!stats)
+		return;
+
+	let textY = toY(maxValue) - 5;
+	let labels = [
+		["#6af", 40, "ENT: " + stats.peak_ent + " ms"],
+		["#a6f", 115, "PLG: " + stats.peak_plugin + " ms"],
+		["#4f4", 190, "PLR: " + stats.peak_player + " ms"],
+		["#aaa", 265, "MSC: " + stats.peak_misc + " ms"],
+		["#f80", 340, "FRM: " + stats.peak_frame + " ms"],
+	];
+	for (let [color, x, text] of labels) {
+		ctx.fillStyle = color;
+		ctx.fillText(text, x, textY);
 	}
-	
-	let textY = -(maxValue*g_perf_scale_y + g_perf_chart_height_pad + 5);
-	chartg.innerHTML += '<text id="perf-fps" x="' + (svgWidth-2) + '" y="' + textY + '" fill="#f00" transform="scale(1,-1)" text-anchor="end"></text>';
-	
-	chartg.innerHTML += '<text id="perf-ms" x="' + (svgWidth-60) + '" y="' + textY + '" fill="#f80" transform="scale(1,-1)" text-anchor="end"></text>';
-	
-	chartg.innerHTML += '<text id="perf-peak-ent" x="' + (40) + '" y="' + textY + '" fill="#6af" transform="scale(1,-1)"></text>';
-	
-	chartg.innerHTML += '<text id="perf-peak-plugin" x="' + (115) + '" y="' + textY + '" fill="#a6f" transform="scale(1,-1)"></text>';
-	
-	chartg.innerHTML += '<text id="perf-peak-player" x="' + (190) + '" y="' + textY + '" fill="#4f4" transform="scale(1,-1)"></text>';
-	
-	chartg.innerHTML += '<text id="perf-peak-misc" x="' + (265) + '" y="' + textY + '" fill="#aaa" transform="scale(1,-1)"></text>';
-	
-	chartg.innerHTML += '<text id="perf-peak-frame" x="' + (340) + '" y="' + textY + '" fill="#f80" transform="scale(1,-1)"></text>';
-	
-	chartg.innerHTML += '<polyline id="perf-line-fps" fill="none" stroke="#f00" stroke-width="1" points=""/>';
-	chartg.innerHTML += '<polyline id="perf-line-ms" fill="none" stroke="#f80" stroke-width="1" points=""/>';
-	
-	if (oldFpsPoints) {
-		chart.getElementById("perf-line-fps").setAttribute("points", oldFpsPoints);
-		chart.getElementById("perf-line-ms").setAttribute("points", oldMsPoints);
+
+	if (hist.length) {
+		ctx.textAlign = "end";
+		ctx.fillStyle = "#f00";
+		ctx.fillText(Math.round(hist[hist.length-1].fps) + " FPS", w - 2, textY);
+		ctx.fillStyle = "#f80";
+		ctx.fillText(highestMs + " ms", w - 60, textY);
 	}
+}
+
+function perf_set_width(container, cls, width) {
+	if (g_perf_last_bars[cls] === width)
+		return;
+	g_perf_last_bars[cls] = width;
+	container.getElementsByClassName(cls)[0].style.width = width;
+}
+
+function update_perf_ups_control() {
+	let ups = g_settings.perf_ups;
+	let idx = PERF_UPS_STEPS.indexOf(ups);
+	let text = document.getElementById("perf_ups_text");
+	text.textContent = ups + " UPS";
+	text.title = ups + (ups == 1 ? " graph update per second" : " graph updates per second");
+	document.getElementById("perf_ups_down").disabled = idx <= 0;
+	document.getElementById("perf_ups_up").disabled = idx >= PERF_UPS_STEPS.length - 1;
+}
+
+function step_perf_ups(dir) {
+	let idx = PERF_UPS_STEPS.indexOf(g_settings.perf_ups) + dir;
+	idx = Math.max(0, Math.min(PERF_UPS_STEPS.length - 1, idx));
+	g_settings.perf_ups = PERF_UPS_STEPS[idx];
+	save_settings();
+	update_perf_ups_control();
 }
 
 function render_perf_graph() {
 	if (document.body.classList.contains("live_maximized"))
-		return; // hidden behind the live view (see live_view.js), and this runs every 10ms
-	
-	if (g_perf_init_needed) {
+		return; // hidden behind the live view (see live_view.js)
+
+	// also after a resize, or if it was set up while hidden
+	if (g_perf_init_needed || document.getElementById("perf-container").offsetWidth != g_perf_chart_width) {
 		init_perf_graph();
 		g_perf_init_needed = false;
 	}
-	
-	if (!g_perf_metrics.length)
-		return;
-	
-	let chart = document.getElementById("perf-chart");	
-	let chartg = chart.getElementsByClassName("chartg")[0];
-	
-	let fps_line = chart.getElementById("perf-line-fps");
-	let ms_line = chart.getElementById("perf-line-ms");
-	let svg = fps_line.ownerSVGElement;
-	
-	let pointIdx = fps_line.points.length;
-	
-	// playback points smoothly while new points arrive in chunks
-	let maxPerfTime = Date.now() - g_perf_delay;
-	
-	let latestMetrics = undefined;
-	
+
+	// Catch up on extra delay at real time speed. This used to be 10 ms per call when it was called
+	// every 10 ms, but the update rate is adjustable now.
+	let now = performance.now();
+	let elapsed = Math.min(now - g_perf_last_render_time, 1000);
+	g_perf_last_render_time = now;
+
 	if (g_perf_delay_ideal < g_perf_delay) {
-		g_perf_delay -= 10;
+		g_perf_delay -= elapsed;
 		if (g_perf_delay < g_perf_delay_ideal)
 			g_perf_delay = g_perf_delay_ideal;
 	}
-	
+
+	if (!g_perf_metrics.length)
+		return;
+
+	// playback points smoothly while new points arrive in chunks
+	let maxPerfTime = Date.now() - g_perf_delay;
+
 	let highestMs = 0;
-	
-	for (let i = 0; i < g_perf_metrics.length; i++) {
-		let metrics = g_perf_metrics[i];
-		
-		if (metrics.frameTime > maxPerfTime) {
-			if (i == g_perf_metrics.length - 1) {
-				g_perf_metrics = [];
-			}
-			else if (i > 0) {
-				g_perf_metrics.splice(0, i);
-			}
-			break;
-		}
-		
-		latestMetrics = metrics;
-		
+	let added = 0;
+
+	while (added < g_perf_metrics.length && g_perf_metrics[added].frameTime <= maxPerfTime) {
+		let metrics = g_perf_metrics[added++];
 		g_perf_metrics_hist.push(metrics);
-		
-		let point_fps = svg.createSVGPoint();
-		point_fps.x = g_perf_chart_width_pad + pointIdx*g_perf_scale_x;
-		point_fps.y = g_perf_chart_height_pad + metrics.fps * g_perf_scale_y;
-		fps_line.points.appendItem(point_fps);
-		
-		let point_ms = svg.createSVGPoint();
-		point_ms.x = point_fps.x;
-		point_ms.y = g_perf_chart_height_pad + metrics.frameInt * g_perf_scale_y;
-		ms_line.points.appendItem(point_ms);
-		
+
 		if (metrics.frameInt > highestMs)
 			highestMs = metrics.frameInt;
-		
-		pointIdx += 1;
 	}
-	
+
+	if (!added)
+		return; // nothing new to draw
+
+	g_perf_metrics.splice(0, added);
+
 	if (g_perf_metrics_hist.length > g_perf_max_points) {
 		g_perf_metrics_hist.splice(0, g_perf_metrics_hist.length - g_perf_max_points);
 	}
-	
+
 	let misc_sum = 0;
 	let ent_sum = 0;
 	let plugin_sum = 0;
 	let player_sum = 0;
-	let total_sum = 0;
-	let peak_ent = 0;
-	let peak_plugin = 0;
-	let peak_player = 0;
-	let peak_misc = 0;
-	let peak_frame = 0;
-	
+	let stats = { peak_ent: 0, peak_plugin: 0, peak_player: 0, peak_misc: 0, peak_frame: 0 };
+
 	for (let i = 0; i < g_perf_metrics_hist.length; i++) {
 		let metrics = g_perf_metrics_hist[i];
-		
+
 		let ent = metrics.entityPhysics + metrics.entityThinks;
 		let player = metrics.sendClientMessages + metrics.readPackets + metrics.addToFullPack;
 		let misc = metrics.frameInt - (ent + metrics.pluginFuncs + player);
-		
+
 		ent_sum += ent;
 		plugin_sum += metrics.pluginFuncs;
 		player_sum += player;
 		if (misc > 0)
 			misc_sum += misc;
-		
-		if (ent > peak_ent)
-			peak_ent = ent;
-		if (player > peak_player)
-			peak_player = player;
-		if (metrics.pluginFuncs > peak_plugin)
-			peak_plugin = metrics.pluginFuncs;
-		if (misc > peak_misc)
-			peak_misc = misc;
-		if (metrics.frameInt > peak_frame)
-			peak_frame =  metrics.frameInt;
-	}
-	
-	total_sum = ent_sum + plugin_sum + player_sum + misc_sum;
-	let misc_percent = (misc_sum / total_sum) * 100;
-	let ent_percent = (ent_sum / total_sum) * 100;
-	let plugin_percent = (plugin_sum / total_sum) * 100;
-	let player_percent = (player_sum / total_sum) * 100;	
 
-	let bar_container = document.getElementById("perf-bar-container");
-	bar_container.getElementsByClassName("ent")[0].style.width = ent_percent + "%";
-	bar_container.getElementsByClassName("plugin")[0].style.width = plugin_percent + "%";
-	bar_container.getElementsByClassName("player")[0].style.width = player_percent + "%";
-	bar_container.getElementsByClassName("misc")[0].style.width = misc_percent + "%";
-	
-	document.getElementById("perf-peak-ent").textContent = "ENT: " + peak_ent + " ms";
-	document.getElementById("perf-peak-plugin").textContent = "PLG: " + peak_plugin + " ms";
-	document.getElementById("perf-peak-player").textContent = "PLR: " + peak_player + " ms";
-	document.getElementById("perf-peak-misc").textContent = "MSC: " + peak_misc + " ms";
-	document.getElementById("perf-peak-frame").textContent = "FRM: " + peak_frame + " ms";
-	
-	if (latestMetrics) {
-		document.getElementById("perf-fps").textContent = Math.round(latestMetrics.fps) + " FPS";
-		document.getElementById("perf-ms").textContent = highestMs + " ms";
+		stats.peak_ent = Math.max(stats.peak_ent, ent);
+		stats.peak_player = Math.max(stats.peak_player, player);
+		stats.peak_plugin = Math.max(stats.peak_plugin, metrics.pluginFuncs);
+		stats.peak_misc = Math.max(stats.peak_misc, misc);
+		stats.peak_frame = Math.max(stats.peak_frame, metrics.frameInt);
 	}
-	
-	// remove old points and shift the graph
-	let removeAmount = fps_line.points.length - g_perf_max_points;
-	for (let i = 0; i < removeAmount && i < fps_line.points.length; i++) {
-		fps_line.points.removeItem(0);
-		ms_line.points.removeItem(0);
-	}
-	for (let i = 0; i < fps_line.points.length; i++) {
-		ms_line.points[i].x = fps_line.points[i].x = g_perf_chart_width_pad + i*g_perf_scale_x;
+
+	draw_perf_graph(stats, highestMs);
+
+	// The bars are totals over the whole graph, so a few updates a second is plenty. Each update
+	// lays out the page again.
+	if (now - g_perf_bar_update_time >= 250) {
+		g_perf_bar_update_time = now;
+
+		let total_sum = ent_sum + plugin_sum + player_sum + misc_sum;
+		let percent = (v) => (Math.round(v / total_sum * 1000) / 10) + "%";
+		let bar_container = document.getElementById("perf-bar-container");
+		perf_set_width(bar_container, "ent", percent(ent_sum));
+		perf_set_width(bar_container, "plugin", percent(plugin_sum));
+		perf_set_width(bar_container, "player", percent(player_sum));
+		perf_set_width(bar_container, "misc", percent(misc_sum));
 	}
 }
 
@@ -2973,10 +2989,31 @@ function apply_chat_settings() {
 		document.getElementById(str).disabled = !g_settings.dim_enable;
 	});
 	
-	if (g_settings.show_perf) {
-		g_perf_timer = setInterval(render_perf_graph, 10);
-	} else {
-		clearInterval(g_perf_timer);
+	if (g_settings.show_perf && !g_perf_rendering) {
+		// One loop no matter how often settings are applied. Limited to the chosen update rate
+		// (g_settings.perf_ups), and to at most PERF_UPS_UNFOCUSED while the page isn't focused,
+		// to save CPU when it's left open on the side.
+		g_perf_rendering = true;
+		let lastRender = 0;
+		const tick = (now) => {
+			if (!g_settings.show_perf) {
+				g_perf_rendering = false;
+				return;
+			}
+			let ups = g_settings.perf_ups;
+			if (!document.hasFocus())
+				ups = Math.min(ups, PERF_UPS_UNFOCUSED);
+			let interval = 1000 / ups;
+			// Advancing by the interval instead of to the frame's time keeps the average rate right
+			// when it isn't a multiple of the display's (60 FPS on 144 Hz). The 2 ms tolerance
+			// absorbs frame timing jitter, so a 60 Hz display doesn't skip frames.
+			if (now - lastRender >= interval - 2) {
+				lastRender = Math.max(lastRender + interval, now - interval);
+				render_perf_graph();
+			}
+			requestAnimationFrame(tick);
+		};
+		requestAnimationFrame(tick);
 	}
 	
 	if (g_socket && g_socket.readyState === WebSocket.OPEN && g_settings.show_perf != oldWantPerf) {
@@ -3052,6 +3089,7 @@ function preload_image(src) {
 	cachedImages.add(src);
 	
 	const preload = new Image();
+	preload.crossOrigin = "anonymous"; // same request as the images it preloads, so it shares their cache entry
 	preload.src = src;
 	imageCache.push(preload);
 }
@@ -3101,6 +3139,9 @@ function load_settings() {
 	g_settings.server = g_settings.server || "Public";
 	g_settings.timestamps = g_settings.timestamps || "24hr";
 	g_settings.translations = g_settings.translations || "auto";
+	if (!PERF_UPS_STEPS.includes(g_settings.perf_ups))
+		g_settings.perf_ups = 60;
+	update_perf_ups_control();
 	
 	document.getElementById("flip_layout_button").checked = g_settings.flip_layout;
 	document.getElementById("dim_enable_button").checked = g_settings.dim_enable;
@@ -3637,6 +3678,8 @@ async function setup() {
 	document.getElementById("show_avatars").addEventListener("click", apply_chat_settings);
 	document.getElementById("keep_screen_awake").addEventListener("click", apply_chat_settings);
 	document.getElementById("show_perf").addEventListener("click", apply_chat_settings);
+	document.getElementById("perf_ups_down").addEventListener("click", () => step_perf_ups(-1));
+	document.getElementById("perf_ups_up").addEventListener("click", () => step_perf_ups(1));
 	document.getElementById("timestamp_selector").addEventListener("change", apply_chat_settings);
 	document.getElementById("translation_mode").addEventListener("change", apply_chat_settings);
 	
@@ -3691,6 +3734,7 @@ function action_denied_popup(reason, errorCode) {
 	document.getElementById('popup-text-too-old-version').style.display = 'none';
 	document.getElementById('popup-text-too-new-version').style.display = 'none';
 	document.getElementById('popup-text-no-chat').style.display = 'none';
+	document.getElementById('popup-text-no-live').style.display = 'none';
 	document.getElementById('popup-text-steam-error').style.display = 'none';
 	document.getElementById('popup-text-server-full').style.display = 'none';
 	document.getElementById('popup-text-max-conn').style.display = 'none';
@@ -3701,6 +3745,9 @@ function action_denied_popup(reason, errorCode) {
 	}
 	if (reason == WEBDENY_NOT_LOGGED_IN_CHAT) {
 		document.getElementById('popup-text-no-chat').style.display = 'block';
+	}
+	if (reason == WEBDENY_NOT_LOGGED_IN_LIVE) {
+		document.getElementById('popup-text-no-live').style.display = 'block';
 	}
 	if (reason == WEBDENY_BANNED) {
 		document.getElementById('popup-text-banned').style.display = 'block';

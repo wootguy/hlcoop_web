@@ -1278,7 +1278,9 @@ h2 {
 	margin-top: 20px;
 }
 #perf-chart {
+	display: block;
 	width: 100%;
+	height: 150px;
 }
 #content svg {
 	background: black;
@@ -1307,9 +1309,32 @@ h2 {
 #content #perf-bar-container .segment.misc {
 	background: #444;
 }
-#perf-container text {
-	font-size: 0.7em;
+#perf-chart {
 	user-select: none;
+}
+#perf-header {
+	position: relative;
+}
+#perf-header h2 {
+	/* room for the update rate control on both sides keeps the title centered without overlap */
+	padding: 0 120px;
+}
+#perf-ups-control {
+	/* right edge, vertically centered on the header */
+	position: absolute;
+	right: 0;
+	top: 50%;
+	transform: translateY(-50%);
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	font-size: 12px;
+	user-select: none;
+}
+#perf_ups_text {
+	min-width: 5em;
+	text-align: center;
+	cursor: help;
 }
 
 .map-change-container {
