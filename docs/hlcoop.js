@@ -1522,7 +1522,12 @@ function parse_auth(view) {
 	let token = read_string(view, offset);
 	offset += get_utf8_data_len(view, offset);
 	
+	// A Steam OpenID response can only be verified once, so reconnects (such as after a server
+	// restart) must sign in with the session token instead. Resending the OpenID response fails.
+	g_auth_params = undefined;
+
 	if (token.length) {
+		g_auth_token = token;
 		const currentDate = new Date();
 		currentDate.setFullYear(currentDate.getFullYear() + 1);
 		const expires = "expires=" + currentDate.toUTCString();
@@ -1630,7 +1635,8 @@ function finish_logout() {
 	login_icon.src = "icon/steam_icon_logo.svg";
 	
 	document.cookie = "token=DELETED; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Strict; secure";
-	
+	g_auth_token = undefined; // the server invalidated it, so don't send it on reconnect
+
 	g_steamid = 0;
 	
 	setup_openid_link();
