@@ -445,9 +445,14 @@ function init_common() {
 // the server (HEAD, skipping the browser cache) for the version of this page, its scripts and
 // stylesheets, and the live view's player. If any of them changed, a green notice appears under the
 // header links. GitHub Pages gives every file the deploy time as its ETag and Last-Modified, so any
-// new commit shows the notice (the dashboard puts it in the top-left corner instead, outside the phone layout), not only ones that change WEBAPP_VERSION. Pages' CDN caches files for
-// up to 10 minutes, so the notice can lag a deploy, but it never shows before the new files are live.
+// new commit shows the notice (the dashboard puts it in the top-left corner instead, outside the phone
+// layout), not only ones that change WEBAPP_VERSION. Pages' CDN caches files for up to 10 minutes, so
+// the notice can lag a deploy, but it never shows before the new files are live.
+// Pages' servers don't all stamp a deploy with the same second, so the same file can come back as
+// W/"6af53d16-4905" from one and W/"6af53d17-4905" from the next (the ETag is the modified time and
+// the size, in hex). Times that close count as the same version.
 const UPDATE_CHECK_INTERVAL = 5*60*1000;
+const UPDATE_TIME_TOLERANCE = 10; // seconds
 
 function init_update_check() {
 	let urls = [location.href.split('#')[0]];
@@ -478,6 +483,28 @@ function init_update_check() {
 		}
 	}
 
+	// splits a version into its time (seconds) and size, if it's a Pages ETag or a Last-Modified date
+	function parse_version(ver) {
+		let m = ver.match(/^(?:W\/)?"([0-9a-f]+)-([0-9a-f]+)"$/i);
+		if (m) {
+			return { time: parseInt(m[1], 16), size: m[2] };
+		}
+		let time = Date.parse(ver);
+		return isNaN(time) ? undefined : { time: time / 1000, size: "" };
+	}
+
+	function same_version(a, b) {
+		if (a === b) {
+			return true;
+		}
+		let pa = parse_version(a);
+		let pb = parse_version(b);
+		if (!pa || !pb) {
+			return false;
+		}
+		return pa.size === pb.size && Math.abs(pa.time - pb.time) <= UPDATE_TIME_TOLERANCE;
+	}
+
 	async function check() {
 		if (found) {
 			return;
@@ -491,7 +518,7 @@ function init_update_check() {
 			}
 			if (baseline[urls[i]] === undefined) {
 				baseline[urls[i]] = ver;
-			} else if (baseline[urls[i]] !== ver) {
+			} else if (!same_version(baseline[urls[i]], ver)) {
 				console.log("Update available: " + urls[i] + " changed from " + baseline[urls[i]] + " to " + ver);
 				show_update_notice();
 				return;
