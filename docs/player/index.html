@@ -47,6 +47,31 @@
 		config.streamRelay = params.get('stream');
 	}
 
+	// Emscripten's GLFW reads event.keyCode, which follows the keyboard layout, so on AZERTY the movement
+	// keys end up scattered (W is bottom-left) and the key in W's place (Z) toggles mouse capture. Desktop
+	// GLFW uses physical key positions, so do the same here: rewrite keyCode from event.code for letters
+	// and digits before GLFW's listener sees it (this listener is added first). Ctrl/Cmd shortcuts keep
+	// the printed letter. The key up reuses whatever its key down sent, or GLFW would see a stuck key.
+	var physicalKeys = {};
+	function physicalKeyCode(e) {
+		var m = /^(?:Key([A-Z])|Digit([0-9]))$/.exec(e.code || '');
+		return m ? (m[1] || m[2]).charCodeAt(0) : 0;
+	}
+	function setKeyCode(e, keyCode) {
+		if (keyCode && keyCode !== e.keyCode)
+			Object.defineProperty(e, 'keyCode', { get: function() { return keyCode; } });
+	}
+	window.addEventListener('keydown', function(e) {
+		if (!(e.code in physicalKeys))
+			physicalKeys[e.code] = (e.ctrlKey || e.metaKey) ? 0 : physicalKeyCode(e);
+		setKeyCode(e, physicalKeys[e.code]);
+	}, true);
+	window.addEventListener('keyup', function(e) {
+		setKeyCode(e, physicalKeys[e.code]);
+		delete physicalKeys[e.code];
+	}, true);
+	window.addEventListener('blur', function() { physicalKeys = {}; }, true); // key ups are lost
+
 	// Alt slows movement, so keep Alt+key presses (Alt+S, Alt+D, Alt+Left...) away from the browser's
 	// menus and shortcuts, and stop a lone Alt press from focusing the menu bar. The player still sees
 	// the keys. AltGr also sets ctrlKey on Windows, and is left alone so it can still type characters.
@@ -56,6 +81,14 @@
 	window.addEventListener('keyup', function(e) {
 		if (e.key === 'Alt') e.preventDefault();
 	});
+
+	// Firefox opens its quick find bar when ' or / is typed (or any character, with "search for text
+	// when you start typing" enabled), which takes the keys away from the chat box. The page has no
+	// text fields of its own, so cancel every character press. GLFW still reads the character from
+	// the same event, and Ctrl/Cmd shortcuts are left alone.
+	window.addEventListener('keypress', function(e) {
+		if (!e.ctrlKey && !e.metaKey) e.preventDefault();
+	}, true);
 
 	// Dragging the camera with the right mouse button can end outside the canvas, and releasing it there
 	// would open the browser's context menu. The website's live view shows the player in a same-origin
