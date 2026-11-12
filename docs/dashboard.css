@@ -124,6 +124,17 @@
 	padding-bottom: 15px;
 }
 
+/* The header is a fixed 100px tall (#content-container's height assumes it), so outside the phone
+   layout the update notice sits in the top-left corner instead of pushing the page down */
+#content:not(.compact) #update_notice {
+	position: absolute;
+	top: 10px;
+	left: 20px;
+	max-width: calc(50% - 170px);
+	margin: 0;
+	text-align: left;
+}
+
 #content.compact #login_but {
 	position: relative;
 	margin: 0 auto 20px auto;
